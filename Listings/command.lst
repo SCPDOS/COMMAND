@@ -1,9 +1,9 @@
      1                                  ;COMMAND.COM main file
-     2                                  [map all ./Utils/COMMAND/Listings/command.map]
+     2                                  [map all ./Listings/command.map]
      3                                  [DEFAULT REL]
      4                                  BITS 64
      5                                  ;Defs, strucs and macros
-     6                                  %include "./Source/Include/dosMacro.mac"
+     6                                  %include "./Include/dosMacro.mac"
      1                              <1> 
      2                              <1> ;-------------------------------------------------------------------------------
      3                              <1> ;Generic Macros file
@@ -86,7 +86,7 @@
     80                              <1> %macro breakpoint 0
     81                              <1> xchg bx, bx
     82                              <1> %endmacro
-     7                                  %include "./Source/Include/dosStruc.inc"
+     7                                  %include "./Include/dosStruc.inc"
      1                              <1> 
      2                              <1> ;-------------------------------------------------------;
      3                              <1> ; This include file contains miscellaneous internal     ;
@@ -538,7 +538,7 @@
    449                              <1> fcbsDefault     equ 4
    450                              <1> safeFcbsDeflt   equ 0
    451                              <1> lastDriveDeflt  equ 5   
-     8                                  %include "./Source/Include/fcbStruc.inc"
+     8                                  %include "./Include/fcbStruc.inc"
      1                              <1> ;FCB related structures
      2                              <1> 
      3                              <1> ;Note: If record size > 64, high byte of randRecrd is ignored.
@@ -631,7 +631,7 @@
     90 00000002 ????                <1>     .relClust   resb 2  ;File relative cluster of last cluster accessed
     91 00000004 ????                <1>     .absClust   resb 2  ;Disk relative cluster of last cluster accessed
     92                              <1> endstruc
-     9                                  %include "./Source/Include/dosError.inc"
+     9                                  %include "./Include/dosError.inc"
      1                              <1> ;DOS Error codes
      2                              <1> 
      3                              <1> ;Extended Error Codes
@@ -718,7 +718,7 @@
     84                              <1> eClsMedia   equ 11  ;Error is on medium, i.e. wrong or damaged remdev
     85                              <1> eClsClash   equ 12  ;Resource already exists!
     86                              <1> eClsUnk     equ 13  ;Unknown class
-    10                                  %include "./Utils/COMMAND/Data/cmdEqu.asm"
+    10                                  %include "./Include/cmdEqu.inc"
      1                              <1> ;Data equates and struct declarations
      2                              <1> 
      3                              <1> cmdBufferL  equ 128 ;Length of a command line buffer
@@ -770,7 +770,7 @@
     49                              <1>     dirInclusive    equ dirHidden | dirSystem | dirDirectory
     50                              <1>     dirIncFiles     equ dirHidden | dirSystem
     11                                  Segment .data align=1 
-    12                                  %include "./Utils/COMMAND/Data/cmdData.asm"
+    12                                  %include "./Data/cmdData.asm"
      1                              <1> ;Static Data Area for COMMAND.COM    
      2                              <1> startLbl:   ;Start symbol, this is the entry point
      3 00000000 E9(00000000)        <1>     jmp cmdLdr
@@ -1054,7 +1054,7 @@
    108 000006E9 000000000000000000- <1>
    108 000006F2 000000000000000000- <1>
    108 000006FB 0000                <1>
-    13                                  %include "./Utils/COMMAND/Data/cmdTable.asm"
+    13                                  %include "./Data/cmdTable.asm"
      1                              <1> ;Function dispatch table
      2                              <1> functionTable:
      3                              <1> ;Use Pascal strings with each row of hte table having three columns:
@@ -1137,7 +1137,7 @@
     80 000007AC DA21                <1>     dw touch - startLbl
     81                              <1> 
     82 000007AE FF                  <1>     db -1   ;End of table
-    14                                  %include "./Utils/COMMAND/Data/cmdMsg.asm"
+    14                                  %include "./Data/cmdMsg.asm"
      1                              <1> ;COMMAND.COM Messages and strings
      2 000007AF 0D0A24              <1> crlf    db  CR,LF,"$"
      3 000007B2 0D0A0D0A24          <1> crlf2   db  CR,LF,CR,LF,"$"
@@ -1362,7 +1362,7 @@
     95                              <1> ;If anything goes wrong with piping or redirecting just close first two 
     96                              <1> ; handles and reopen CON
     97 00000DAA 434F4E00            <1> conName db "CON",0      
-    15                                  %include "./Utils/COMMAND/Source/cmdMain.asm"
+    15                                  %include "./Source/cmdMain.asm"
      1                              <1> commandStart:
      2                              <1>     ;Resize Allocation, jump here with endpointer in rbx
      3                              <1>     ;Ideally would have this jettisoned too but cannot guarantee
@@ -2281,7 +2281,7 @@
    742 000016AA 4159                <1>     pop r9
    743 000016AC 4158                <1>     pop r8
    744 000016AE 48CF                <1>     iretq
-    16                                  %include "./Utils/COMMAND/Source/cmdFunc.asm"
+    16                                  %include "./Source/cmdFunc.asm"
      1                              <1> ;Note! Each function must setup the DTA to use for itself.
      2                              <1> ;There is no requirement to preserve the DTA across a call.
      3                              <1> ;Only the Int 4Eh entry point will preserve the callers DTA.
@@ -4011,7 +4011,7 @@
     13                              <2> %%_ret:
     14 00002702 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-    17                                  %include "./Utils/COMMAND/Source/cmdUtils.asm"
+    17                                  %include "./Source/cmdUtils.asm"
      1                              <1> ;Misc functions and subroutines for command.com
      2                              <1> 
      3                              <1> printCRLF:
@@ -5052,7 +5052,7 @@
     13                              <2> %%_ret:
     14 00002CD6 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-    18                                  %include "./Utils/COMMAND/Source/int44h.asm"
+    18                                  %include "./Source/int44h.asm"
      1                              <1> critErrorHandler:   ;Int 44h
      2                              <1> ;User Stack in usage here, must be swapped to before this is called
      3                              <1> ;Entered with:  
@@ -5271,7 +5271,7 @@
    201 00002F87 C20800              <1>     ret 8   ;Return and pop CS off the stack to indicate we wanna kill task
     19                                  
     20                                  endOfAllocNoMaster: ;End of alloc if not the master cmd
-    21                                  %include "./Utils/COMMAND/Data/cmdEnv.asm"
+    21                                  %include "./Data/cmdEnv.asm"
      1                              <1>     
      2                              <1> masterEnv:  ;Yeet this is this is a child command processor
      3 00002F8A 5F3A434F4D4D414E44- <1>     db "_:COMMAND.COM",0
@@ -5284,7 +5284,7 @@
     23                                  ;The stack is always setup one stackSize away from the endOfAlloc, aligned to
     24                                  Segment transient align=1 follows=.data
     25                                  ;This segment always gets ejected post load
-    26                                  %include "./Utils/COMMAND/Source/cmdLdr.asm"
+    26                                  %include "./Source/cmdLdr.asm"
      1                              <1> cmdLdr:
      2                              <1> ;First check if the version is ok. If not, return.
      3 00000000 B430                <1>     mov ah, 30h

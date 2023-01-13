@@ -1,8 +1,8 @@
 
 - NASM Map file ---------------------------------------------------------------
 
-Source file:  ./Utils/COMMAND/command.asm
-Output file:  ./Utils/COMMAND/Binaries/COMMAND.COM
+Source file:  command.asm
+Output file:  ./Binaries/COMMAND.COM
 
 -- Program origin -------------------------------------------------------------
 
