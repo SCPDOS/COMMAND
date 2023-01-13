@@ -1,5 +1,5 @@
 ;COMMAND.COM main file
-[map all ./Utils/COMMAND/Listings/command.map]
+[map all ./Listings/command.map]
 [DEFAULT REL]
 BITS 64
 ;Defs, strucs and macros
