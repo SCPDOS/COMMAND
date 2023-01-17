@@ -5396,7 +5396,7 @@
    109 00000160 CD41                <1>     int 41h ;Print init string
    110 00000162 5B                  <1>     pop rbx
    111                              <1>     ;Now we add the stack to the alloc and paragraph align
-   112 00000163 4881C340000000      <1>     add rbx, stackSize
+   112 00000163 4881C300020000      <1>     add rbx, stackSize
    113 0000016A 4881C311000000      <1>     add rbx, 11h    ;Go one para up
    114 00000171 48C1EB04            <1>     shr rbx, 4      ;Round to this new para boundary
    115 00000175 48C1E304            <1>     shl rbx, 4
@@ -5423,6 +5423,6 @@
    124 00000205 20444F532076657273- <1>
    124 0000020E 696F6E0D0A24        <1>
     27                                  
-    28                                  stackSize equ 64
+    28                                  stackSize equ 64*8    ;64 QWORD stack
     28          ------------------       info: assembly required 1+3+2 passes
 

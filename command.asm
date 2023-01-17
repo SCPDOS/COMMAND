@@ -25,4 +25,4 @@ Segment transient align=1 follows=.data
 ;This segment always gets ejected post load
 %include "./Source/cmdLdr.asm"
 
-stackSize equ 64
+stackSize equ 64*8    ;64 QWORD stack

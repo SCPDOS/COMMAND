@@ -504,7 +504,7 @@ Value     Name
 00000016  cmdLineStateL
 00000017  pipeErrMsgL
 00000013  redirErrMsgL
-00000040  stackSize
+00000200  stackSize
 
 
 ---- Section .data ------------------------------------------------------------
