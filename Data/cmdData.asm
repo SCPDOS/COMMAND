@@ -6,7 +6,7 @@ returnCode  dw 0    ;Return Code from a child process
 pspPtr      dq 0    ;Internal pointer to the task PSP
 realParent  dq -1   ;Only the first Copy of COMMAND.COM sets itself here
 sysVars     dq 0    ;Ptr to DOS sysvars
-numHdls     dw 20   ;Get number of handles permitted, hardcoded in this version
+numHdls     dw 20   ;Get number of handles permitted
 promptPtr   dw -1   ;Offset From Environemnt Start to prompt String. -1 => dflt 
 pathSep     db "\"  ;Default path sep
 switchChar  db "/"  ;Default switch char
@@ -20,8 +20,7 @@ currDirStr  db fullDirPathZL dup (0) ;Current Directory String
 cmdLineStatePtr:
 cmdStartOff db 0    ;Offset to the first char for this command (may be a space)
 cmdEndOff   db 0    ;Offset to the terminating char for this command (0Dh or |)
-newPipeFlag db 0    ;If set, we fired up a new pipe for this command
-pipeNumber  db 0    ;Count of active pipes (1 if a | b or 2 if a | b | c ...)
+pipeFlag    db 0    ;If set, we fired up a pipe for this command line
 pipeSTDIN   dw -1   ;The handle to replace STDIN with once all piping complete
 pipeSTDOUT  dw -1   ;The handle to replace STDOUT with once all piping complete
 

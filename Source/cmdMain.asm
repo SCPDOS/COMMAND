@@ -78,7 +78,7 @@ commandMain:
     lea rdx, badCmd
     mov ah, 09h
     int 41h
-    jmp short .inputMain
+    jmp .inputMain
 
 parseInput:
 ;EndOff is set up before entering this part
@@ -155,7 +155,7 @@ parseInput:
     sub rsi, rbx    ;Get the offset into the command line
     mov ebx, esi
     mov byte [cmdEndOff], bl    ;Store the offset to the terminating char
-    inc byte [cmdEndOff] ;Goto  first char past terminating char for next bit
+    ;inc byte [cmdEndOff] ;Goto first char past terminating char for next bit
     mov al, CR
     stosb   ;Store the terminating CR in the psp command line
     ;Now compute the command line length 
@@ -418,64 +418,48 @@ redirPipeFailureCommon:
 
 cleanUpRedir:
 ;Cleans up the redir stuff after we are done.
+    breakpoint
     test byte [redirIn], -1
     jnz .redirInClear
     test byte [redirOut], -1
     jnz .redirOutClear
-    test byte [newPipeFlag], -1 ;New pipe active flag set?
-    jnz .newPipe
-    test byte [pipeNumber], -1
+    test byte [pipeFlag], -1
     retz
-;Here for final pipe cleanup
-    mov rdx, [oldPipe]
-    mov eax, 4100h
-    int 41h
-    jc pipeFailure
-    mov byte [rdx], 0   ;Invalidate the path too
-;Now place STDIN handle back where it belongs
-    xor ecx, ecx    ;Close STDIN and duplicate ebx in it
-    movzx ebx, word [pipeSTDIN]
+;Pipe processing here
+;We handle stdin, closing the redir if it is and deleting
+; the redir file.
+;Then we handle stdout, moving the redir to stdin.
+    cmp word [pipeSTDIN], -1
+    je .pipeNostdin
+    ;We close the handle first and delete the file.
+    movzx ebx, word [pipeSTDIN] 
+    xor ecx, ecx    ;DUP into STDIN closing the redir
     mov eax, 4600h
     int 41h
     jc pipeFailure
-    mov eax, 3E00h  ;Now close the duplicate in ebx
+    mov eax, 3E00h  ;Close the copy
     int 41h
     jc pipeFailure
-    mov word [pipeSTDIN], -1
-    mov byte [pipeNumber], 0   ;Make the pipe number 0
-    return
-.newPipe:
-    cmp byte [pipeNumber], 2 ;Do we have two pipes active?
-    jne .noClose    ;If not, skip deleting old pipe
-    ;Here to delete the old pipe file
-    mov rdx, [oldPipe]
-    mov eax, 4100h
+    mov rdx, qword [oldPipe]    ;Get the ptr to the filename
+    mov eax, 4100h  ;Delete the file!
     int 41h
     jc pipeFailure
-    mov byte [rdx], 0   ;Overwrite the first byte of pathname with a zero
-    dec byte [pipeNumber]   ;Decrement the number of active pipes
-.noClose:
-    mov rax, qword [newPipe]   ;Transfer the name pointer
-    mov qword [oldPipe], rax
-    mov ebx, 1  ;Now move STDOUT to STDIN
-    xor ecx, ecx
+.pipeNostdin:
+    cmp word [pipeSTDOUT], -1   ;If no stdout redir, exit now
+    rete
+;Handle now moving STDOUT to STDIN
     mov eax, 4600h
+    xor ecx, ecx    ;DUP STDOUT into STDIN
+    mov ebx, ecx
+    inc ebx ;ebx = 1, ecx = 0
     int 41h
     jc pipeFailure
-    mov eax, 3E00h  ;And CLOSE STDOUT as it stands
-    int 41h
-;Now we reset STDOUT back to what it was initially.
-    movzx ebx, word [pipeSTDOUT]
-    mov ecx, 1
+    movzx ecx, word [pipeSTDOUT]
     mov eax, 4600h
-    int 41h
-    jc pipeFailure
-;And now close the copy
-    mov eax, 3E00h
-    int 41h
-    jc pipeFailure
-    mov byte [newPipeFlag], 0  ;Indicate we are done with pipe command
-    mov word [pipeSTDOUT], -1
+    mov rdx, qword [newPipe]    ;Move the pathname pointer
+    mov qword [oldPipe], rdx
+    ;Now we dup the handle into STDIN, and close STDOUT 
+    mov word [pipeSTDOUT], -1   ;Set this to free for next use
     return
 
 .redirInClear:
@@ -600,6 +584,7 @@ checkAndSetupRedir:
     xor al, al
     jmp .redirExit
 .pipeSetup:
+;We only need to setup STDOUT redirection to the pipe file
     lea rdx, pipe1Filespec
     cmp byte [rdx], 0
     jz .pathFound
@@ -608,35 +593,30 @@ checkAndSetupRedir:
     jnz .pipeError
 .pathFound:
     mov qword [newPipe], rdx    ;Use this as the newPipe path
+    mov eax, 4500h  ;Now DUP STDOUT
+    mov ebx, 1
+    int 41h
+    jc .pipeError
+    mov word [pipeSTDOUT], ax   ;Save the copy of the handle
     call getCurrentDrive    ;Get current drive in al (0 based number)
     add al, "A"
     mov ebx, 005C3A00h  ;0,"\:",0
     mov bl, al  ;Move the drive letter into low byte of ebx
+    mov dword [rdx], ebx    ;Put the \ terminated path
     mov ecx, dirHidden  ;Hidden attributes
     mov eax, 5A00h  ;Create a temporary file
     int 41h
     jc .pipeError
     ;AX has the handle for this file now, this will become STDOUT
     ;If this is the first pipe, we want to save a copy of this handle
-    test byte [pipeNumber], -1
-    jnz .notFirstPipe
-    movzx edx, ax    ;Save this handle for a minute in dx
-    ;Now DUP STDOUT to save for later
-    mov eax, 4500h
-    mov ebx, 1  ;Duplicate STDOUT
+    movzx ebx, ax   ;Clone new handle into STDOUT
+    mov ecx, 1
+    mov eax, 4600h
     int 41h
     jc .pipeError
-    ;Save this handle in the variable
-    mov word [pipeSTDOUT], ax   ;Save this pipe number
-    mov eax, edx    ;Get the temp file handle back in eax
-.notFirstPipe:
-    movzx ebx, ax
-    mov ecx, 1  ;Close STDOUT and move bx into it
-    mov eax, 4600h  ;DUPlicate temp file handle into STDOUT
+    mov eax, 3E00h  ;Now close the original copy of the handle (in bx)
     int 41h
     jc .pipeError
-    mov byte [newPipeFlag], -1  ;Mark we have a new pipe active
-    inc byte [pipeNumber]   ;Start a new pipe
     xor al, al
     stc
     pop rdi
