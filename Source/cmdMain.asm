@@ -26,7 +26,7 @@ applicationReturn:  ;Return point from a task, all regs preserved
     mov qword [r8 + psp.oldInt42h], rdx
     mov eax, 2542h
     int 41h
-    test byte [pipeNumber], -1
+    test byte [pipeFlag], -1
     jnz commandMain.pipeProceed ;Skip the handle closing when pipe active
     call cleanUpRedir   ;Clean up redirection once we are done
 ;Close all handles from 5->MAX
@@ -63,14 +63,14 @@ commandMain:
     lea rdi, cmdBuffer
     mov ecx, cmdBufferL   ;Straight up copy the buffer over
     rep movsb
-    xor eax, eax
-    mov word [cmdStartOff], ax  ;Clear start and end Off positions
 .pipeLoop:
     call parseInput
     call doCommandLine
 .pipeProceed:
     call cleanUpRedir
-    test byte [pipeNumber], -1  ;If we have any pipes active, we proceed here
+    mov rax, qword [cmdEndPtr]
+    mov qword [cmdStartPtr], rax
+    test byte [pipeFlag], -1  ;If we have any pipes active, we proceed here
     jz .inputMain
     call clearCommandState  ;Else, clear the command state and start again
     jmp short .pipeLoop
@@ -84,10 +84,14 @@ parseInput:
 ;EndOff is set up before entering this part
 ;Copies a nicely formatted version of the input command line
 ; without any redirections to psp.dta
-    lea rsi, qword [cmdBuffer + 2]  ;Goto the command buffer
+    ;lea rsi, qword [cmdBuffer + 2]  ;Goto the command buffer
     lea rdi, qword [r8 + cmdLine]   ;Go to the command line in the psp
-    movzx ebx, byte [cmdEndOff] ;Get the old end offset
-    add rsi, rbx    ;Move rsi to the start of this new command
+    mov rsi, qword [cmdStartPtr]
+    test rsi, rsi
+    jnz .notNewCmd
+    lea rsi, [cmdBuffer + 1]    ;Goto command buffer - 1
+.notNewCmd:
+    inc rsi ;Goto first char in new buffer since rsi points to terminating char
     call skipSpaces ;Skip any preceeding spaces
     lodsw   ;Get the first two chars into ax
     mov word [cmdDrvSpec], ax ;Store these chars as if they are the drvspec
@@ -150,12 +154,8 @@ parseInput:
     lea rdi, qword [rdi - 1]    ;Point back at the inserted terminating null
     jnc .cmdLineProcess
 .exit:
-    lea rbx, cmdBuffer
     dec rsi
-    sub rsi, rbx    ;Get the offset into the command line
-    mov ebx, esi
-    mov byte [cmdEndOff], bl    ;Store the offset to the terminating char
-    ;inc byte [cmdEndOff] ;Goto first char past terminating char for next bit
+    mov qword [cmdEndPtr], rsi
     mov al, CR
     stosb   ;Store the terminating CR in the psp command line
     ;Now compute the command line length 
@@ -225,7 +225,7 @@ parseInput:
     return
 
 doCommandLine:
-    lea rsi, qword [cmdBuffer + 2]  ;Goto the command buffer
+    lea rsi, qword [r8 + cmdLine]
     lea rdi, cmdFcb
     mov eax, 2901h  ;Skip leading blanks
     int 41h
@@ -388,7 +388,7 @@ redirPipeFailureCommon:
     movzx ebx, word [pipeSTDOUT]
     call .closeHandle
     mov word [pipeSTDOUT], -1
-    mov word [newPipeFlag], 0  ;Cover the pipe number too
+    mov word [pipeFlag], 0  ;Cover the pipe number too
     lea rdx, qword [pipe1Filespec]
     cmp byte [rdx], 0
     jz .checkOld
@@ -423,8 +423,15 @@ cleanUpRedir:
     jnz .redirInClear
     test byte [redirOut], -1
     jnz .redirOutClear
-    test byte [pipeFlag], -1
-    retz
+    movzx eax, word [pipeSTDIN]
+    movzx ebx, word [pipeSTDOUT]
+    shl ebx, 10h
+    or eax, ebx
+    cmp eax, -1
+    jne .pipe
+    mov byte [pipeFlag], 0  ;Clear the flag
+    return
+.pipe:
 ;Pipe processing here
 ;We handle stdin, closing the redir if it is and deleting
 ; the redir file.
@@ -444,6 +451,7 @@ cleanUpRedir:
     mov eax, 4100h  ;Delete the file!
     int 41h
     jc pipeFailure
+    mov word [pipeSTDIN], -1    ;This has been closed now
 .pipeNostdin:
     cmp word [pipeSTDOUT], -1   ;If no stdout redir, exit now
     rete
@@ -454,8 +462,14 @@ cleanUpRedir:
     inc ebx ;ebx = 1, ecx = 0
     int 41h
     jc pipeFailure
-    movzx ecx, word [pipeSTDOUT]
-    mov eax, 4600h
+
+    movzx ebx, word [pipeSTDOUT]    ;Return the OG handle back to STDOUT
+    mov word [pipeSTDIN], bx    ;First back it up at STDIN
+
+    inc ecx
+    mov eax, 4600h  ;ebx = pipeSTDOUT, ecx = 1
+    int 41h
+    jc pipeFailure
     mov rdx, qword [newPipe]    ;Move the pathname pointer
     mov qword [oldPipe], rdx
     ;Now we dup the handle into STDIN, and close STDOUT 
@@ -617,6 +631,7 @@ checkAndSetupRedir:
     mov eax, 3E00h  ;Now close the original copy of the handle (in bx)
     int 41h
     jc .pipeError
+    mov byte [pipeFlag], -1 ;Set the pipe flag up!
     xor al, al
     stc
     pop rdi

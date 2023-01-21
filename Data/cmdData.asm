@@ -18,8 +18,8 @@ currDirStr  db fullDirPathZL dup (0) ;Current Directory String
 
 
 cmdLineStatePtr:
-cmdStartOff db 0    ;Offset to the first char for this command (may be a space)
-cmdEndOff   db 0    ;Offset to the terminating char for this command (0Dh or |)
+cmdStartPtr dq 0    ;Ptr to the first char for this command (may be a space)
+cmdEndPtr   dq 0    ;Ptr to the terminating char for this command (0Dh or |)
 pipeFlag    db 0    ;If set, we fired up a pipe for this command line
 pipeSTDIN   dw -1   ;The handle to replace STDIN with once all piping complete
 pipeSTDOUT  dw -1   ;The handle to replace STDOUT with once all piping complete
