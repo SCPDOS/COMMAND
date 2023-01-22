@@ -494,6 +494,12 @@ copy:
     int 41h
     jc badParamError
     mov word [sourceHdl], ax
+
+    mov eax, 4400h  ;Get device info in dx
+    movzx ebx, ax   ;For bx
+    int 41h
+    mov word [srcHdlInfo], dx   ;Store information here
+
     lea rdx, destPath
     mov eax, 3C00h  ;Create the file
     xor ecx, ecx    ;No file attributes
@@ -511,19 +517,24 @@ copy:
     test eax, eax
     jz .okExit
     add esi, eax
-    ;mov eax, EOF
-    ;mov rdi, rdx
-    ;mov ecx, 128
-    ;repne scasb ;Scan for an EOF
-    ;mov eax, 128
-    ;sub eax, ecx    ;If an EOF found, only print up to it
     mov ecx, eax
     movzx ebx, word [destHdl]
     mov ah, 40h ;Write
     int 41h
     jc .badExit
-    cmp eax, 128    ;Change this for writing from Char devices in ASCII mode
-    jnb .copyLoop
+    cmp eax, 128    ;Did we read 128 chars?
+    je .copyLoop
+    ;If not char dev, exit
+    test word [srcHdlInfo], 80h ;Char dev bit set?
+    jz .okExit
+    ;Is handle in cooked or binary mode?
+    test word [srcHdlInfo], 20h
+    jnz .okExit
+    ;Here the char dev must be in cooked mode. Check if the last char was ^Z
+    or eax, eax ;Clear upper bits in eax
+    lea rdi, qword [rdx + rax - 1]  ;Point to the last char in the buffer
+    cmp byte [rdi], EOF ;Was this EOF?
+    jne .copyLoop   ;Jump if not
 .okExit:
     call .leaveCopyClose
     lea rdx, crlf
