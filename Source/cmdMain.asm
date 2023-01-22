@@ -391,7 +391,7 @@ redirPipeFailureCommon:
     movzx ebx, word [pipeSTDOUT]
     call .closeHandle
     mov word [pipeSTDOUT], -1
-    mov word [pipeFlag], 0  ;Cover the pipe number too
+    mov byte [pipeFlag], 0  ;Cover the pipe number too
     lea rdx, qword [pipe1Filespec]
     cmp byte [rdx], 0
     jz .checkOld
