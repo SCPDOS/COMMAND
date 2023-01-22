@@ -495,8 +495,8 @@ copy:
     jc badParamError
     mov word [sourceHdl], ax
 
-    mov eax, 4400h  ;Get device info in dx
     movzx ebx, ax   ;For bx
+    mov eax, 4400h  ;Get device info in dx
     int 41h
     mov word [srcHdlInfo], dx   ;Store information here
 

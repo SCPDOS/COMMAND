@@ -421,10 +421,6 @@ redirPipeFailureCommon:
 
 cleanUpRedir:
 ;Cleans up the redir stuff after we are done.
-    test byte [redirIn], -1
-    jnz .redirInClear
-    test byte [redirOut], -1
-    jnz .redirOutClear
     movzx eax, word [pipeSTDIN]
     movzx ebx, word [pipeSTDOUT]
     shl ebx, 10h
@@ -432,7 +428,7 @@ cleanUpRedir:
     cmp eax, -1
     jne .pipe
     mov byte [pipeFlag], 0  ;Clear the flag
-    return
+    jmp .redirInClear   ;If no piping, skip
 .pipe:
 ;Pipe processing here
 ;We handle stdin, closing the redir if it is and deleting
@@ -457,7 +453,7 @@ cleanUpRedir:
     mov word [pipeSTDIN], -1    ;This has been closed now
 .pipeNostdin:
     cmp word [pipeSTDOUT], -1   ;If no stdout redir, exit now
-    rete
+    je .redirInClear
 ;Duplicate STDIN to save across pipe
     mov eax, 4500h
     xor ebx, ebx    ;Set ebx to STDIN
@@ -495,9 +491,12 @@ cleanUpRedir:
     mov rdx, qword [newPipe]    ;Move the pathname pointer
     mov qword [oldPipe], rdx
     mov word [pipeSTDOUT], -1   ;Set this to free for next use
-    return
 
 .redirInClear:
+;Check redir in
+    test byte [redirIn], -1
+    jz .redirOutClear
+
     movzx ebx, word [redirSTDIN]    ;Put this file back to STDIN
     xor ecx, ecx    ;Duplicate original STDIN into CX (into STDIN position)
     mov eax, 4600h  ;This closes the redir file in the process
@@ -508,8 +507,11 @@ cleanUpRedir:
     jc redirFailure
     mov word [redirSTDIN], -1  ;Replace the file handle with -1
     mov byte [redirIn], 0   ;Clear the flag
-    return
 .redirOutClear:
+;Now check Redir Out
+    test byte [redirOut], -1
+    retz    ;Return if not set
+
     movzx ebx, word [redirSTDOUT]    ;Put this file back to STDOUT
     mov ecx, 1    ;Duplicate original STDOUT into CX (into STDOUT position)
     mov eax, 4600h  ;This closes the redir file in the process
