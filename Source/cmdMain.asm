@@ -53,9 +53,9 @@ commandMain:
     int 41h
     call printCRLF  ;Note we have accepted input
 
-;First check we had something typed in of length greater than 1
+;First check we had something typed in of length greater than 0
 ;Must be greater than 0 as executable commands must have extension and filename
-    cmp byte [inBuffer + 1], 1  ;Check input length valid
+    cmp byte [inBuffer + 1], 0  ;Check input length valid
     je .dfltErrExit
     jb .inputMain
     ;Copy over the input text

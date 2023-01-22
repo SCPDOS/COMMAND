@@ -1418,9 +1418,9 @@
     53 00000E62 CD41                <1>     int 41h
     54 00000E64 E8E9180000          <1>     call printCRLF  ;Note we have accepted input
     55                              <1> 
-    56                              <1> ;First check we had something typed in of length greater than 1
+    56                              <1> ;First check we had something typed in of length greater than 0
     57                              <1> ;Must be greater than 0 as executable commands must have extension and filename
-    58 00000E69 803DAEF2FFFF01      <1>     cmp byte [inBuffer + 1], 1  ;Check input length valid
+    58 00000E69 803DAEF2FFFF00      <1>     cmp byte [inBuffer + 1], 0  ;Check input length valid
     59 00000E70 7444                <1>     je .dfltErrExit
     60 00000E72 72D3                <1>     jb .inputMain
     61                              <1>     ;Copy over the input text
