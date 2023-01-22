@@ -226,6 +226,9 @@ parseInput:
 
 doCommandLine:
     lea rsi, qword [r8 + cmdLine]
+    ;The following check accounts for the end of a piped command
+    cmp byte [rsi], CR  ;If the first char is a CR, exit the pipe loop
+    rete    ;Do not attempt to execute if the first char is a CR
     lea rdi, cmdFcb
     mov eax, 2901h  ;Skip leading blanks
     int 41h
@@ -418,7 +421,6 @@ redirPipeFailureCommon:
 
 cleanUpRedir:
 ;Cleans up the redir stuff after we are done.
-    breakpoint
     test byte [redirIn], -1
     jnz .redirInClear
     test byte [redirOut], -1
@@ -451,28 +453,47 @@ cleanUpRedir:
     mov eax, 4100h  ;Delete the file!
     int 41h
     jc pipeFailure
+    mov byte [rdx], 0           ;Mark this buffer as free
     mov word [pipeSTDIN], -1    ;This has been closed now
 .pipeNostdin:
     cmp word [pipeSTDOUT], -1   ;If no stdout redir, exit now
     rete
-;Handle now moving STDOUT to STDIN
+;Duplicate STDIN to save across pipe
+    mov eax, 4500h
+    xor ebx, ebx    ;Set ebx to STDIN
+    int 41h
+    jc pipeFailure
+    mov word [pipeSTDIN], ax    ;Save duplicate here
+
+;Now move STDOUT to STDIN, closing original STDIN in the process
     mov eax, 4600h
-    xor ecx, ecx    ;DUP STDOUT into STDIN
-    mov ebx, ecx
+    mov ecx, ebx    ;DUP STDOUT into STDIN
     inc ebx ;ebx = 1, ecx = 0
     int 41h
     jc pipeFailure
 
-    movzx ebx, word [pipeSTDOUT]    ;Return the OG handle back to STDOUT
-    mov word [pipeSTDIN], bx    ;First back it up at STDIN
-
-    inc ecx
+;Now return the original stdout to stdout
+    mov ecx, ebx
+    movzx ebx, word [pipeSTDOUT]
     mov eax, 4600h  ;ebx = pipeSTDOUT, ecx = 1
     int 41h
     jc pipeFailure
+
+;Now close the DUP'ed STDOUT
+    mov eax, 3E00h
+    int 41h
+    jc pipeFailure
+
+;Finally unwind STDIN to the beginning of the file
+    mov eax, 4200h  ;Seek from start of file
+    xor ebx, ebx    ;STDIN handle
+    mov ecx, ebx    ;Set high 32 bits
+    mov edx, ebx    ;Set low 32 bits
+    int 41h
+    jc pipeFailure  ;This should never happen
+
     mov rdx, qword [newPipe]    ;Move the pathname pointer
     mov qword [oldPipe], rdx
-    ;Now we dup the handle into STDIN, and close STDOUT 
     mov word [pipeSTDOUT], -1   ;Set this to free for next use
     return
 
@@ -576,7 +597,7 @@ checkAndSetupRedir:
     int 41h
     jc .redirError
 .fileExists:
-    mov ecx, 1    ;Close STDOUT and duplicate bx into it
+    mov ecx, 1      ;Close STDOUT and duplicate bx into it
     movzx ebx, ax   ;AX has the new handle for output
     mov eax, 4600h  ;DUP2
     int 41h
@@ -617,7 +638,7 @@ checkAndSetupRedir:
     mov ebx, 005C3A00h  ;0,"\:",0
     mov bl, al  ;Move the drive letter into low byte of ebx
     mov dword [rdx], ebx    ;Put the \ terminated path
-    mov ecx, dirHidden  ;Hidden attributes
+    mov ecx, 0;dirHidden  ;Hidden attributes
     mov eax, 5A00h  ;Create a temporary file
     int 41h
     jc .pipeError
@@ -653,6 +674,8 @@ copyCommandTailItemProgram:
     lodsb
     cmp al, CR
     je .endOfInput
+    cmp al, "|"
+    je .endOfInput
     call isALterminator
     jz .exit
     cmp al, byte [pathSep]
@@ -676,9 +699,11 @@ copyCommandTailItem:
 ;Input: rsi = Start of the item to copy
 ;       rdi = Location for copy
 ;Output: Sentence copied with a null terminator inserted.
-; If CF=CY, embedded CR encountered
+; If CF=CY, embedded CR or Pipe encountered
     lodsb
     cmp al, CR
+    je .endOfInput
+    cmp al, "|"
     je .endOfInput
     call isALterminator
     jz .exit
