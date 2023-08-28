@@ -637,7 +637,8 @@ date:
     mov ah, 09h
     int 41h
 
-    lea rdx, qword [r8 + cmdLineCnt]
+    lea rdx, inBuffer
+    mov byte [rdx], 126 ;Enter a string of up to 126 chars in length
     mov ah, 0Ah
     int 41h
     push rdx
@@ -691,7 +692,8 @@ time:
     mov ah, 09h
     int 41h
 
-    lea rdx, qword [r8 + cmdLineCnt]
+    lea rdx, inBuffer
+    mov byte [rdx], 126 ;Enter a string of up to 126 chars in length
     mov ah, 0Ah
     int 41h
     push rdx

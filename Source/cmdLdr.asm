@@ -67,7 +67,7 @@ cmdLdr:
     mov al, 19h ;Get current Drive
     int 41h
     add al, "A"
-    mov byte [masterEnv], al
+    mov byte [masterEnv.cspec], al
 ;Set Int 4Eh up
     lea rdx, int4Eh
     mov eax, 254Eh ;Set this as Int 4Eh

@@ -12,8 +12,13 @@ Output file:  ./Binaries/COMMAND.COM
 
 Vstart            Start             Stop              Length    Class     Name
                0                 0                 0  00000000  progbits  .text
+<<<<<<< HEAD
                0                 0              30CE  000030CE  progbits  .data
             30CE              30CE              32E2  00000214  progbits  transient
+=======
+               0                 0              3080  00003080  progbits  .data
+            3080              3080              3294  00000214  progbits  transient
+>>>>>>> 840a70bb66f25aa62d68a4f2f9c7198a337409ff
 
 -- Sections (detailed) --------------------------------------------------------
 
@@ -31,7 +36,11 @@ vfollows:  not defined
 ---- Section .data ------------------------------------------------------------
 
 class:     progbits
+<<<<<<< HEAD
 length:                30CE
+=======
+length:                3080
+>>>>>>> 840a70bb66f25aa62d68a4f2f9c7198a337409ff
 start:                    0
 align:                    1
 follows:   not defined
@@ -43,10 +52,17 @@ vfollows:  not defined
 
 class:     progbits
 length:                 214
+<<<<<<< HEAD
 start:                 30CE
 align:                    1
 follows:   .data
 vstart:                30CE
+=======
+start:                 3080
+align:                    1
+follows:   .data
+vstart:                3080
+>>>>>>> 840a70bb66f25aa62d68a4f2f9c7198a337409ff
 valign:    not defined
 vfollows:  not defined
 
@@ -545,6 +561,7 @@ Real              Virtual           Name
               C2                C2  cmdFcb
               D2                D2  cmdFFBlock
               FD                FD  launchBlock
+<<<<<<< HEAD
              11D               11D  cmdTail
              19D               19D  inBuffer
              21D               21D  cmdBuffer
@@ -1094,10 +1111,553 @@ Real              Virtual           Name
             30A4              30A4  endOfAllocNoMaster
             30A4              30A4  masterEnv
             30CE              30CE  endOfAlloc
+=======
+             11D               11D  inBuffer
+             19D               19D  cmdBuffer
+             21D               21D  cmdPathSpec
+             26C               26C  fcbCmdSpec
+             277               277  cmdSpec
+             284               284  cmdName
+             292               292  rdrInFilespec
+             2E1               2E1  rdrOutFilespec
+             330               330  pipe1Filespec
+             37F               37F  pipe2Filespec
+             3CE               3CE  newPipe
+             3D6               3D6  oldPipe
+             3DE               3DE  searchSpec
+             45E               45E  dirPrnType
+             45F               45F  dirLineCtr
+             460               460  dirFileCtr
+             461               461  dirDrv
+             462               462  dirOldCWD
+             4E2               4E2  dirPathArg
+             562               562  dirSrchPat
+             56A               56A  dirSPExt
+             56E               56E  volLblSpc
+             57B               57B  volPathBuf
+             582               582  td1
+             583               583  td2
+             584               584  td3
+             585               585  td4
+             586               586  sourcePath
+             606               606  destPath
+             686               686  sourceHdl
+             688               688  destHdl
+             68A               68A  srcHdlInfo
+             68C               68C  copyBuffer
+             70C               70C  functionTable
+             7BE               7BE  crlf
+             7C1               7C1  crlf2
+             7C6               7C6  badBat
+             7DD               7DD  needBat
+             81B               81B  badCmd
+             836               836  dupName
+             84D               84D  fnfMsg
+             85E               85E  noSpace
+             878               878  noEnvSpace
+             893               893  fulRootDir
+             8A9               8A9  noSelfCopy
+             8CD               8CD  filLostErr
+             8F7               8F7  copyOk
+             909               909  dirOk
+             913               913  bytesOk
+             921               921  dirLbl
+             92A               92A  badDrv
+             948               948  pauseMes
+             967               967  badParm
+             97B               97B  dayName
+             990               990  badDate
+             99F               99F  curDate
+             9B0               9B0  newDate
+             9C2               9C2  usDate
+             9CF               9CF  ukDate
+             9DC               9DC  jpDate
+             9E9               9E9  badTime
+             9F8               9F8  curTime
+             A09               A09  newTime
+             A1C               A1C  ynMes
+             A31               A31  dosVer
+             A43               A43  volMes
+             A55               A55  volOk
+             A5A               A5A  volNo
+             A68               A68  badDir
+             A7C               A7C  badMD
+             A99               A99  badRD
+             AD0               AD0  dirMain
+             AE0               AE0  noPath
+             AE9               AE9  badDrvSrch
+             B08               B08  badDev
+             B19               B19  badLbl
+             B2B               B2B  syntaxErr
+             B3A               B3A  forNest
+             B52               B52  pipeErr
+             B78               B78  binDevErr
+             B9F               B9F  offMes
+             BA5               BA5  onMes
+             BAA               BAA  breakIs
+             BB4               BB4  verifyIs
+             BBF               BBF  echoIs
+             BC8               BC8  badSpec
+             BE4               BE4  badArgs
+             C03               C03  devWriteErr
+             C1A               C1A  backSpace
+             C1E               C1E  memSys
+             C44               C44  memDOS
+             C6A               C6A  memApp
+             C90               C90  memHole
+             CB6               CB6  memFree
+             CDC               CDC  memByte
+             CE3               CE3  memBad0
+             D09               D09  memBad1
+             D23               D23  memBad2
+             D32               D32  memBad3
+             D42               D42  touchErr
+             D5A               D5A  pipeErrMsg
+             D71               D71  redirErrMsg
+             D84               D84  ansiCls
+             D88               D88  fourSpc
+             D8D               D8D  threeSpc
+             D91               D91  twoSpc
+             D94               D94  badOnOff
+             DAD               DAD  pathEVar
+             DB2               DB2  promptEVar
+             DB9               DB9  conName
+             DBD               DBD  commandStart
+             DD0               DD0  applicationReturn
+             E2E               E2E  applicationReturn.handleClose
+             E38               E38  commandMain
+             E47               E47  commandMain.inputMain
+             E89               E89  commandMain.pipeLoop
+             E93               E93  commandMain.pipeProceed
+             EB6               EB6  commandMain.dfltErrExit
+             EC6               EC6  parseInput
+             EE0               EE0  parseInput.notNewCmd
+             F1D               F1D  parseInput.cmdLineProcess
+             F22               F22  parseInput.redirFound
+             F3F               F3F  parseInput.arg1
+             F60               F60  parseInput.arg2
+             F8A               F8A  parseInput.argCommon
+             FA3               FA3  parseInput.exit
+             FE6               FE6  parseInput.keepSearching
+             FFA               FFA  parseInput.cmdStartFnd
+            1016              1016  parseInput.cmdGetChar
+            102C              102C  parseInput.nameLenFnd
+            105D              105D  ..@68._ret
+            105E              105E  doCommandLine
+            1068              1068  ..@70._base
+            10A3              10A3  ..@72._base
+            10A5              10A5  doCommandLine.badDrive
+            10B1              10B1  ..@73._ret
+            10B2              10B2  doCommandLine.noDriveSpecified
+            1108              1108  doCommandLine.fcbArgsDone
+            1150              1150  ..@74._ret
+            1151              1151  doCommandLine.executeInternal
+            1158              1158  doCommandLine.nextEntry
+            1194              1194  ..@75._ret
+            1195              1195  doCommandLine.gotoNextEntry
+            11A1              11A1  doCommandLine.dfltErrExit
+            11AC              11AC  ..@76._ret
+            11AD              11AD  checkExtensionExec
+            11C7              11C7  ..@78._base
+            11CE              11CE  ..@80._base
+            11D5              11D5  ..@82._base
+            11D8              11D8  ..@83._ret
+            11D9              11D9  redirFailure
+            11E7              11E7  pipeFailure
+            11F3              11F3  redirPipeFailureCommon
+            129B              129B  redirPipeFailureCommon.checkOld
+            12AE              12AE  redirPipeFailureCommon.pipeNamesComplete
+            12CB              12CB  ..@84._ret
+            12CC              12CC  redirPipeFailureCommon.closeHandle
+            12D2              12D2  ..@86._base
+            12DB              12DB  ..@87._ret
+            12DC              12DC  cleanUpRedir
+            1302              1302  cleanUpRedir.pipe
+            1350              1350  cleanUpRedir.pipeNostdin
+            13CF              13CF  cleanUpRedir.redirInClear
+            140B              140B  cleanUpRedir.redirOutClear
+            1412              1412  ..@89._base
+            1414              1414  ..@90._ret
+            1415              1415  ..@89.a
+            144B              144B  ..@91._ret
+            144C              144C  checkAndSetupRedir
+            145E              145E  checkAndSetupRedir.redirExit
+            145F              145F  ..@92._ret
+            1460              1460  checkAndSetupRedir.inputRedir
+            14CD              14CD  checkAndSetupRedir.outputRedir
+            14E2              14E2  checkAndSetupRedir.notDouble
+            1536              1536  checkAndSetupRedir.fileExists
+            1577              1577  checkAndSetupRedir.dontAppend
+            1585              1585  checkAndSetupRedir.pipeSetup
+            159D              159D  checkAndSetupRedir.pathFound
+            15FC              15FC  ..@93._ret
+            15FD              15FD  checkAndSetupRedir.pipeError
+            1603              1603  checkAndSetupRedir.redirError
+            1609              1609  copyCommandTailItemProgram
+            162C              162C  copyCommandTailItemProgram.endOfInput
+            1632              1632  ..@94._ret
+            1633              1633  copyCommandTailItemProgram.exit
+            1636              1636  ..@95._ret
+            1637              1637  copyCommandTailItem
+            1662              1662  copyCommandTailItem.pathSep
+            1682              1682  copyCommandTailItem.endOfInput
+            1688              1688  ..@96._ret
+            1689              1689  copyCommandTailItem.exit
+            168C              168C  ..@97._ret
+            168D              168D  int4Eh
+            16C1              16C1  noSelfCopyError
+            16CA              16CA  badParamError
+            16D3              16D3  badDriveError
+            16DC              16DC  badArgError
+            16E5              16E5  badFileError
+            16EE              16EE  badDupFnf
+            16F7              16F7  badDirError
+            16FE              16FE  badCmn
+            1706              1706  ..@98._ret
+            1707              1707  dir
+            1755              1755  dir.switchScan
+            1769              1769  dir.notWideSw
+            177A              177A  dir.switchScanDone
+            178D              178D  dir.lp
+            17B3              17B3  dir.notSwitch
+            17CA              17CA  dir.nameCopy
+            17DC              17DC  dir.terminateCopy
+            17E1              17E1  dir.eocReached
+            17E4              17E4  dir.eocNoNull
+            1821              1821  dir.currentDrv
+            182C              182C  dir.dirPrintVol
+            184A              184A  dir.printCWD
+            18AA              18AA  ..@99._ret
+            18AB              18AB  dir.searchForFile
+            18C3              18C3  dir.noAddSlash
+            18E2              18E2  dir.findNext
+            18ED              18ED  dir.dirNoMoreFiles
+            1901              1901  dir.dirNoEndNewLine
+            195E              195E  ..@100._ret
+            195F              195F  dir.dirPrintFileData
+            1966              1966  ..@102._base
+            19DB              19DB  dir.dirPrintNotDir
+            19F8              19F8  dir.dirPrintFileSizePrep
+            1A10              1A10  dir.dirPrintFileSize
+            1A11              1A11  dir.dirPrintFileSizeLoop
+            1A2A              1A2A  dir.dirPrintFileDT
+            1A62              1A62  dir.widePrint
+            1A6D              1A6D  dir.dirPrintNameExit
+            1A80              1A80  ..@104._base
+            1A82              1A82  ..@105._ret
+            1A83              1A83  ..@104.a
+            1AA4              1AA4  ..@106._ret
+            1AA5              1AA5  chdir
+            1AAE              1AAE  chdir.printCWD
+            1AB8              1AB8  ..@107._ret
+            1AB9              1AB9  chdir.printDiskCWD
+            1AFA              1AFA  ..@108._ret
+            1AFB              1AFB  chdir.changeDir
+            1B30              1B30  chdir.getFQPath
+            1B4C              1B4C  ..@109._ret
+            1B4D              1B4D  mkdir
+            1B88              1B88  ..@111._base
+            1B8A              1B8A  mkdir.badMake
+            1B98              1B98  ..@112._ret
+            1B99              1B99  rmdir
+            1BD4              1BD4  ..@114._base
+            1BD6              1BD6  rmdir.badRemove
+            1BE4              1BE4  ..@115._ret
+            1BE5              1BE5  copy
+            1C26              1C26  copy.copyName1
+            1C3C              1C3C  copy.endOfName1
+            1C66              1C66  copy.copyName2
+            1C78              1C78  copy.endOfName2
+            1CE8              1CE8  copy.copyLoop
+            1D3C              1D3C  copy.okExit
+            1D68              1D68  ..@116._ret
+            1D69              1D69  copy.sameFilename
+            1D73              1D73  copy.leaveCopyClose
+            1D8F              1D8F  ..@117._ret
+            1D90              1D90  copy.badExit
+            1DA5              1DA5  copy.skipSource
+            1DC3              1DC3  erase
+            1DEB              1DEB  ..@118._ret
+            1DEC              1DEC  date
+            1EB1              1EB1  ..@120._base
+            1EB3              1EB3  ..@121._ret
+            1EB4              1EB4  ..@120.a
+            1EB4              1EB4  ..@122._ret
+            1EB5              1EB5  time
+            1F4C              1F4C  ..@124._base
+            1F4E              1F4E  ..@125._ret
+            1F4F              1F4F  ..@124.a
+            1F4F              1F4F  ..@126._ret
+            1F50              1F50  ctty
+            1F90              1F90  ctty.noDrive
+            1FDA              1FDA  ..@127._ret
+            1FDB              1FDB  ctty.badCharDev
+            1FEA              1FEA  ..@128._ret
+            1FEB              1FEB  cls
+            200E              200E  cls.biosCheck
+            2021              2021  cls.biosConfirmed
+            2044              2044  ..@129._ret
+            2045              2045  cls.doAnsi
+            2053              2053  cls.ansiLp
+            205C              205C  ..@130._ret
+            205D              205D  break
+            2092              2092  ..@131._ret
+            2093              2093  break.argumentProvided
+            20BF              20BF  break.maybeOn
+            20CA              20CA  break.setBreak
+            20D1              20D1  ..@132._ret
+            20D2              20D2  break.badOnOff
+            20DD              20DD  ..@133._ret
+            20DE              20DE  verify
+            2113              2113  ..@134._ret
+            2114              2114  verify.argumentProvided
+            2140              2140  verify.maybeOn
+            214A              214A  verify.setVerify
+            214E              214E  ..@135._ret
+            214F              214F  verify.badOnOff
+            215A              215A  ..@136._ret
+            215B              215B  rename
+            219C              219C  rename.copyName1
+            21B2              21B2  rename.endOfName1
+            21E6              21E6  rename.copyName2
+            21F8              21F8  rename.endOfName2
+            2210              2210  ..@138._base
+            2212              2212  ..@139._ret
+            2213              2213  ..@138.a
+            2228              2228  touch
+            2256              2256  ..@140._ret
+            2257              2257  touch.touchError
+            2263              2263  truename
+            2298              2298  ..@141._ret
+            2299              2299  volume
+            22C0              22C0  volume.checkDriveLetter
+            22F5              22F5  volume.dirEP
+            232F              232F  volume.dirLblCopy
+            2339              2339  volume.dirLblSkipStore
+            233D              233D  volume.skipVolLbl
+            2377              2377  ..@142._ret
+            2378              2378  volume.volIDOk
+            23AB              23AB  ..@143._ret
+            23AC              23AC  version
+            23D2              23D2  ..@144._ret
+            23D3              23D3  version.printVersionNumber
+            23EF              23EF  ..@145._ret
+            23F0              23F0  memory
+            240C              240C  memory.sysvarsOK
+            241B              241B  memory.memLp
+            2429              2429  memory.validMCB
+            243F              243F  memory.notDOS
+            244E              244E  memory.notFree
+            245D              245D  memory.notHole
+            2460              2460  memory.gotoNext
+            246C              246C  memory.endOfWalk
+            24AD              24AD  memory.skipHole
+            251B              251B  ..@146._ret
+            251C              251C  memory.mcbPrintAmount
+            2529              2529  ..@147._ret
+            252A              252A  memory.badMCBFound
+            253A              253A  type
+            2583              2583  type.noDrive
+            25A6              25A6  type.lp
+            25CB              25CB  type.exit
+            25CF              25CF  ..@148._ret
+            25D0              25D0  type.exitBad
+            25D2              25D2  exit
+            25D9              25D9  ..@150._base
+            25E8              25E8  ..@152._base
+            2607              2607  ..@153._ret
+            2608              2608  launchChild
+            2647              2647  launchChild.noExt
+            266B              266B  launchChild.search
+            267F              267F  launchChild.moreSearch
+            268C              268C  launchChild.noMoreFiles
+            26A6              26A6  launchChild.launchexebat
+            26B5              26B5  launchChild.launchbat
+            26BA              26BA  launchChild.launch
+            26F8              26F8  launchChild.noExtCheckExt
+            2728              2728  ..@154._ret
+            2729              2729  launchChild.neceexe
+            2736              2736  ..@155._ret
+            2737              2737  launchChild.necebat
+            273C              273C  ..@157._base
+            2744              2744  ..@158._ret
+            2745              2745  launchChild.dfltErrExit
+            2750              2750  ..@159._ret
+            2751              2751  printCRLF
+            2766              2766  ..@160._ret
+            2767              2767  printDate
+            27B2              27B2  ..@161._ret
+            27B3              27B3  printDate.usDate
+            27F0              27F0  ..@162._ret
+            27F1              27F1  printDate.jpnDate
+            282E              282E  ..@163._ret
+            282F              282F  printDate.printFirst
+            283D              283D  printDate.skipSpace
+            284A              284A  ..@164._ret
+            284B              284B  printDate.printSecond
+            285B              285B  printDate.printYear
+            2878              2878  printDate.twoDigitYear
+            2888              2888  ..@165._ret
+            2889              2889  printTime
+            28A6              28A6  ..@166._ret
+            28A7              28A7  printTime.ampm
+            28C0              28C0  ..@167._ret
+            28C1              28C1  printTime.pm
+            28C6              28C6  printTime.pm2
+            28D6              28D6  ..@168._ret
+            28D7              28D7  printTime.printMinutes
+            28EB              28EB  printTime.printMinutesAlt
+            28FB              28FB  printTime.printHours
+            2909              2909  printTime.skipSpace
+            2916              2916  ..@169._ret
+            2917              2917  putVersionInPrompt
+            2944              2944  ..@170._ret
+            2945              2945  putEscInPrompt
+            2949              2949  putMoneyInPrompt
+            294D              294D  putEquInPrompt
+            2951              2951  putPipeInPrompt
+            2955              2955  putGTinPrompt
+            2959              2959  putLTinPrompt
+            295D              295D  putDriveInPrompt
+            2965              2965  outChar
+            2969              2969  ..@171._ret
+            296A              296A  putCWDInPrompt
+            29A8              29A8  ..@172._ret
+            29A9              29A9  BCDtoHex
+            29BD              29BD  BCDtoHex.bth
+            29C8              29C8  hexToBCD
+            29CE              29CE  hexToBCD.htb0
+            29DE              29DE  hexToBCD.htb1
+            29E5              29E5  printPackedBCD
+            29F8              29F8  printPackedBCD.upperNybble
+            2A06              2A06  printPackedBCD.lowerNybble
+            2A10              2A10  ..@173._ret
+            2A11              2A11  getCurrentDrive
+            2A15              2A15  ..@174._ret
+            2A16              2A16  strlen
+            2A24              2A24  ..@175._ret
+            2A25              2A25  findTerminatorOrEOC
+            2A43              2A43  findTerminatorOrEOC.endOfInput
+            2A49              2A49  ..@176._ret
+            2A4A              2A4A  findTerminatorOrEOC.exit
+            2A4D              2A4D  ..@177._ret
+            2A4E              2A4E  findTerminator
+            2A59              2A59  ..@178._ret
+            2A5A              2A5A  isALterminator
+            2A5C              2A5C  ..@180._base
+            2A60              2A60  ..@182._base
+            2A64              2A64  ..@184._base
+            2A68              2A68  ..@186._base
+            2A6C              2A6C  ..@188._base
+            2A70              2A70  ..@189._ret
+            2A71              2A71  findEndOfCommand
+            2A7C              2A7C  ..@190._ret
+            2A7D              2A7D  isALEndOfCommand
+            2A7F              2A7F  ..@192._base
+            2A83              2A83  ..@193._ret
+            2A84              2A84  skipSpaces
+            2A8C              2A8C  ..@195._base
+            2A8E              2A8E  skipSpaces.skip
+            2A93              2A93  printPrompt
+            2AA8              2AA8  ..@196._ret
+            2AA9              2AA9  printPrompt.validPrompt
+            2AA9              2AA9  ..@197._ret
+            2AAA              2AAA  clearCommandState
+            2AC4              2AC4  ..@198._ret
+            2AC5              2AC5  clearCommandLineState
+            2AE9              2AE9  ..@199._ret
+            2AEA              2AEA  asciiToFCB
+            2AFB              2AFB  asciiFilenameToFCB
+            2B18              2B18  asciiFilenameToFCB.processName
+            2B28              2B28  asciiFilenameToFCB.extSpace
+            2B31              2B31  asciiFilenameToFCB.ext
+            2B35              2B35  asciiFilenameToFCB.processExt
+            2B41              2B41  asciiFilenameToFCB.exitBadChar
+            2B43              2B43  asciiFilenameToFCB.exit
+            2B44              2B44  ..@200._ret
+            2B45              2B45  FCBToAsciiz
+            2B4C              2B4C  FCBToAsciiz.scanNameSpace
+            2B5F              2B5F  FCBToAsciiz.ext
+            2B6C              2B6C  FCBToAsciiz.validExt
+            2B76              2B76  FCBToAsciiz.scanExtSpace
+            2B81              2B81  FCBToAsciiz.exit
+            2B84              2B84  ..@201._ret
+            2B85              2B85  buildCommandPath
+            2BB6              2BB6  buildCommandPath.relativeGiven
+            2BC1              2BC1  buildCommandPath.relativeCommon
+            2BFA              2BFA  buildCommandPath.absoluteCurrent
+            2C15              2C15  buildCommandPath.absolutePath
+            2C1C              2C1C  buildCommandPath.buildPath
+            2C22              2C22  ..@202._ret
+            2C23              2C23  printDecimalWord
+            2C37              2C37  printDecimalWord.notZero
+            2C3E              2C3E  printDecimalWord.dpfb0
+            2C4E              2C4E  printDecimalWord.dpfb00
+            2C52              2C52  printDecimalWord.dpfb01
+            2C62              2C62  printDecimalWord.dpfb1
+            2C6E              2C6E  printDecimalWord.dpfb10
+            2C70              2C70  printDecimalWord.dpfb11
+            2C75              2C75  printDecimalWord.dpfb2
+            2C85              2C85  printDecimalWord.dpfb20
+            2C8B              2C8B  printDecimalWord.dpfb21
+            2C93              2C93  ..@203._ret
+            2C94              2C94  getDecimalWord
+            2C9D              2C9D  getDecimalWord.dpfb0
+            2CB3              2CB3  getDecimalWord.dpfb1
+            2CBA              2CBA  ..@204._ret
+            2CBB              2CBB  freezePC
+            2CC6              2CC6  freezePC.altEP
+            2CD1              2CD1  freezePC.lp
+            2CD6              2CD6  getFilenamePtrFromFilespec
+            2CEA              2CEA  getFilenamePtrFromFilespec.lp
+            2CED              2CED  ..@206._base
+            2D02              2D02  getFilenamePtrFromFilespec.pointFilename
+            2D05              2D05  ..@207._ret
+            2D06              2D06  getFilenamePtrFromFilespec.exitBad
+            2D07              2D07  getFilenamePtrFromFilespec.exit
+            2D07              2D07  ..@208._ret
+            2D08              2D08  copyArgumentToSearchSpec
+            2D0F              2D0F  copyArgumentToSearchSpec.copyPath
+            2D21              2D21  copyArgumentToSearchSpec.finishCopy
+            2D24              2D24  ..@209._ret
+            2D25              2D25  critErrorHandler
+            2D9F              2D9F  critErrorHandler.userInput
+            2DAA              2DAA  critErrorHandler.userAbort
+            2DB5              2DB5  critErrorHandler.userRetry
+            2DD0              2DD0  critErrorHandler.userIgnore
+            2DEB              2DEB  critErrorHandler.userFail
+            2E06              2E06  critErrorHandler.userMsgEnd
+            2E24              2E24  critErrorHandler.uip1
+            2E36              2E36  critErrorHandler.validInput
+            2E44              2E44  critErrorHandler.viFail
+            2E4F              2E4F  critErrorHandler.viIgnore
+            2E5A              2E5A  critErrorHandler.viRetry
+            2E63              2E63  critErrorHandler.cehExit
+            2E6A              2E6A  critErrorHandler.charError
+            2E76              2E76  critErrorHandler.ce1
+            2E84              2E84  critErrorHandler.errorMsgTable
+            2F6E              2F6E  critErrorHandler.drive
+            2F75              2F75  critErrorHandler.readmsg
+            2F84              2F84  critErrorHandler.writemsg
+            2F93              2F93  critErrorHandler.abortmsg
+            2F99              2F99  critErrorHandler.ignoremsg
+            2FA0              2FA0  critErrorHandler.retrymsg
+            2FA6              2FA6  critErrorHandler.failmsg
+            2FAB              2FAB  critErrorHandler.betweenMsg
+            2FAE              2FAE  critErrorHandler.endMsg
+            2FB1              2FB1  critErrorHandler.responses
+            2FB5              2FB5  int43h
+            2FD4              2FD4  int43h.exit
+            2FD8              2FD8  endOfAllocNoMaster
+            2FD8              2FD8  masterEnv
+            2FE6              2FE6  masterEnv.cspec
+            3080              3080  endOfAlloc
+>>>>>>> 840a70bb66f25aa62d68a4f2f9c7198a337409ff
 
 ---- Section transient --------------------------------------------------------
 
 Real              Virtual           Name
+<<<<<<< HEAD
             30CE              30CE  cmdLdr
             30E3              30E3  cmdLdr.okVersion
             3162              3162  cmdLdr.skipSwitch
@@ -1107,4 +1667,15 @@ Real              Virtual           Name
             3256              3256  initString
             328C              328C  initString2
             32CA              32CA  badVerStr
+=======
+            3080              3080  cmdLdr
+            3095              3095  cmdLdr.okVersion
+            3114              3114  cmdLdr.skipSwitch
+            3194              3194  cmdLdr.skipMaster
+            31BF              31BF  cmdLdr.noSwitches
+            31C6              31C6  cmdLdr.printInit
+            3208              3208  initString
+            323E              323E  initString2
+            327C              327C  badVerStr
+>>>>>>> 840a70bb66f25aa62d68a4f2f9c7198a337409ff
 
