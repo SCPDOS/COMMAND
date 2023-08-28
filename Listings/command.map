@@ -661,6 +661,7 @@ Real              Virtual           Name
              EAE               EAE  applicationReturn.handleClose
              EB8               EB8  commandMain
              EC7               EC7  commandMain.inputMain
+             ECC               ECC  commandMain.inputMain2
              F07               F07  commandMain.pipeLoop
              F11               F11  commandMain.pipeProceed
              F34               F34  commandMain.dfltErrExit

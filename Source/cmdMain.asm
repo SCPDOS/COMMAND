@@ -44,8 +44,9 @@ commandMain:
     cld ;Ensure stringops are done the right way
     mov byte [inBuffer], 80h    ;Reset the buffer length
 .inputMain:
-    call clearCommandLineState
     call printCRLF
+.inputMain2:
+    call clearCommandLineState
     call printPrompt
 
     lea rdx, inBuffer
@@ -56,7 +57,7 @@ commandMain:
 ;First check we had something typed in of length greater than 0
 ;Must be greater than 0 as executable commands must have extension and filename
     cmp byte [inBuffer + 1], 0  ;Check input length valid
-    je .inputMain
+    je .inputMain2
     ;Copy over the input text
     lea rsi, inBuffer
     lea rdi, cmdBuffer
