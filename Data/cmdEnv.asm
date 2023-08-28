@@ -7,4 +7,3 @@ masterEnv:  ;Yeet this is this is a child command processor, length 168 chars!
     db "_:\COMMAND.COM", 0
     db (165 - ($ - masterEnv)) dup (" ")    ;Pad the environment with spaces
     dw 0    ;End of environment marker
-    db 0    ;End of "program path section"

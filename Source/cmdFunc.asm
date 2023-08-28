@@ -1410,8 +1410,8 @@ launchChild:
     mov byte [rdx], cl  ;Finish by placing count 
 .launch:
     lea rbx, launchBlock
-    xor eax, eax
-    mov qword [rbx + execProg.pEnv], rax    ;Tell DOS to copy my current Env
+    mov rax, qword [r8 + psp.envPtr]    ;Get the env pointer
+    mov qword [rbx + execProg.pEnv], rax 
     lea rax, cmdTail
     mov qword [rbx + execProg.pCmdLine], rax
     lea rax, qword [r8 + fcb1]
@@ -1419,6 +1419,10 @@ launchChild:
     lea rax, qword [r8 + fcb2]
     mov qword [rbx + execProg.pfcb2], rax
     lea rdx, cmdPathSpec
+    mov rsi, rdx
+    mov rdi, rdx
+    mov eax, 6000h  ;Get TRUENAME
+    int 41h
     mov eax, 4B00h  ;Load and execute!
     int 41h
     jmp .dfltErrExit    ;If something goes wrong, error out
