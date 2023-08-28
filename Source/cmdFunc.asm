@@ -1357,23 +1357,60 @@ launchChild:
     test ebx, 1
     jz .launchexebat
     mov eax, ".COM"
-    jmp short .launch
+    jmp short .buildTail
 .launchexebat:
     test ebx, 2
     jz .launchbat
     mov eax, ".EXE"
-    jmp short .launch
+    jmp short .buildTail
 .launchbat:
 ;Temporary For BAT
     jmp .dfltErrExit
-.launch:
+.buildTail:
     stosd
-    xor al, al
+    xor eax, eax
     stosb   ;Store the terminating null
+;Now we build the cmdtail properly
+    lea rdi, cmdTail
+    mov rdx, rdi    ;Use rdx as the anchor pointer for cmdline
+    mov ecx, 128/8
+    rep stosq   ;Clear the buffer with nulls
+    lea rdi, qword [rdx + 1]    ;Mov rdi to start of cmdtail (not count)
+    lea rsi, qword [r8 + cmdLineCnt]
+    lodsb   ;Get into al the number of chars and move rsi to the tail proper
+    mov ah, al  ;Move the number into ah
+    xor ecx, ecx    ;Use ch for number of chars read, cl for chars copied
+    ;Skip the parsed command name
+.passName:
+    lodsb   ;Get the char in al
+    inc ch
+    cmp ch, 127     ;Exit condition (bad case)
+    je short .finishBuildingTailNoCR
+    cmp al, CR      ;If we get to the CR after name, no tail
+    je short .finishBuildingTail
+    cmp al, SPC
+    jne short .passName
+    ;Now we copy the name 
+    call skipSpaces ;Start by skipping spaces (there are no embedded tabs)
+    ;rsi points to the first non-space char
+.copyTail:
+    lodsb
+    cmp al, CR
+    je short .finishBuildingTail
+    stosb
+    inc cl
+    cmp cl, 127 ;Exit condition
+    jne .copyTail
+    jmp short .finishBuildingTailNoCR
+.finishBuildingTail:
+    stosb   ;Store the CR
+.finishBuildingTailNoCR:
+    mov byte [rdx], cl  ;Finish by placing count 
+.launch:
     lea rbx, launchBlock
     xor eax, eax
     mov qword [rbx + execProg.pEnv], rax    ;Tell DOS to copy my current Env
-    lea rax, qword [r8 + cmdLineCnt]
+    lea rax, cmdTail
     mov qword [rbx + execProg.pCmdLine], rax
     lea rax, qword [r8 + fcb1]
     mov qword [rbx + execProg.pfcb1], rax
@@ -1410,4 +1447,17 @@ launchChild:
     lea rdx, badCmd
     mov ah, 09h
     int 41h
+    return
+
+.cmdTailTerminatorCheck:
+;Input: al = Char to check
+;ZF=NZ -> Not a terminator
+;ZF=ZE and CF=NC -> SPC detected
+;ZF=ZE and CF=CY -> CR detected
+    clc     ;Clear CF 
+    cmp al, SPC
+    rete    ;ZF Set
+    cmp al, CR
+    retne   ;CF and ZF clear
+    stc     ;Set CF since ZF is already set
     return

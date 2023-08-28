@@ -56,8 +56,7 @@ commandMain:
 ;First check we had something typed in of length greater than 0
 ;Must be greater than 0 as executable commands must have extension and filename
     cmp byte [inBuffer + 1], 0  ;Check input length valid
-    je .dfltErrExit
-    jb .inputMain
+    je .inputMain
     ;Copy over the input text
     lea rsi, inBuffer
     lea rdi, cmdBuffer
