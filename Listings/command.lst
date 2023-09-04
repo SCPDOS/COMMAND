@@ -4177,7 +4177,7 @@
      2                              <1> 
      3                              <1> printCRLF:
      4 00002812 488D1525E0FFFF      <1>     lea rdx, crlf
-     5 00002819 BB02000000          <1>     mov ebx, 2
+     5 00002819 BB01000000          <1>     mov ebx, 1  ;Print on STDOUT
      6 0000281E B440                <1>     mov ah, 40h ;Print a new line
      7 00002820 B902000000          <1>     mov ecx, 2  ;Two chars to write
      8 00002825 CD41                <1>     int 41h

@@ -2,7 +2,7 @@
 
 printCRLF:
     lea rdx, crlf
-    mov ebx, 2
+    mov ebx, 1  ;Print on STDOUT
     mov ah, 40h ;Print a new line
     mov ecx, 2  ;Two chars to write
     int 41h
