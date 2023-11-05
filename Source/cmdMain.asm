@@ -276,17 +276,18 @@ doCommandLine:
     int 41h
     mov byte [arg2FCBret], al
 .fcbArgsDone:
-    lea rsi, cmdBuffer
-    lea rbx, cmdName
+    lea rbx, cmdBuffer
+    lea rsi, cmdName
     mov eax, 0AE00h ;Installable command check
     mov edx, 0FFFFh
     mov ch, -1
-    int 4Fh ;Return: al = -1 if this command a extension to COMMAND.COM
-            ;        al = 0  if the command should be executed as usual
+    int 4Fh ;Give the TSR time to prepare if it needs to
     mov eax, 0AE00h ;Installable command check
     mov edx, 0FFFFh
     xor ch, ch  ;Second call uses ch = 0
-    int 4Fh
+    int 4Fh ;Return: al = -1 if this command a extension to COMMAND.COM
+            ;        al = 0  if the command should be executed as usual
+    test al, al
     jz .executeInternal
     ;Here we execute externally and return to the prompt
     ; as if it was an internal execution
