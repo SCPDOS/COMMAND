@@ -999,7 +999,6 @@ truename:
     mov rbp, rdi    ;Have rbp point to the end of the string
     mov rsi, rdx    ;Point rsi to start of path
     lea rdi, searchSpec ;Store the path here
-    breakpoint
     mov eax, 6000h  ;TRUENAME
     int 41h
     jnc .writePath
