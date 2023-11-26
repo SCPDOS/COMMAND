@@ -986,12 +986,33 @@ touch:
 truename:
     test byte [arg1Flg], -1
     jz badArgError
-    call buildCommandPath
     ;Explicitly call Truename if we remove truename from this function
-    lea rdi, searchSpec
-    call strlen
-    dec ecx ;Don't print terminating null
-    lea rdx, searchSpec
+    movzx eax, byte [arg1Off]
+    lea rdx, cmdBuffer
+    add rdx, rax    ;Go to the start of the pathname
+    mov ecx, 120    ;Only search within 128 chars
+    mov al, CR     ;Search for the first space char after the argument
+    mov rdi, rdx
+    repne scasb
+    dec rdi ;Go back a char
+    mov byte [rdi], 0   ;Make ASCIIZ
+    mov rbp, rdi    ;Have rbp point to the end of the string
+    mov rsi, rdx    ;Point rsi to start of path
+    lea rdi, searchSpec ;Store the path here
+    breakpoint
+    mov eax, 6000h  ;TRUENAME
+    int 41h
+    jnc .writePath
+    cmp al, 2
+    je badFileError
+    jmp badParamError
+.writePath:
+    mov rdx, rdi    ;Print from the destination buffer
+    mov ecx, -1
+    xor al, al
+    repne scasb     ;Get the new len
+    not ecx         ;Invert bits and subtract by 1 (to drop trailing 0)
+    dec ecx
     mov ebx, 01
     mov ah, 40h
     int 41h
