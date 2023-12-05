@@ -79,4 +79,10 @@ functionTable:
     db 5, "TOUCH"
     dw touch - startLbl
 
+    db 4, "JOIN"
+    dw join - startLbl
+
+    db 5, "SUBST"
+    dw subst - startLbl
+
     db -1   ;End of table

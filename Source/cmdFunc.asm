@@ -982,6 +982,57 @@ touch:
 .touchError:
     lea rdx, touchErr
     jmp badCmn
+
+join:
+;Mock join command, to test join. Make an external command.
+;Mounts the A drive on C:\JOINTEST,0
+    test byte [.joinOn], -1
+    jz .okJoin
+.joindisable:
+    mov eax, 5200h  
+    int 41h
+    mov rbx, qword [rbx + 2Ah]    ;Get CDS ptr
+    ;Set the join flag on A and make CDS path C:\JOINTEST,0
+    mov eax, 8001h  ;Enter crit 1
+    int 4Ah
+    and word [rbx + cds.wFlags], ~cdsJoinDrive    ;Clear that we are join
+    mov byte [rbx], "A"     ;Set back to A
+    mov byte [rbx + 3], 0   ;Terminating Nul
+    mov eax, 8101h  ;Exit crit 1
+    int 4Ah
+    mov byte [.joinOn], 0
+    lea rdx, .joinDisableMsg
+    jmp short .joinExit
+.okJoin:
+    mov byte [.joinOn], -1
+    mov eax, 5200h  
+    int 41h
+    mov rbx, qword [rbx + 2Ah]    ;Get CDS ptr
+    ;Set the join flag on A and make CDS path C:\JOINTEST,0
+    mov eax, 8001h  ;Enter crit 1
+    int 4Ah
+    or word [rbx + cds.wFlags], cdsJoinDrive    ;Set that we are join
+    mov rdi, rbx
+    lea rsi, .joinPath
+    mov ecx, .joinPathL
+    rep movsb   ;Copy chars over
+    mov eax, 8101h  ;Exit crit 1
+    int 4Ah
+    lea rdx, .joinEnableMsg
+.joinExit:
+    mov eax, 0900h
+    int 41h
+    return
+.joinEnableMsg:  db CR,LF,"JOIN enabled",CR,LF,"$"
+.joinDisableMsg: db CR,LF,"JOIN disabled",CR,LF,"$"
+.joinCDSptr:     dq -1
+.joinOn: db 0    ;Var to indicate we are on
+.joinPath:  db "C:\JOINTEST",0
+.joinPathL  equ $ - .joinPath 
+subst:
+;Mock subst command, to test join. Make an external command.
+;Substitutes C:\SUBTEST,0 for D:\
+    return
 ;TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP
 truename:
     test byte [arg1Flg], -1
