@@ -82,9 +82,10 @@ Value     Name
 00000043  cds.wFlags
 00000045  cds.qDPBPtr
 0000004D  cds.dStartCluster
-00000051  cds.qReserved
-00000059  cds.wBackslashOffset
-0000005B  cds_size
+00000051  cds.qIFSPtr
+00000059  cds.dNetStore
+0000005D  cds.wBackslashOffset
+0000005F  cds_size
 00008000  cdsRedirDrive
 00004000  cdsValidDrive
 00002000  cdsJoinDrive
