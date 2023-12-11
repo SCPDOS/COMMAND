@@ -581,58 +581,6 @@ buildCommandPath:
     movzx eax, byte [arg1Off]
     lea rsi, cmdBuffer
     add rsi, rax    ;Go to the start of the command
-    mov bh, byte [pathSep]
-    mov bl, ":"
-    cmp byte [rsi], bh  ;Is the first char relative to root?
-    je .absoluteCurrent
-    cmp word [rsi + 1], bx    ;This checks if absolute or relative
-    je .absolutePath
-    cmp byte [rsi + 1], bl  ;Check if a drive separator
-    je .relativeGiven
-;No drive letter given, must get Current Drive
-    call getCurrentDrive    ;Get current drive number (0 based) in al
-    add al, "A"
-    jmp short .relativeCommon
-.relativeGiven:
-;Drive letter pointed to by AL
-    mov al, byte [rsi]  ;Get drive letter in al
-    and al, 0DFh    ;Convert to UC
-    add rsi, 2  ;Skip the given drive letter and the colon
-.relativeCommon:
-    ;al has drive letter
-    mov dl, al  ;Save drive letter in dl
-    sub dl, "@" ;Get 1 based drive number in dl
-    mov ah, ":" ;Get the colon in too
-    lea rdi, searchSpec ;Start building our search path here
-    stosw   ;Store X:
-    mov al, byte [pathSep]
-    stosb   ;Store pathSep
-    push rsi    ;Save user input string
-    mov rsi, rdi    ;Put the current directory here for this drive
-    mov ah, 47h ;Get Current Working Directory, dl has drive number
-    int 41h ;Won't fail as drive letter in dl confirmed ok
-    pop rsi
-    ;Now want to find terminating null
-    xor al, al
-    xor ecx, ecx
-    dec ecx
-    repne scasb ;Search for the terminating null
-    dec rdi ;Go back one once found
-    mov al, byte [pathSep]
-    cmp byte [rdi - 1], al
-    je .buildPath ;If the previous char is a pathsep, skip storing another
-    stosb   ;Store the pathsep
-    jmp short .buildPath  ;Now we copy the user string over and good to go
-.absoluteCurrent:
-    call getCurrentDrive    ;Get current drive number (0 based) in al
-    add al, "A"
-    mov ah, ":" ;ax has X: now to store 
-    lea rdi, searchSpec
-    stosw
-    mov al, byte [pathSep]
-    stosb
-    jmp short .buildPath
-.absolutePath:
     lea rdi, searchSpec
 .buildPath:
     call copyCommandTailItem    ;Terminates with a 0 for free

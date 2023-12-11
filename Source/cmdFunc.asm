@@ -376,20 +376,18 @@ chdir:
     cmp al, -1 
     je badDriveError  ;IF the drive is good, but FCB name blank, either X: or \ 
     cmp byte [r8 + fcb1 + fcb.filename], " "
-    jne .getFQPath
-    ;Now we double check that on the command line we have . or ..
+    jne .setPath
+    ;If we searched for a . or .., the fcb will be blank. Make sure we didn't search that
     movzx eax, byte [arg1Off]
     lea rsi, cmdBuffer
     add rsi, rax
     mov al, byte [pathSep]
     cmp byte [rsi], al  ;Is the first char a pathsep?
-    je .getFQPath
+    je .setPath
     cmp byte [rsi], "."
     jne .printDiskCWD
-    ;If the path is . or .., its acceptable, else fail
-.getFQPath:
+.setPath:
     call buildCommandPath   ;Else build a fully qualified pathname
-    jc badDirError  ;If this returns CF=CY, its a badDir
     lea rdx, searchSpec
     mov ah, 3Bh ;CHDIR
     int 41h
@@ -1009,6 +1007,9 @@ join:
     int 41h
     mov rbx, qword [rbx + 2Ah]    ;Get CDS ptr
     ;Set the join flag on A and make CDS path C:\JOINTEST,0
+    ;JOIN NEEDS TO SET THE VARIABLE FOR THE NUMBER OF JOIN DRIVES ACTIVE
+    ;DOS NEEDS TO CHANGE TO NOT SEARCH THROUGH THE CDS BUT INSTEAD
+    ;RELY ON THE COUNT OF JOIN DRIVES FOR ITS OPTIONAL JOIN OPERATION.
     mov eax, 8001h  ;Enter crit 1
     int 4Ah
     or word [rbx + cds.wFlags], cdsJoinDrive    ;Set that we are join
