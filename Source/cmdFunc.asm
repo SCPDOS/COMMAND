@@ -189,6 +189,9 @@ dir:
     movsd
     xor al, al
     stosb   ;Store the terminating null
+    call setDTA
+    breakpoint
+    lea r10, cmdFFBlock
     mov ecx, dirReadOnly | dirDirectory
     mov ah, 4Eh ;Find first
     int 41h
@@ -1098,9 +1101,7 @@ volume:
 .dirEP: ;Must be called with VALID 0 based drive number in al
     add eax, "A" ;Get ASCII representation of 0 based number
     mov byte [volPathBuf], al   ;Store ASCII letter here
-    lea rdx, cmdFFBlock     ;Use this as the DTA for this request
-    mov ah, 1Ah
-    int 41h
+    call setDTA
     lea rdx, volPathBuf
     mov cx, dirVolumeID
     mov ah, 4Eh ;Find first
@@ -1378,9 +1379,7 @@ launchChild:
 ;We run EXEC on this and the child task will return via applicationReturn
 ;Here we must search the CWD or all path componants before failing
 ;Also this command must be a .COM, .EXE or .BAT so check that first
-    lea rdx, cmdFFBlock
-    mov ah, 1Ah     ;Set DTA for task
-    int 41h
+    call setDTA
 
     mov eax, dword [cmdFcb + fcb.fileext]   ;Get a dword, with dummy byte 3
     and eax, 00FFFFFFh  ;Clear byte three

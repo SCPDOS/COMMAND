@@ -721,3 +721,13 @@ copyArgumentToSearchSpec:
     xor eax, eax
     stosb
     return
+
+setDTA:
+    push rax
+    push rdx
+    lea rdx, cmdFFBlock     ;Use this as the DTA for this request
+    mov eax, 1A00h
+    int 41h
+    pop rdx
+    pop rax
+    return
