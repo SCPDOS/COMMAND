@@ -190,7 +190,6 @@ dir:
     xor al, al
     stosb   ;Store the terminating null
     call setDTA
-    breakpoint
     lea r10, cmdFFBlock
     mov ecx, dirReadOnly | dirDirectory
     mov ah, 4Eh ;Find first
