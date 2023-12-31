@@ -1490,10 +1490,6 @@ launchChild:
     lea rax, qword [r8 + fcb2]
     mov qword [rbx + execProg.pfcb2], rax
     lea rdx, cmdPathSpec
-    mov rsi, rdx
-    mov rdi, rdx
-    mov eax, 6000h  ;Get TRUENAME
-    int 41h
     mov eax, 4B00h  ;Load and execute!
     int 41h
     jmp .dfltErrExit    ;If something goes wrong, error out
