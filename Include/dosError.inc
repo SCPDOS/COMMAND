@@ -47,7 +47,7 @@ errNoNet    equ 50  ;Network request not supported, generic net fail
 
 errFilExist equ 80  ;File already exists
 errDirExist equ 82  ;Directory already exists
-errFI44     equ 83  ;Fail on INT 44h
+errFI44     equ 83  ;Fail on Int 24h
 errRedir    equ 84  ;Too many levels of redirection
 errDupRedir equ 85  ;Trying to redirect a redirection
 errBadPass  equ 86  ;Bad password

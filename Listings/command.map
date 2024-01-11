@@ -242,9 +242,9 @@ Value     Name
 00000000  psp
 00000000  psp.return
 00000002  psp.allocSize
-0000000A  psp.oldInt42h
-00000012  psp.oldInt43h
-0000001A  psp.oldInt44h
+0000000A  psp.oldInt22h
+00000012  psp.oldInt23h
+0000001A  psp.oldInt24h
 00000022  psp.parentPtr
 0000002A  psp.externalJFTPtr
 0000002A  psp.jobFileTbl
@@ -524,7 +524,7 @@ Real              Virtual           Name
               2B                2B  pathSep
               2C                2C  switchChar
               2D                2D  permaSwitch
-              2E                2E  parentInt42
+              2E                2E  parentInt22
               36                36  ctryData
               5C                5C  currDirStr
               9F                9F  cmdLineStatePtr
@@ -742,7 +742,7 @@ Real              Virtual           Name
             16F7              16F7  ..@96._ret
             16F8              16F8  copyCommandTailItem.exit
             16FB              16FB  ..@97._ret
-            16FC              16FC  int4Eh
+            16FC              16FC  int2Eh
             1730              1730  noSelfCopyError
             1739              1739  badParamError
             1742              1742  badDriveError
@@ -1110,8 +1110,8 @@ Real              Virtual           Name
             31E4              31E4  critErrorHandler.betweenMsg
             31E7              31E7  critErrorHandler.endMsg
             31EA              31EA  critErrorHandler.responses
-            31EE              31EE  int43h
-            320D              320D  int43h.exit
+            31EE              31EE  int23h
+            320D              320D  int23h.exit
             3211              3211  endOfAllocNoMaster
             3211              3211  masterEnv
             321F              321F  masterEnv.cspec

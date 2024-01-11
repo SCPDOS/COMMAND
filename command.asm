@@ -15,7 +15,7 @@ Segment .data align=1
 %include "./Source/cmdMain.asm"
 %include "./Source/cmdFunc.asm"
 %include "./Source/cmdUtils.asm"
-%include "./Source/int44h.asm"
+%include "./Source/int24h.asm"
 
 endOfAllocNoMaster: ;End of alloc if not the master cmd
 %include "./Data/cmdEnv.asm"

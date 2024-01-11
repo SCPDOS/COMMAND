@@ -5,7 +5,7 @@ printCRLF:
     mov ebx, 1  ;Print on STDOUT
     mov ah, 40h ;Print a new line
     mov ecx, 2  ;Two chars to write
-    int 41h
+    int 21h
     return
 printDate:
 ;Input: eax = Packed Date
@@ -24,7 +24,7 @@ printDate:
     call .printFirst
     mov dl, byte [ctryData + countryStruc.dateSep]
     mov ah, 02h
-    int 41h
+    int 21h
 
     mov eax, ecx
     and eax, 1E0h   ;Save bits 5-8
@@ -33,7 +33,7 @@ printDate:
 
     mov dl, byte [ctryData + countryStruc.dateSep]
     mov ah, 02h
-    int 41h
+    int 21h
 
     mov eax, ecx
     and eax, 0FE00h ;Save bits 9-15
@@ -49,7 +49,7 @@ printDate:
 
     mov dl, byte [ctryData + countryStruc.dateSep]
     mov ah, 02h
-    int 41h
+    int 21h
 
     mov eax, ecx
     and eax, 1Fh    ;Save day bits
@@ -57,7 +57,7 @@ printDate:
 
     mov dl, byte [ctryData + countryStruc.dateSep]
     mov ah, 02h
-    int 41h
+    int 21h
 
     mov eax, ecx
     and eax, 0FE00h ;Save bits 9-15
@@ -74,7 +74,7 @@ printDate:
 
     mov dl, byte [ctryData + countryStruc.dateSep]
     mov ah, 02h
-    int 41h
+    int 21h
 
     mov eax, ecx
     and eax, 1E0h   ;Save bits 5-8
@@ -83,7 +83,7 @@ printDate:
 
     mov dl, byte [ctryData + countryStruc.dateSep]
     mov ah, 02h
-    int 41h
+    int 21h
 
     mov eax, ecx
     and eax, 1Fh    ;Save day bits
@@ -101,10 +101,10 @@ printDate:
 .skipSpace:
     mov dl, cl
     mov ah, 02h
-    int 41h
+    int 21h
     mov dl, ch
     mov ah, 02h
-    int 41h
+    int 21h
     pop rcx
     return
 .printSecond:
@@ -125,18 +125,18 @@ printDate:
     jz .twoDigitYear
     mov dl, cl  ;Print the first digit
     mov ah, 02h
-    int 41h
+    int 21h
     mov dl, ch  ;Print the second digit
     mov ah, 02h
-    int 41h
+    int 21h
 .twoDigitYear:
     shr ecx, 10h    ;Get high word low
     mov dl, cl  ;Print the upper digit
     mov ah, 02h
-    int 41h
+    int 21h
     mov dl, ch  ;Print the lower digit
     mov ah, 02h
-    int 41h
+    int 21h
     pop rcx
     return
 
@@ -161,7 +161,7 @@ printTime:
     call .printMinutes
     mov dl, "a"
     mov ah, 02h
-    int 41h
+    int 21h
     return
 .pm:
     sub eax, 12
@@ -170,12 +170,12 @@ printTime:
     call .printMinutes
     mov dl, "p"
     mov ah, 02h
-    int 41h
+    int 21h
     return
 .printMinutes:
     mov dl, byte [ctryData + countryStruc.timeSep]
     mov ah, 02h
-    int 41h
+    int 21h
 
     mov eax, ecx
     and eax, 7E0h   ;Save bits 5-10
@@ -198,10 +198,10 @@ printTime:
 .skipSpace:
     mov dl, cl
     mov ah, 02h
-    int 41h
+    int 21h
     mov dl, ch
     mov ah, 02h
-    int 41h
+    int 21h
     pop rcx
     return
 
@@ -209,15 +209,15 @@ printTime:
 putVersionInPrompt:
     lea rdx, dosVer
     mov ah, 09h ;Print String
-    int 41h
+    int 21h
     mov ah, 30h ;Get ver in al=Maj ver, ah = Min ver
-    int 41h
+    int 21h
     push rax    ;Save minor version
     call hexToBCD   ;Get in al a bcd representation for major version
     call printPackedBCD ;Print al
     mov dl, "."
     mov ah, 02h
-    int 41h
+    int 21h
     pop rax
     mov al, ah  ;Get the minor version low
     call hexToBCD
@@ -249,17 +249,17 @@ putLTinPrompt:
 
 putDriveInPrompt:
     mov ah, 19h ;Get 0-based current drive number in al
-    int 41h
+    int 21h
     add al, "A" ;Convert to letter
     mov dl, al
 outChar:
     mov ah, 02h ;Echo to STDOUT
-    int 41h
+    int 21h
     return
 putCWDInPrompt:
     lea rdi, currDirStr ;Update the current directory string
     mov ah, 19h ;Get 0-based current drive number in al
-    int 41h
+    int 21h
     mov dl, al  ;Get drive letter in dl for path
     inc dl
     add al, "A" ;Convert to letter
@@ -269,14 +269,14 @@ putCWDInPrompt:
     stosb   ;Store pathSep, inc rdi
     mov ah, 47h ;Get Current Working Directory
     mov rsi, rdi    ;rsi points to buffer to write to
-    int 41h
+    int 21h
     call strlen
     add ecx, 2 ;Add two for the X:
     ;We repurpose the fact that strlen counts the NULL to account for "\"
     mov ah, 40h ;Write to handle
     mov ebx, 1  ;STDOUT
     lea rdx, currDirStr
-    int 41h
+    int 21h
     return
 
 BCDtoHex:
@@ -325,7 +325,7 @@ printPackedBCD:
     jnz .upperNybble
     mov dl, " "
     mov ah, 02h
-    int 41h
+    int 21h
     jmp short .lowerNybble
 .upperNybble:
     push rax
@@ -333,13 +333,13 @@ printPackedBCD:
     add ah, "0"  ;Convert to an ASCII digit
     mov dl, ah
     mov ah, 02h ;Print DL
-    int 41h
+    int 21h
     pop rax
 .lowerNybble:
     add al, "0"
     mov dl, al
     mov ah, 02h ;Print DL
-    int 41h
+    int 21h
     pop rdx
     pop rax
     return
@@ -347,7 +347,7 @@ printPackedBCD:
 getCurrentDrive:
 ;Returns the 0 based current drive in al
     mov ah, 19h
-    int 41h
+    int 21h
     return
 
 strlen:
@@ -636,7 +636,7 @@ printDecimalWord:
     shr rcx, 8    ;Get next digit down
 .dpfb21:
     mov ah, 02h
-    int 41h
+    int 21h
     dec ebp
     jnz .dpfb2
     return
@@ -665,11 +665,11 @@ getDecimalWord:
 freezePC:
     lea rdx, memBad1
     mov ah, 09h
-    int 41h
+    int 21h
 .altEP:
     lea rdx, memBad3
     mov ah, 09h
-    int 41h
+    int 21h
 .lp:
     pause
     hlt
@@ -727,7 +727,7 @@ setDTA:
     push rdx
     lea rdx, cmdFFBlock     ;Use this as the DTA for this request
     mov eax, 1A00h
-    int 41h
+    int 21h
     pop rdx
     pop rax
     return
