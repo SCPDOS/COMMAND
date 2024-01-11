@@ -7,25 +7,25 @@ commandStart:
     shr ebx, 4  ;Convert to paragraphs
     mov ah, 4Ah ;Realloc
     neg r8  ;Convert -r8 to r8
-    int 41h
+    int 21h
     jmp short commandMain
 applicationReturn:  ;Return point from a task, all regs preserved
     mov eax, 4D00h ;Get Return Code
-    int 41h
+    int 21h
     mov word [returnCode], ax
 ;Reset our PSP vectors (and IVT copies) in the event they got mangled
     lea rdx, critErrorHandler
-    mov qword [r8 + psp.oldInt44h], rdx
-    mov eax, 2544h
-    int 41h
-    lea rdx, int43h
-    mov qword [r8 + psp.oldInt43h], rdx
-    mov eax, 2543h
-    int 41h
+    mov qword [r8 + psp.oldInt24h], rdx
+    mov eax, 2524h
+    int 21h
+    lea rdx, int23h
+    mov qword [r8 + psp.oldInt23h], rdx
+    mov eax, 2523h
+    int 21h
     lea rdx, applicationReturn
-    mov qword [r8 + psp.oldInt42h], rdx
-    mov eax, 2542h
-    int 41h
+    mov qword [r8 + psp.oldInt22h], rdx
+    mov eax, 2522h
+    int 21h
     test byte [pipeFlag], -1
     jnz commandMain.pipeProceed ;Skip the handle closing when pipe active
     call cleanUpRedir   ;Clean up redirection once we are done
@@ -34,7 +34,7 @@ applicationReturn:  ;Return point from a task, all regs preserved
     mov ebx, 5
 .handleClose:
     mov ah, 3Eh ;File close
-    int 41h
+    int 21h
     inc ebx ;Goto next file
     cmp ebx, ecx
     jbe .handleClose    ;Keep looping whilst below or equal
@@ -51,7 +51,7 @@ commandMain:
 
     lea rdx, inBuffer
     mov eax, 0C0Ah  ;Do Buffered input
-    int 41h
+    int 21h
     call printCRLF  ;Note we have accepted input
 
 ;First check we had something typed in of length greater than 0
@@ -77,7 +77,7 @@ commandMain:
 .dfltErrExit:
     lea rdx, badCmd
     mov ah, 09h
-    int 41h
+    int 21h
     jmp .inputMain
 
 parseInput:
@@ -231,28 +231,28 @@ doCommandLine:
     rete    ;Do not attempt to execute if the first char is a CR
     lea rdi, cmdFcb
     mov eax, 2901h  ;Skip leading blanks
-    int 41h
+    int 21h
     movzx ebx, word [cmdDrvSpec]    ;Get the drive specifier
     cmp bh, ":"
     jne .noDriveSpecified
     mov dl, bl      ;Move the drive letter in dl
     and dl, 0DFh    ;Make the drive letter upper case
     sub dl, "A"     ;And make it a 0 based drive letter
-    cmp al, -1  ;Int 41h returns AL = -1 if bad drive specified
+    cmp al, -1  ;Int 21h returns AL = -1 if bad drive specified
     je .badDrive
     ;If drive specified and cmdName length = 2 => X: type command
     cmp byte [cmdName], 2
     jne .noDriveSpecified   ;Drive specified but proceed as normal
     mov ah, 0Eh ;Set drive to dl
-    int 41h 
+    int 21h 
     mov ah, 19h
-    int 41h     ;Get current drive
+    int 21h     ;Get current drive
     cmp al, dl  ;If the drive was set, all is well
     rete
 .badDrive:
     lea rdx, badDrv
     mov ah, 09h
-    int 41h
+    int 21h
     stc
     return
 .noDriveSpecified:
@@ -264,7 +264,7 @@ doCommandLine:
     add rsi, rax    ;Point to first argument
     lea rdi, qword [r8 + fcb1]
     mov eax, 2901h
-    int 41h
+    int 21h
     mov byte [arg1FCBret], al
     test byte [arg2Flg], -1
     jz .fcbArgsDone
@@ -273,7 +273,7 @@ doCommandLine:
     add rsi, rax    ;Point to first argument
     lea rdi, qword [r8 + fcb2]
     mov eax, 2901h
-    int 41h
+    int 21h
     mov byte [arg2FCBret], al
 .fcbArgsDone:
     lea rbx, cmdBuffer
@@ -281,11 +281,11 @@ doCommandLine:
     mov eax, 0AE00h ;Installable command check
     mov edx, 0FFFFh
     mov ch, -1
-    int 4Fh ;Give the TSR time to prepare if it needs to
+    int 2Fh ;Give the TSR time to prepare if it needs to
     mov eax, 0AE00h ;Installable command check
     mov edx, 0FFFFh
     xor ch, ch  ;Second call uses ch = 0
-    int 4Fh ;Return: al = -1 if this command a extension to COMMAND.COM
+    int 2Fh ;Return: al = -1 if this command a extension to COMMAND.COM
             ;        al = 0  if the command should be executed as usual
     test al, al
     jz .executeInternal
@@ -296,7 +296,7 @@ doCommandLine:
     mov eax, 0AE01h ;Execute command!
     mov edx, 0FFFFh
     mov ch, -1
-    int 4Fh 
+    int 2Fh 
     return
 .executeInternal:
 ;Now we compare the name in the cmdFcb field to our commmand list
@@ -332,7 +332,7 @@ doCommandLine:
 .dfltErrExit:
     lea rdx, badCmd
     mov ah, 09h
-    int 41h
+    int 21h
     return
 
 
@@ -367,17 +367,17 @@ redirPipeFailureCommon:
 ;It resets all variables and proceeds.
     mov eax, 4000h  ;Write handle
     mov ebx, 2  ;Write to STDERR
-    int 41h
+    int 21h
     xor ebx, ebx    ;Select STDIN
     call .closeHandle
     inc ebx         ;Select STDOUT
     call .closeHandle
     mov eax, 3D02h  ;Open read/write
     lea rdx, conName
-    int 41h
+    int 21h
     mov ebx, eax    ;Move file handle to ebx
     mov eax, 4500h  ;DUP
-    int 41h
+    int 21h
     mov word [redirIn], 0  ;Clear both flags
     movzx ebx, word [redirSTDIN]
     call .closeHandle
@@ -397,13 +397,13 @@ redirPipeFailureCommon:
     cmp byte [rdx], 0
     jz .checkOld
     mov eax, 4100h  ;Del File pointed to by rdx
-    int 41h
+    int 21h
 .checkOld:
     lea rdx, qword [pipe2Filespec]
     cmp byte [rdx],0
     jz .pipeNamesComplete
     mov eax, 4100h  ;Del File pointed to by dl
-    int 41h
+    int 21h
 .pipeNamesComplete:
     xor eax, eax
     ;Invalidate the pointers and the paths too
@@ -417,7 +417,7 @@ redirPipeFailureCommon:
     cmp ebx, -1
     rete
     mov eax, 3E00h
-    int 41h
+    int 21h
     return
 
 cleanUpRedir:
@@ -441,14 +441,14 @@ cleanUpRedir:
     movzx ebx, word [pipeSTDIN] 
     xor ecx, ecx    ;DUP into STDIN closing the redir
     mov eax, 4600h
-    int 41h
+    int 21h
     jc pipeFailure
     mov eax, 3E00h  ;Close the copy
-    int 41h
+    int 21h
     jc pipeFailure
     mov rdx, qword [oldPipe]    ;Get the ptr to the filename
     mov eax, 4100h  ;Delete the file!
-    int 41h
+    int 21h
     jc pipeFailure
     mov byte [rdx], 0           ;Mark this buffer as free
     mov word [pipeSTDIN], -1    ;This has been closed now
@@ -458,7 +458,7 @@ cleanUpRedir:
 ;Duplicate STDIN to save across pipe
     mov eax, 4500h
     xor ebx, ebx    ;Set ebx to STDIN
-    int 41h
+    int 21h
     jc pipeFailure
     mov word [pipeSTDIN], ax    ;Save duplicate here
 
@@ -466,19 +466,19 @@ cleanUpRedir:
     mov eax, 4600h
     mov ecx, ebx    ;DUP STDOUT into STDIN
     inc ebx ;ebx = 1, ecx = 0
-    int 41h
+    int 21h
     jc pipeFailure
 
 ;Now return the original stdout to stdout
     mov ecx, ebx
     movzx ebx, word [pipeSTDOUT]
     mov eax, 4600h  ;ebx = pipeSTDOUT, ecx = 1
-    int 41h
+    int 21h
     jc pipeFailure
 
 ;Now close the DUP'ed STDOUT
     mov eax, 3E00h
-    int 41h
+    int 21h
     jc pipeFailure
 
 ;Finally unwind STDIN to the beginning of the file
@@ -486,7 +486,7 @@ cleanUpRedir:
     xor ebx, ebx    ;STDIN handle
     mov ecx, ebx    ;Set high 32 bits
     mov edx, ebx    ;Set low 32 bits
-    int 41h
+    int 21h
     jc pipeFailure  ;This should never happen
 
     mov rdx, qword [newPipe]    ;Move the pathname pointer
@@ -501,10 +501,10 @@ cleanUpRedir:
     movzx ebx, word [redirSTDIN]    ;Put this file back to STDIN
     xor ecx, ecx    ;Duplicate original STDIN into CX (into STDIN position)
     mov eax, 4600h  ;This closes the redir file in the process
-    int 41h
+    int 21h
     jc redirFailure
     mov eax, 3E00h  ;Now close BX in the process too remove duplicates.
-    int 41h
+    int 21h
     jc redirFailure
     mov word [redirSTDIN], -1  ;Replace the file handle with -1
     mov byte [redirIn], 0   ;Clear the flag
@@ -516,10 +516,10 @@ cleanUpRedir:
     movzx ebx, word [redirSTDOUT]    ;Put this file back to STDOUT
     mov ecx, 1    ;Duplicate original STDOUT into CX (into STDOUT position)
     mov eax, 4600h  ;This closes the redir file in the process
-    int 41h
+    int 21h
     jc redirFailure
     mov eax, 3E00h  ;Now close BX in the process too remove duplicates.
-    int 41h
+    int 21h
     jc redirFailure
     mov word [redirSTDOUT], -1  ;Replace the file handle with -1
     mov byte [redirOut], 0   ;Clear the flag
@@ -555,20 +555,20 @@ checkAndSetupRedir:
     ;Setup the redir here for STDIN
     xor ebx, ebx    ;DUP STDIN
     mov eax, 4500h
-    int 41h
+    int 21h
     jc .redirError
     mov word [redirSTDIN], ax   ;Save the handle in variable
     lea rdx, rdrInFilespec
     mov eax, 3D02h  ;Open file for read write access
-    int 41h
+    int 21h
     jc .redirError
     xor ecx, ecx    ;Close STDIN and duplicate bx into it
     movzx ebx, ax   ;Move the handle into bx to duplicate into cx (STDIN)
     mov eax, 4600h
-    int 41h
+    int 21h
     jc .redirError
     mov eax, 3E00h  ;Now close the original copy of the handle
-    int 41h
+    int 21h
     jc .redirError
     xor al, al
     jmp short .redirExit
@@ -588,25 +588,25 @@ checkAndSetupRedir:
     ;Setup the redir here for STDOUT
     mov ebx, 1    ;DUP STDOUT
     mov eax, 4500h
-    int 41h
+    int 21h
     jc .redirError
     mov word [redirSTDOUT], ax   ;Save the handle in variable
     lea rdx, rdrOutFilespec
     mov eax, 3D02h  ;Open file for read write access
-    int 41h
+    int 21h
     jnc .fileExists
     mov eax, 3C00h
     mov ecx, 0  ;Make the file with no attributes
-    int 41h
+    int 21h
     jc .redirError
 .fileExists:
     mov ecx, 1      ;Close STDOUT and duplicate bx into it
     movzx ebx, ax   ;AX has the new handle for output
     mov eax, 4600h  ;DUP2
-    int 41h
+    int 21h
     jc .redirError
     mov eax, 3E00h  ;Now close the original copy of the handle (in bx)
-    int 41h
+    int 21h
     jc .redirError
     cmp byte [redirOut], 1
     je .dontAppend
@@ -615,7 +615,7 @@ checkAndSetupRedir:
     xor ecx, ecx    ;High order 32 bits
     mov ebx, 1  ;We seek STDOUT to the end
     mov eax, 4202h  ;Seek from end of file
-    int 41h
+    int 21h
     jc .redirError
 .dontAppend:
     mov byte [redirOut], -1
@@ -633,7 +633,7 @@ checkAndSetupRedir:
     mov qword [newPipe], rdx    ;Use this as the newPipe path
     mov eax, 4500h  ;Now DUP STDOUT
     mov ebx, 1
-    int 41h
+    int 21h
     jc .pipeError
     mov word [pipeSTDOUT], ax   ;Save the copy of the handle
     call getCurrentDrive    ;Get current drive in al (0 based number)
@@ -643,17 +643,17 @@ checkAndSetupRedir:
     mov dword [rdx], ebx    ;Put the \ terminated path
     mov ecx, 0;dirHidden  ;Hidden attributes
     mov eax, 5A00h  ;Create a temporary file
-    int 41h
+    int 21h
     jc .pipeError
     ;AX has the handle for this file now, this will become STDOUT
     ;If this is the first pipe, we want to save a copy of this handle
     movzx ebx, ax   ;Clone new handle into STDOUT
     mov ecx, 1
     mov eax, 4600h
-    int 41h
+    int 21h
     jc .pipeError
     mov eax, 3E00h  ;Now close the original copy of the handle (in bx)
-    int 41h
+    int 21h
     jc .pipeError
     mov byte [pipeFlag], -1 ;Set the pipe flag up!
     xor al, al
@@ -743,16 +743,16 @@ copyCommandTailItem:
     return
 
 
-int4Eh:   ;Interrupt interface for parsing and executing command lines
+int2Eh:   ;Interrupt interface for parsing and executing command lines
 ;Input: rsi points to the count byte of a command line
     push r8
     push r9
     mov ah, 51h ;Get Current PSP in rdx
-    int 41h
+    int 21h
     push rdx    ;Save on the stack
     lea rbx, qword [startLbl - psp_size]    ;Get a psp ptr for this COMMAND.COM
     mov ah, 50h ;Set this version of COMMAND.COM as the current PSP
-    int 41h
+    int 21h
     mov r8, rbx ;Set to point to the command.com psp
     mov r9, rbx
     lea rdi, qword [r8 + cmdLine]
@@ -761,7 +761,7 @@ int4Eh:   ;Interrupt interface for parsing and executing command lines
     ;call doCommandLine
     pop rbx ;Get Old current PSP in rbx
     mov ah, 50h ;Set Current PSP
-    int 41h
+    int 21h
     pop r9
     pop r8
     iretq

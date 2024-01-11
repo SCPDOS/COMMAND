@@ -1,42 +1,42 @@
 cmdLdr:
 ;First check if the version is ok. If not, return.
     mov ah, 30h
-    int 41h
+    int 21h
     cmp al, 01h ;Version 1
     jbe .okVersion
     lea rdx, badVerStr
     mov ah, 09h
-    int 41h
-    int 40h ;Exit to caller or DOS to print bad command interpreter line
+    int 21h
+    int 20h ;Exit to caller or DOS to print bad command interpreter line
 .okVersion:
 ;If ok then store self as parent in the PSP, to prevent accidental closure
     mov qword [pspPtr], r8  ;Store PSP ptr in internal var 
     mov rax, qword [r8 + psp.parentPtr] ;Get PSP parent
     mov qword [r8 + psp.parentPtr], r8  ;Store self as parent
     mov qword [realParent], rax ;Preserve the real parent address
-;Setup Int 42h, Int 43h and Int 44h
-    mov rax, qword [r8 + psp.oldInt42h] ;Preserve the original addresses
-    mov qword [parentInt42], rax
+;Setup Int 22h, Int 23h and Int 24h
+    mov rax, qword [r8 + psp.oldInt22h] ;Preserve the original addresses
+    mov qword [parentInt22], rax
 
     lea rdx, critErrorHandler
-    mov qword [r8 + psp.oldInt44h], rdx
-    mov eax, 2544h
-    int 41h
-    lea rdx, int43h
-    mov qword [r8 + psp.oldInt43h], rdx
-    mov eax, 2543h
-    int 41h
+    mov qword [r8 + psp.oldInt24h], rdx
+    mov eax, 2524h
+    int 21h
+    lea rdx, int23h
+    mov qword [r8 + psp.oldInt23h], rdx
+    mov eax, 2523h
+    int 21h
     lea rdx, applicationReturn
-    mov qword [r8 + psp.oldInt42h], rdx
-    mov eax, 2542h
-    int 41h
+    mov qword [r8 + psp.oldInt22h], rdx
+    mov eax, 2522h
+    int 21h
 ;Get a pointer to DOS Sysvars
     mov ah, 52h ;Get sysvars
-    int 41h
+    int 21h
     mov qword [sysVars], rbx    ;Save ptr to sysVars
 ;Call for simple internationalisation data
     mov eax, 3700h  ;Get switchchar in dl
-    int 41h
+    int 21h
     cmp al, -1
     je .skipSwitch
     mov byte [switchChar], dl   ;Store the switchChar in var
@@ -46,14 +46,14 @@ cmdLdr:
 .skipSwitch:
     mov eax, 3800h  ;Get current country data
     lea rdx, ctryData
-    int 41h ;Write the data to the internal country table
+    int 21h ;Write the data to the internal country table
 ;Now determine if this is the master copy of COMMAND.COM
-;Check if Int 4Eh has the same address as Int 4Dh. If so, we are master.
-    mov eax, 354Eh  ;Get int 4Eh address
-    int 41h
+;Check if Int 2Eh has the same address as Int 2Dh. If so, we are master.
+    mov eax, 352Eh  ;Get int 2Eh address
+    int 21h
     mov rdx, rbx    ;Save the pointer in rdx
-    mov eax, 354Dh  ;Get int 4Dh address
-    int 41h
+    mov eax, 352Dh  ;Get int 2Dh address
+    int 21h
     cmp rdx, rbx    ;If these are equal then this is first boot!
     jne .skipMaster
 ;Ok so we are master command.com
@@ -65,23 +65,23 @@ cmdLdr:
     mov qword [r8 + psp.envPtr], rax
 ;Set current Drive in COMSPEC
     mov al, 19h ;Get current Drive
-    int 41h
+    int 21h
     add al, "A"
     mov byte [masterEnv.cspec], al
-;Set Int 4Eh up
-    lea rdx, int4Eh
-    mov eax, 254Eh ;Set this as Int 4Eh
-    int 41h
+;Set Int 2Eh up
+    lea rdx, int2Eh
+    mov eax, 252Eh ;Set this as Int 2Eh
+    int 21h
 ;Now, open and parse AUTOEXEC.BAT. Build Master Environment here
 ;If no AUTOEXEC.BAT, request time and date from user
     lea rdx, crlf
     mov ah, 09h
-    int 41h
+    int 21h
     call time
     call date
     lea rdx, crlf
     mov ah, 09h
-    int 41h
+    int 21h
     lea rbx, endOfAlloc ;Save the Master Environment
     jmp short .printInit
 .skipMaster:
@@ -102,11 +102,11 @@ cmdLdr:
     push rbx
     lea rdx, initString
     mov ah, 09h
-    int 41h ;Print init string
+    int 21h ;Print init string
     call version.printVersionNumber
     lea rdx, initString2
     mov ah, 09h
-    int 41h ;Print init string
+    int 21h ;Print init string
     pop rbx
     ;Now we add the stack to the alloc and paragraph align
     add rbx, stackSize

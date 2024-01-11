@@ -1,6 +1,6 @@
 ;Note! Each function must setup the DTA to use for itself.
 ;There is no requirement to preserve the DTA across a call.
-;Only the Int 4Eh entry point will preserve the callers DTA.
+;Only the Int 2Eh entry point will preserve the callers DTA.
 
 ;Common Error Messages, jumped to to return from
 noSelfCopyError:
@@ -26,7 +26,7 @@ badDirError:
     lea rdx, badDir
 badCmn:
     mov eax, 0900h
-    int 41h
+    int 21h
     stc ;Return with CY => Error occured
     return
 
@@ -115,7 +115,7 @@ dir:
     mov byte [r8 + fcb1 + fcb.driveNum], 0  ;Clear this byte by default
     lea rdi, qword [r8 + fcb1]
     mov eax, 2901h   ;Parse filename
-    int 41h
+    int 21h
     cmp al, -1
     je badDriveError    ;If the drive is bad, bad parameter
     ;Else the drive in the fcb is valid
@@ -146,20 +146,20 @@ dir:
     lea rsi, searchSpec + 3  ;Make space for a X:"\"
     mov ah, 47h ;Get Current Working Directory
     inc dl  ;Convert to 1 based number
-    int 41h
+    int 21h
     lea rdi, searchSpec
     call strlen
     dec ecx
     mov byte [rdi + rcx], "$"   ;Replace the null with a string terminator
     lea rdx, dirMain
     mov ah, 09h
-    int 41h
+    int 21h
     mov rdx, rdi    ;Print the current directory we are working on
     mov ah, 09h
-    int 41h
+    int 21h
     lea rdx, crlf2
     mov ah, 09h
-    int 41h
+    int 21h
     call .searchForFile
     return
     ;If we get no path spec or just a X: path spec then we 
@@ -193,38 +193,38 @@ dir:
     lea r10, cmdFFBlock
     mov ecx, dirReadOnly | dirDirectory
     mov ah, 4Eh ;Find first
-    int 41h
+    int 21h
     jc .dirNoMoreFiles
 .findNext:
     call .dirPrintFileData  ;Print the file information
     mov ah, 4Fh
-    int 41h
+    int 21h
     jnc .findNext 
 .dirNoMoreFiles:
     test byte [dirPrnType], 1
     jz .dirNoEndNewLine
     lea rdx, crlf   ;Only need this for /W
     mov ah, 09h
-    int 41h
+    int 21h
 .dirNoEndNewLine:
     ;Now we print the number of files and the number of bytes on the disk
     lea rdx, fourSpc
     mov ah, 09h
-    int 41h
+    int 21h
     mov ah, 09h ;Print four Spaces twice
-    int 41h
+    int 21h
     movzx eax, byte [dirFileCtr]   ;Get number of files
     call printDecimalWord
     lea rdx, dirOk
     mov ah, 09h
-    int 41h
+    int 21h
     lea rdx, threeSpc
     mov ah, 09h
-    int 41h
+    int 21h
     mov eax, 3600h ;Get disk info
     mov dl, byte [dirDrv]
     inc dl  ;Function 36h wants the 1 based number
-    int 41h ;Get disk free space info
+    int 21h ;Get disk free space info
     movzx eax, ax   ;Sectors per Cluster 
     movzx ecx, cx   ;Bytes per Sector
     or ebx, ebx ;Clear the upper bits of rbx
@@ -234,7 +234,7 @@ dir:
     call printDecimalWord
     lea rdx, bytesOk
     mov ah, 09h
-    int 41h
+    int 21h
     return
 
 .dirPrintFileData:
@@ -250,17 +250,17 @@ dir:
     mov ecx, 8  ;Print 8 chars
     mov ebx, 1  ;STDOUT
     mov ah, 40h ;Write handle
-    int 41h
+    int 21h
     push rdx
     mov dl, " "
     mov ah, 02h ;Print char
-    int 41h
+    int 21h
     pop rdx
     add rdx, 8  ;Go to ext field
     mov ecx, 3  ;Print three chars
     mov ebx, 1  ;STDOUT
     mov ah, 40h ;Write handle
-    int 41h
+    int 21h
     test byte [dirPrnType], 1
     jnz .widePrint
 ;Normal print (Name space ext <> File size <> Acc Date <> Acc Time)
@@ -269,16 +269,16 @@ dir:
     jz .dirPrintNotDir
     lea rdx, dirLbl
     mov ah, 09h
-    int 41h
+    int 21h
     lea rdx, threeSpc
     mov ah, 09h
-    int 41h
+    int 21h
     jmp short .dirPrintFileDT
 .dirPrintNotDir:
 ;Here we print the file size
     mov dl, " "
     mov ah, 02h
-    int 41h
+    int 21h
     mov eax, dword [cmdFFBlock + ffBlock.fileSize]
     call getDecimalWord
     mov rbx, rcx
@@ -290,7 +290,7 @@ dir:
     jne .dirPrintFileSize
     mov ah, 02h
     mov dl, " "
-    int 41h
+    int 21h
     shr rbx, 8  ;Get next byte
     dec ecx
     cmp ecx, 1
@@ -300,34 +300,34 @@ dir:
 .dirPrintFileSizeLoop:
     mov dl, bl
     mov ah, 02h
-    int 41h
+    int 21h
     shr rbx, 8  ;Get next byte
     dec ecx
     jnz .dirPrintFileSizeLoop
     lea rdx, twoSpc
     mov ah, 09h
-    int 41h
+    int 21h
 .dirPrintFileDT:
     mov dl, " "
     mov ah, 02h
-    int 41h
+    int 21h
     movzx eax, word [cmdFFBlock + ffBlock.fileDate]
     xor ebx, ebx    ;Ensure we print 2 digit year
     call printDate
     lea rdx, twoSpc
     mov ah, 09h
-    int 41h
+    int 21h
     movzx eax, word [cmdFFBlock + ffBlock.fileTime]
     call printTime
     lea rdx, crlf
     mov ah, 09h
-    int 41h
+    int 21h
     jmp short .dirPrintNameExit
 .widePrint:
 ;If /W, print name space ext space space space space
     lea rdx, fourSpc
     mov ah, 09h ;Print string
-    int 41h
+    int 21h
 .dirPrintNameExit:
     inc byte [dirFileCtr]   ;Increment file counter
     inc byte [dirLineCtr]
@@ -335,13 +335,13 @@ dir:
     retne
     lea rdx, pauseMes
     mov ah, 09h
-    int 41h
+    int 21h
     mov ah, 01h ;Wait for a char from STDIN
-    int 41h
+    int 21h
     mov byte [dirLineCtr], 0
     lea rdx, crlf   ;Force new line
     mov ah, 09h
-    int 41h
+    int 21h
     return
 
 chdir:
@@ -364,13 +364,13 @@ chdir:
     stosb   ;Store pathSep, inc rdi
     mov ah, 47h ;Get Current Working Directory
     mov rsi, rdi    ;rsi points to buffer to write to
-    int 41h
+    int 21h
     call strlen
     add ecx, 2 ;Add two for the X:
     mov ah, 40h ;Write to handle
     mov ebx, 1  ;STDOUT
     lea rdx, searchSpec
-    int 41h
+    int 21h
     call printCRLF
     return
 .changeDir:
@@ -392,7 +392,7 @@ chdir:
     call buildCommandPath   ;Else build a fully qualified pathname
     lea rdx, searchSpec
     mov ah, 3Bh ;CHDIR
-    int 41h
+    int 21h
     jc badDirError
     return
 
@@ -408,12 +408,12 @@ mkdir:
     call buildCommandPath
     lea rdx, searchSpec
     mov eax, 3900h  ;MKDIR
-    int 41h
+    int 21h
     retnc
 .badMake:   ;Else, bad make
     lea rdx, badMD
     mov eax, 0900h
-    int 41h
+    int 21h
     return
 
 rmdir:
@@ -428,12 +428,12 @@ rmdir:
     call buildCommandPath
     lea rdx, searchSpec
     mov eax, 3A00h  ;RMDIR
-    int 41h
+    int 21h
     retnc   ;Return if not carry
 .badRemove:   ;Else, bad make
     lea rdx, badRD
     mov eax, 0900h
-    int 41h
+    int 21h
     return
 
 copy:
@@ -485,25 +485,25 @@ copy:
     lea rsi, sourcePath
     lea rdi, destPath
     mov eax, 121Eh
-    int 4Fh
+    int 2Fh
     jz .sameFilename
     ;Open source with read permission
     ;Open destination with write permission
     lea rdx, sourcePath
     mov eax, 3D00h  ;Read open
-    int 41h
+    int 21h
     jc badParamError
     mov word [sourceHdl], ax
 
     movzx ebx, ax   ;For bx
     mov eax, 4400h  ;Get device info in dx
-    int 41h
+    int 21h
     mov word [srcHdlInfo], dx   ;Store information here
 
     lea rdx, destPath
     mov eax, 3C00h  ;Create the file
     xor ecx, ecx    ;No file attributes
-    int 41h
+    int 21h
     jc .badExit
     mov word [destHdl], ax
     xor esi, esi
@@ -512,7 +512,7 @@ copy:
     mov ecx, 128
     movzx ebx, word [sourceHdl]
     mov ah, 3Fh ;Read
-    int 41h
+    int 21h
     jc .badExit
     test eax, eax
     jz .okExit
@@ -520,7 +520,7 @@ copy:
     mov ecx, eax
     movzx ebx, word [destHdl]
     mov ah, 40h ;Write
-    int 41h
+    int 21h
     jc .badExit
     cmp eax, 128    ;Did we read 128 chars?
     je .copyLoop
@@ -539,16 +539,16 @@ copy:
     call .leaveCopyClose
     lea rdx, crlf
     mov ah, 09h
-    int 41h
+    int 21h
     lea rdx, fourSpc
     mov ah, 09h
-    int 41h
+    int 21h
     mov ah, 02h
     mov dl, "1" ;1 File(s) copied
-    int 41h
+    int 21h
     lea rdx, copyOk
     mov ah, 09h
-    int 41h
+    int 21h
     return
 .sameFilename:
     call .leaveCopyClose ;Close the handles
@@ -556,10 +556,10 @@ copy:
 .leaveCopyClose:
     mov bx, word [sourceHdl]
     mov eax, 3E00h
-    int 41h
+    int 21h
     mov bx, word [destHdl]
     mov eax, 3E00h
-    int 41h
+    int 21h
     return
 .badExit:
 ;Prototypically use badParamError for error reporting... sucks I know
@@ -567,13 +567,13 @@ copy:
     cmp bx, -1
     je .skipSource
     mov eax, 3E00h  ;Close this handle
-    int 41h
+    int 21h
 .skipSource:
     mov bx, word [destHdl]
     cmp bx, -1
     je badParamError
     mov eax, 3E00h
-    int 41h
+    int 21h
     jmp badParamError
 
 erase:
@@ -583,15 +583,15 @@ erase:
     lea rdx, searchSpec
     mov eax, 4100h  ;Delete File 
     xor ecx, ecx
-    int 41h
+    int 21h
     jc badArgError
     return
 date:
     lea rdx, curDate
     mov ah, 09h
-    int 41h
+    int 21h
     mov ah, 2Ah ;DOS get date
-    int 41h
+    int 21h
 	;AL = day of the week (0=Sunday)
 	;CX = year (1980-2099)
 	;DH = month (1-12)
@@ -608,10 +608,10 @@ date:
     mov ecx, 3  ;Print three chars
     mov ebx, 1  ;STDOUT
     mov ah, 40h ;Write to handle
-    int 41h
+    int 21h
     mov dl, " "
     mov ah, 02h
-    int 41h
+    int 21h
 ;       eax[0:4] = Day of the month, a value in [0,...,31]
 ;       eax[5:8] = Month of the year, a value in [0,...,12]
 ;       eax[9:15] = Number of years since 1980, a value in [0,...,127]
@@ -627,7 +627,7 @@ date:
 
     lea rdx, newDate
     mov ah, 09h
-    int 41h
+    int 21h
     lea rdx, ukDate
     lea rax, usDate
     lea rbx, jpDate
@@ -635,16 +635,16 @@ date:
     cmova rdx, rbx
     cmovb rdx, rax
     mov ah, 09h
-    int 41h
+    int 21h
 
     lea rdx, inBuffer
     mov byte [rdx], 126 ;Enter a string of up to 126 chars in length
     mov ah, 0Ah
-    int 41h
+    int 21h
     push rdx
     lea rdx, crlf
     mov ah, 09h
-    int 41h
+    int 21h
     pop rdx
     cmp byte [rdx + 1], 0   ;If the user typed nothing...
     rete    ;Exit!
@@ -653,9 +653,9 @@ date:
 time:
     lea rdx, curTime
     mov ah, 09h
-    int 41h
+    int 21h
     mov ah, 2Ch ;DOS get time
-    int 41h
+    int 21h
     ;CH = hour (0-23)
 	;CL = minutes (0-59)
 	;DH = seconds (0-59)
@@ -669,37 +669,37 @@ time:
 
     mov dl, byte [ctryData + countryStruc.timeSep]
     mov ah, 02h
-    int 41h
+    int 21h
 
     movzx eax, byte [td1]   ;Minutes
     call printTime.printMinutesAlt
 
     mov dl, byte [ctryData + countryStruc.timeSep]
     mov ah, 02h
-    int 41h
+    int 21h
 
     movzx eax, byte [td4]   ;Seconds
     call printTime.printMinutesAlt
 
     mov dl, "."
     mov ah, 02h
-    int 41h
+    int 21h
 
     movzx eax, byte [td3]   ;Hundreths
     call printTime.printMinutesAlt
 
     lea rdx, newTime
     mov ah, 09h
-    int 41h
+    int 21h
 
     lea rdx, inBuffer
     mov byte [rdx], 126 ;Enter a string of up to 126 chars in length
     mov ah, 0Ah
-    int 41h
+    int 21h
     push rdx
     lea rdx, crlf
     mov ah, 09h
-    int 41h
+    int 21h
     pop rdx
     cmp byte [rdx + 1], 0   ;If the user typed nothing...
     rete    ;Exit!
@@ -722,52 +722,52 @@ ctty:
     call copyArgumentToSearchSpec
     lea rdx, searchSpec
     mov eax, 3D02h  ;Open in read/write mode
-    int 41h
+    int 21h
     jc badFileError
     movzx ebx, ax   ;Save the handle in ebx
     mov eax, 4400h  ;Get device word
-    int 41h
+    int 21h
     test dl, 80h    ;Test if this device is a char device
     jz .badCharDev  ;If this bit is 0 => Disk file
     ;Now we set this handle to be STDIO
     or dl, 3    ;Set STDIO bits
     xor dh, dh
     mov eax, 4401h  ;Now we set the device word
-    int 41h
+    int 21h
     ;Now we DUP2 for STDIN/OUT/ERR
     xor ecx, ecx    ;STDIN
     mov ah, 46h
-    int 41h
+    int 21h
     inc ecx         ;STDOUT
     mov ah, 46h
-    int 41h
+    int 21h
     inc ecx         ;STDERR
     mov ah, 46h
-    int 41h
+    int 21h
     mov ah, 3Eh ;Now we close the original handle
-    int 41h
+    int 21h
     return
 .badCharDev:
     lea rdx, badDev
     mov ah, 09h
-    int 41h
+    int 21h
     mov ah, 3Eh ;Close opened handle
-    int 41h
+    int 21h
     return
 
 cls:  
     mov eax, 4400h  ;Get device info
     mov ebx, 1      ;for handle 1
-    int 41h         ;in dx
+    int 21h         ;in dx
     test edx, devCharDev
     jz .doAnsi  ;Make files register an ansi cls sequence
     test edx, charDevFastOut
     jz .doAnsi
-    ;Test if Int 49h uses Int 30h
+    ;Test if Int 29h uses Int 30h
     ;Tests if within the first 1024 bytes we have the sequence Int 30h (30CD)
-    ;Int 49h MUST be terminated with a IRETQ, within 1024 bytes
-    mov eax, 3549h  ;Get the vector for interrupt 49h
-    int 41h
+    ;Int 29h MUST be terminated with a IRETQ, within 1024 bytes
+    mov eax, 3529h  ;Get the vector for interrupt 29h
+    int 21h
 .biosCheck:
     cmp word [rbx], 30CDh
     je .biosConfirmed
@@ -806,7 +806,7 @@ cls:
 .ansiLp:
     lodsb   ;Get the char in 
     mov dl, al
-    int 41h
+    int 21h
     dec ecx
     jnz .ansiLp
     return
@@ -816,17 +816,17 @@ break:
     jnz .argumentProvided
     ;Here we just get the status of break
     mov eax, 3300h  ;Get break status in dl
-    int 41h
+    int 21h
     mov bl, dl
     lea rdx, breakIs
     mov ah, 09h
-    int 41h
+    int 21h
     lea rdx, onMes
     lea rcx, offMes
     test bl, bl ;IF bl = 0, break is off
     cmovz rdx, rcx
     mov ah, 09h
-    int 41h
+    int 21h
     return
 .argumentProvided:
     lea rsi, qword [r8 + fcb1 + fcb.filename]  ;Point to the first fcb name
@@ -851,12 +851,12 @@ break:
     mov edx, 1
 .setBreak:
     mov eax, 3301h  ;Set break
-    int 41h
+    int 21h
     return
 .badOnOff:
     lea rdx, badOnOff
     mov ah, 09h
-    int 41h
+    int 21h
     return
 
 verify:
@@ -864,17 +864,17 @@ verify:
     jnz .argumentProvided
     ;Here we just get the status of break
     mov eax, 5400h  ;Get verify status in al
-    int 41h
+    int 21h
     mov bl, al
     lea rdx, verifyIs
     mov ah, 09h
-    int 41h
+    int 21h
     lea rdx, onMes
     lea rcx, offMes
     test bl, bl ;IF bl = 0, break is off
     cmovz rdx, rcx
     mov ah, 09h
-    int 41h
+    int 21h
     return
 .argumentProvided:
     lea rsi, qword [r8 + fcb1 + fcb.filename]  ;Point to the first fcb name
@@ -900,12 +900,12 @@ verify:
     inc eax ;AL=1 => VERIFY is on
 .setVerify:
     mov ah, 2Eh  ;Set Verify
-    int 41h
+    int 21h
     return
 .badOnOff:
     lea rdx, badOnOff
     mov ah, 09h
-    int 41h
+    int 21h
     return
 
 rename:
@@ -957,7 +957,7 @@ rename:
     lea rdx, sourcePath
     lea rdi, destPath
     mov eax, 5600h
-    int 41h
+    int 21h
     retnc   ;Return if all oki!
     cmp al, errBadDrv
     je badDriveError
@@ -973,11 +973,11 @@ touch:
     lea rdx, searchSpec
     mov eax, 3C00h  ;Create file 
     xor ecx, ecx
-    int 41h
+    int 21h
     jc .touchError
     movzx ebx, ax
     mov eax, 3e00h  ;Close file immediately
-    int 41h
+    int 21h
     return
 .touchError:
     lea rdx, touchErr
@@ -990,10 +990,10 @@ join:
     jz .okJoin
 .joindisable:
     mov eax, 5200h  
-    int 41h
+    int 21h
     ;Set the join flag on A and make CDS path C:\JOINTEST,0
     mov eax, 8001h  ;Enter crit 1
-    int 4Ah
+    int 2Ah
     lea rbp, qword [rbx + 61h]  ;Get ptr to join byte
     mov rbx, qword [rbx + 2Ah]  ;Get CDS ptr
     and word [rbx + cds.wFlags], ~cdsJoinDrive    ;Clear that we are join
@@ -1001,19 +1001,19 @@ join:
     mov byte [rbx + 3], 0   ;Terminating Nul
     dec byte [rbp]          ;Decrement DOS counter
     mov eax, 8101h  ;Exit crit 1
-    int 4Ah
+    int 2Ah
     mov byte [.joinOn], 0
     lea rdx, .joinDisableMsg
     jmp short .joinExit
 .okJoin:
     mov byte [.joinOn], -1
     mov eax, 5200h  
-    int 41h
+    int 21h
     lea rbp, qword [rbx + 61h]  ;Get ptr to join byte
     mov rbx, qword [rbx + 2Ah]  ;Get CDS ptr
     ;Set the join flag on A and make CDS path C:\JOINTEST,0
     mov eax, 8001h  ;Enter crit 1
-    int 4Ah
+    int 2Ah
     or word [rbx + cds.wFlags], cdsJoinDrive    ;Set that we are join
     mov rdi, rbx
     lea rsi, .joinPath
@@ -1021,11 +1021,11 @@ join:
     rep movsb   ;Copy chars over
     inc byte [rbp]  ;Increment DOS counter
     mov eax, 8101h  ;Exit crit 1
-    int 4Ah
+    int 2Ah
     lea rdx, .joinEnableMsg
 .joinExit:
     mov eax, 0900h
-    int 41h
+    int 21h
     return
 .joinEnableMsg:  db CR,LF,"JOIN enabled",CR,LF,"$"
 .joinDisableMsg: db CR,LF,"JOIN disabled",CR,LF,"$"
@@ -1040,10 +1040,10 @@ subst:
     jz .okSubst
 .substdisable:
     mov eax, 5200h  
-    int 41h
+    int 21h
     ;Set the SUBST and valid flags on D: and make CDS path C:\SUBSTEST,0
     mov eax, 8001h  ;Enter crit 1
-    int 4Ah
+    int 2Ah
     mov rbx, qword [rbx + 2Ah]  ;Get CDS ptr
     add rbx, 3*cds_size ;Go to the fourth CDS
     and word [rbx + cds.wFlags], ~(cdsSubstDrive | cdsValidDrive)    ;Clear that we are subst (and valid)
@@ -1051,16 +1051,16 @@ subst:
     mov byte [rbx + 3], 0   ;Terminating Nul
     mov word [rbx + cds.wBackslashOffset], 2
     mov eax, 8101h  ;Exit crit 1
-    int 4Ah
+    int 2Ah
     mov byte [.substOn], 0
     lea rdx, .substDisableMsg
     jmp short .substExit
 .okSubst:
     mov byte [.substOn], -1
     mov eax, 5200h  
-    int 41h
+    int 21h
     mov eax, 8001h  ;Enter crit 1
-    int 4Ah
+    int 2Ah
     mov rbx, qword [rbx + 2Ah]  ;Get CDS ptr
     add rbx, 2*cds_size ;Go to the third CDS to get the DPB ptr
     mov rax, qword [rbx + cds.qDPBPtr]
@@ -1075,11 +1075,11 @@ subst:
     mov ecx, .substPathL
     rep movsb   ;Copy chars over
     mov eax, 8101h  ;Exit crit 1
-    int 4Ah
+    int 2Ah
     lea rdx, .substEnableMsg
 .substExit:
     mov eax, 0900h
-    int 41h
+    int 21h
     return
 .substEnableMsg:  db CR,LF,"SUBST enabled",CR,LF,"$"
 .substDisableMsg: db CR,LF,"SUBST disabled",CR,LF,"$"
@@ -1104,7 +1104,7 @@ truename:
     mov rsi, rdx    ;Point rsi to start of path
     lea rdi, searchSpec ;Store the path here
     mov eax, 6000h  ;TRUENAME
-    int 41h
+    int 21h
     jnc .writePath
     cmp al, 2
     je badFileError
@@ -1118,7 +1118,7 @@ truename:
     dec ecx
     mov ebx, 01
     mov ah, 40h
-    int 41h
+    int 21h
     call printCRLF
     return
 
@@ -1154,7 +1154,7 @@ volume:
     lea rdx, volPathBuf
     mov cx, dirVolumeID
     mov ah, 4Eh ;Find first
-    int 41h
+    int 21h
     jc .skipVolLbl
     lea rsi, qword [cmdFFBlock + ffBlock.asciizName]
     lea rdi, volLblSpc
@@ -1176,59 +1176,59 @@ volume:
     pushfq
     lea rdx, crlf
     mov ah, 09h
-    int 41h
+    int 21h
     lea rdx, volMes
     mov ah, 09h
-    int 41h
+    int 21h
     mov dl, byte [volPathBuf]   ;Print the drive letter out
     mov ah, 02h
-    int 41h
+    int 21h
     popfq
     jnc .volIDOk
     lea rdx, volNo
     mov ah, 09h
-    int 41h
+    int 21h
     lea rdx, crlf
     mov ah, 09h
-    int 41h
+    int 21h
     return
 .volIDOk:
     lea rdx, volOk
     mov ah, 09h
-    int 41h
+    int 21h
     lea rdi, volLblSpc
     call strlen
     dec ecx
     mov byte [rdi + rcx], "$"   ;Replace the null with a string terminator
     lea rdx, volLblSpc
     mov ah, 09h
-    int 41h
+    int 21h
     lea rdx, crlf
     mov ah, 09h
-    int 41h
+    int 21h
     return
 
 version:
     lea rdx, crlf
     mov ah, 09h
-    int 41h
+    int 21h
     lea rdx, dosVer
     mov ah, 09h
-    int 41h
+    int 21h
     call .printVersionNumber
     lea rdx, crlf
     mov ah, 09h
-    int 41h
+    int 21h
     return
 .printVersionNumber:
     mov ah, 30h ;Get version numbers, al = Major, ah = Minor
-    int 41h
+    int 21h
     push rax
     movzx eax, al
     call printDecimalWord
     mov dl, "."
     mov ah, 02h
-    int 41h
+    int 21h
     pop rax
     movzx eax, ah
     call printDecimalWord
@@ -1241,7 +1241,7 @@ memory:
     jnz .sysvarsOK
     lea rdx, memBad0
     mov ah, 09h
-    int 41h
+    int 21h
     jmp freezePC.altEP
 .sysvarsOK:
     ;Use rsi to store DOS memory, rdi to store Free memory and rbp for Hole
@@ -1285,46 +1285,46 @@ memory:
     
     lea rdx, memDOS
     mov ah, 09h
-    int 41h
+    int 21h
     mov rax, rsi
     call .mcbPrintAmount
     lea rdx, memByte
     mov ah, 09h
-    int 41h
+    int 21h
 
     test rbp, rbp
     jz .skipHole
     lea rdx, memHole
     mov ah, 09h
-    int 41h
+    int 21h
     mov rax, rbp
     call .mcbPrintAmount
     lea rdx, memByte
     mov ah, 09h
-    int 41h
+    int 21h
 .skipHole:
 
     lea rdx, memApp
     mov ah, 09h
-    int 41h
+    int 21h
     mov rax, rcx
     call .mcbPrintAmount
     lea rdx, memByte
     mov ah, 09h
-    int 41h
+    int 21h
 
     lea rdx, memFree
     mov ah, 09h
-    int 41h
+    int 21h
     mov rax, rdi
     call .mcbPrintAmount
     lea rdx, memByte
     mov ah, 09h
-    int 41h
+    int 21h
 
     lea rdx, memSys
     mov ah, 09h
-    int 41h
+    int 21h
     mov rax, rsi
     add rax, rdi
     add rax, rcx
@@ -1332,11 +1332,11 @@ memory:
     call .mcbPrintAmount
     lea rdx, memByte
     mov ah, 09h
-    int 41h
+    int 21h
 
     lea rdx, crlf
     mov ah, 09h
-    int 41h
+    int 21h
     return
 
 .mcbPrintAmount:
@@ -1353,7 +1353,7 @@ memory:
 .badMCBFound:
     lea rdx, memBad2
     mov ah, 09h
-    int 41h
+    int 21h
     jmp freezePC.altEP
 
 type:
@@ -1376,20 +1376,20 @@ type:
     call copyArgumentToSearchSpec
     lea rdx, searchSpec
     mov eax, 3D00h  ;Open in read only mode
-    int 41h
+    int 21h
     jc badFileError
     lea rdx, qword [r8 + psp.dta]
     movzx ebx, ax    ;Save the file handle in ebx
 .lp:
     mov ecx, 128    ;Read 128 bytes at a time
     mov ah, 3Fh ;Read handle
-    int 41h
+    int 21h
     mov ecx, eax
     jecxz .exit
     push rbx    ;Save the original in handle
     mov ebx, 1  ;STDOUT
     mov ah, 40h
-    int 41h
+    int 21h
     pop rbx ;Get back the original read handle
     jc .exitBad
     cmp eax, ecx
@@ -1399,7 +1399,7 @@ type:
     jne .exitBad
 .exit:
     mov ah, 3Eh ;Close handle
-    int 41h
+    int 21h
     return
 .exitBad:
     ;Print a disk error message... use a table to build the message but for
@@ -1415,13 +1415,13 @@ exit:
     rete    ;If the real parent is -1 => Original Command Interpreter.
     mov qword [r8 + psp.parentPtr], rax ;and restore parent pointer
 
-    mov rdx, qword [parentInt42]
-    mov qword [r8 + psp.oldInt42h], rdx
-    mov eax, 2542h
-    int 41h
+    mov rdx, qword [parentInt22]
+    mov qword [r8 + psp.oldInt22h], rdx
+    mov eax, 2522h
+    int 21h
 
     mov eax, 4C00h  ;Exit now okay
-    int 41h
+    int 21h
     return  ;If the exit wasn't successful for some reason, return as normal
 
 launchChild:
@@ -1462,12 +1462,12 @@ launchChild:
 .search:
     mov ecx, dirIncFiles
     mov ah, 4Eh ;Find First File
-    int 41h
+    int 21h
     jc .dfltErrExit
     call .noExtCheckExt
 .moreSearch:
     mov ah, 4Fh
-    int 41h
+    int 21h
     jc .noMoreFiles
     call .noExtCheckExt
     jmp short .moreSearch
@@ -1540,7 +1540,7 @@ launchChild:
     mov qword [rbx + execProg.pfcb2], rax
     lea rdx, cmdPathSpec
     mov eax, 4B00h  ;Load and execute!
-    int 41h
+    int 21h
     jmp .dfltErrExit    ;If something goes wrong, error out
 .noExtCheckExt:
     ;mov eax, dword [cmdFFBlock + ffBlock.asciizName + filename.fExt]
@@ -1568,7 +1568,7 @@ launchChild:
 .dfltErrExit:
     lea rdx, badCmd
     mov ah, 09h
-    int 41h
+    int 21h
     return
 
 .cmdTailTerminatorCheck:

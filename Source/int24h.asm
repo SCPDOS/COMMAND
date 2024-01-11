@@ -1,4 +1,4 @@
-critErrorHandler:   ;Int 44h
+critErrorHandler:   ;Int 24h
 ;User Stack in usage here, must be swapped to before this is called
 ;Entered with:  
 ;               AH = Critical Error Bitfield
@@ -31,7 +31,7 @@ critErrorHandler:   ;Int 44h
     mov bx, ax  ;Save ah in bh and al in bl (if needed)
     lea rdx, crlf
     mov ah, 09h ;Print String
-    int 41h
+    int 21h
 
     and edi, 00FFh   ;Zero the upper bytes of DI just in case
     mov ecx, 0Ch
@@ -45,72 +45,72 @@ critErrorHandler:   ;Int 44h
     lea rdx, qword [.errorMsgTable]
     lea rdx, qword [rdx+rdi]   ;Load EA to rdx
     mov ah, 09h ;Print String
-    int 41h     ;Call DOS to print first part of message
+    int 21h     ;Call DOS to print first part of message
 
     lea rdx, qword [.readmsg]
     lea rdi, qword [.writemsg]
     test bh, 1  ;Bit 0 is set if write operation
     cmovnz rdx, rdi ;Move the correct r/w part of the message to rdx
     mov ah, 09h ;Print String
-    int 41h     ;Call DOS to print error reading/writing portion
+    int 21h     ;Call DOS to print error reading/writing portion
 
     test bh, 80h    ;Test bit 7 for char/Disk assertation
     jnz .charError
 ;Disk error continues here
     lea rdx, qword [.drive] ;Drive message
     mov ah, 09h
-    int 41h
+    int 21h
     mov dl, bl  ;Get zero based drive number into dl
     add dl, "A" ;Add ASCII code
     mov ah, 02h ;Print char in dl
-    int 41h
+    int 21h
 .userInput:
     lea rdx, crlf  ;Print new line
     mov ah, 09h
-    int 41h
+    int 21h
 ;Abort, Retry, Ignore, Fail is word order
 ;Last message gets a ?, otherwise a comma followed by a 20h (space)
 .userAbort:
 ;Abort is always an option
     lea rdx, qword [.abortmsg]
     mov ah, 09h
-    int 41h ;Call DOS to prompt user for ABORT option
+    int 21h ;Call DOS to prompt user for ABORT option
 .userRetry:
     test bh, 10h  ;Bit 4 is retry bit
     jz .userIgnore    ;If clear, dont print message
     lea rdx, qword [.betweenMsg]
     mov ah, 09h
-    int 41h
+    int 21h
     lea rdx, qword [.retrymsg]
     mov ah, 09h
-    int 41h
+    int 21h
 .userIgnore:
     test bh, 20h    ;Bit 5 is ignore bit
     jz .userFail
     lea rdx, qword [.betweenMsg]
     mov ah, 09h
-    int 41h
+    int 21h
     lea rdx, qword [.ignoremsg]
     mov ah, 09h
-    int 41h
+    int 21h
 .userFail:
     test bh, 08h    ;Bit 3 is Fail bit
     jz .userMsgEnd
     lea rdx, qword [.betweenMsg]
     mov ah, 09h
-    int 41h
+    int 21h
     lea rdx, qword [.failmsg]
     mov ah, 09h
-    int 41h
+    int 21h
 .userMsgEnd:
     lea rdx, qword [.endMsg]
     mov ah, 09h
-    int 41h
+    int 21h
 ;Get user input now 
     xor ecx, ecx  ;4 Possible Responses
     lea rdi, qword [.responses] ;Go to start of string
     mov ah, 01h ;STDIN without Console Echo
-    int 41h ;Get char in al
+    int 21h ;Get char in al
     cmp al, "a" ;Chack if lowercase
     jb .uip1    ;If the value is below, ignore subtraction
     sub al, "a"-"A"  ;Turn the char into uppercase
@@ -155,7 +155,7 @@ critErrorHandler:   ;Int 44h
     lodsb   ;Get a string char into al and inc rsi
     mov dl, al  ;Move char into dl
     mov ah, 02h
-    int 41h ;Print char
+    int 21h ;Print char
     loop .ce1   ;Keep looping until all 8 char device chars have been printed
     jmp .userInput
 
@@ -185,7 +185,7 @@ critErrorHandler:   ;Int 44h
 .endMsg     db "? $"
 .responses  db "IRAF"   ;Abort Retry Ignore Fail
 
-int43h:
+int23h:
     test byte [permaSwitch], -1
     jnz .exit   ;If this is non-zero, just exit as normal
     ;Else, we juggle parent PSP's
