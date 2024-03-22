@@ -86,6 +86,9 @@ functionTable:
     db 5, "RMLBL"
     dw rmlbl - startLbl
 
+    db 5, "RNLBL"
+    dw rnlbl - startLbl
+
     db 5, "TOUCH"
     dw touch - startLbl
 

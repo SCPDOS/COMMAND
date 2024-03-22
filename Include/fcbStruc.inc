@@ -26,7 +26,7 @@ struc exFcb
     .extSig     resb 1  ;If the first byte is -1, signals an exFCB
     .reserved   resb 5  
     .attribute  resb 1  ;File attribute byte
-    .driveNum   resb 1  ;0 based drive number
+    .driveNum   resb 1  ;1 based drive number 
     .filename   resb 8
     .fileext    resb 3
     .curBlock   resb 2  ;Current block number relative to 0
@@ -55,7 +55,23 @@ struc renameFcb
     .resDrvNum  resb 1  ;Always zero, used by AH=29h for the drive letter
     .newName    resb 8
     .newExt     resb 3
-    .reserved2  resb 4  ;Alignement bytes, cleared by AH=29h
+    .reserved2  resb 4  ;Alignment bytes, cleared by AH=29h
+endstruc
+
+struc exRenFcb
+;Used for accessing the names and drive letter for renaming
+;The fcb ptr must be pointing to the drivenumber even if the passed fcb was ext
+    .extSig     resb 1  ;If the first byte is -1, signals an exFCB
+    .res0       resb 5  
+    .attribute  resb 1  ;File attribute byte
+    .driveNum   resb 1
+    .filename   resb 8
+    .fileext    resb 3
+    .reserved   resb 4  ;Alignment bytes, cleared by AH=29h
+    .resDrvNum  resb 1  ;Always zero, used by AH=29h for the drive letter
+    .newName    resb 8
+    .newExt     resb 3
+    .reserved2  resb 4  ;Alignment bytes, cleared by AH=29h
 endstruc
 
 ;FCBmode equates:
