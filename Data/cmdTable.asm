@@ -76,6 +76,16 @@ functionTable:
     db 4, "TYPE"
     dw type - startLbl
 
+    db 5, "LABEL"
+    dw label - startLbl
+
+;TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP
+    db 5, "MKLBL"
+    dw mklbl - startLbl
+
+    db 5, "RMLBL"
+    dw rmlbl - startLbl
+
     db 5, "TOUCH"
     dw touch - startLbl
 
@@ -84,5 +94,5 @@ functionTable:
 
     db 5, "SUBST"
     dw subst - startLbl
-
+;TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP
     db -1   ;End of table

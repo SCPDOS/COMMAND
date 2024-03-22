@@ -1122,6 +1122,34 @@ truename:
     call printCRLF
     return
 
+label:
+;Displays/Changes/Deletes the file label
+    lea rdx, .l1
+    mov eax, 0900h
+    int 21h
+    return
+.l1: db CR,LF,"Function unimplemented",CR,LF,"$"
+
+mklbl:
+    breakpoint
+    lea rdx, .l1
+    mov cx, 08h ;Make a label
+    mov eax, 3C00h
+    int 21h
+
+    mov ebx, eax
+    mov eax, 3E00h  ;Close the handle
+    int 21h
+    return
+
+.l1: db "TESTLABEL",0
+rmlbl:
+    breakpoint
+    lea rdx, mklbl.l1
+    mov eax, 4100h
+    int 21h
+    return
+    
 volume:
     lea rsi, cmdBuffer + 2  ;Get the command buffer
     call skipSpaces
