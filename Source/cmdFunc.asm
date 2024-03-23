@@ -1211,59 +1211,37 @@ volume:
     movzx eax, byte [r8 + fcb1 + fcb.driveNum] ;Get the 1-based drive number
     dec eax ;Convert to 0 based number
 .dirEP: ;Must be called with VALID 0 based drive number in al
-    add eax, "A" ;Get ASCII representation of 0 based number
-    mov byte [volPathBuf], al   ;Store ASCII letter here
-    call setDTA
-    lea rdx, volPathBuf
-    mov cx, dirVolumeID
-    mov ah, 4Eh ;Find first
+    call setDTA     ;Ensure we have our DTA set correctly, preserving all regs
+    lea rdx, volFcb
+    inc eax ;Get 1 based drive number
+    mov byte [rdx + exFcb.driveNum], al
+    mov eax, 1100h ;Find first FCB
     int 21h
-    jc .skipVolLbl
-    lea rsi, qword [cmdFFBlock + ffBlock.asciizName]
-    lea rdi, volLblSpc
-    mov ecx, 11 ;Get the 11 chars of the volume label
-.dirLblCopy:
-    lodsb   ;Get the first char
-    cmp al, 0
-    je .skipVolLbl  ;Jump with CF=NC
-    cmp al, "."
-    je .dirLblSkipStore
-    stosb
-.dirLblSkipStore:
-    dec ecx
-    jnz .dirLblCopy
-    ;Fallthru with CF=NC
-.skipVolLbl:
-;Print volume label information now
-;Propagates the CF if CF was set    
-    pushfq
+;Propagate the retval from rax
+    push rax
     lea rdx, crlf
     mov ah, 09h
     int 21h
     lea rdx, volMes
     mov ah, 09h
     int 21h
-    mov dl, byte [volPathBuf]   ;Print the drive letter out
+    lea rdx, cmdFFBlock
+    mov dl, byte [volFcb + exFcb.driveNum]   ;Get the 1 based drive number
+    add dl, "@"
     mov ah, 02h
     int 21h
-    popfq
-    jnc .volIDOk
+    pop rax
+    test al, al ;If this is zero, the call succeeded
+    jz .volIDOk
     lea rdx, volNo
-    mov ah, 09h
-    int 21h
-    lea rdx, crlf
-    mov ah, 09h
-    int 21h
-    return
+    jmp short .volEndPrint
 .volIDOk:
     lea rdx, volOk
     mov ah, 09h
     int 21h
-    lea rdi, volLblSpc
-    call strlen
-    dec ecx
-    mov byte [rdi + rcx], "$"   ;Replace the null with a string terminator
-    lea rdx, volLblSpc
+    mov byte [cmdFFBlock + exFcb.curBlock], "$"   ;Place a $ at the end of the name
+    lea rdx, qword [cmdFFBlock + exFcb.filename]
+.volEndPrint:
     mov ah, 09h
     int 21h
     lea rdx, crlf

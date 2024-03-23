@@ -88,9 +88,15 @@ dirSPExt    db "."
             db 3 dup ("?")
 
 ;Volume Vars
-volLblSpc   db 13 dup (0)
-volPathBuf  db 0 ;Drive LETTER goes here
-            db ":\*.*",0  ;This remains to build X:\*.*,0 for vol label search
+volFcb:
+    istruc exFcb
+    at exFcb.extSig,    db -1   ;Indicate extended FCB
+    at exFcb.attribute, db dirVolumeID
+    at exFcb.driveNum,  db 0    ;Current drive
+    at exFcb.filename,  db "????????"
+    at exFcb.fileext,   db "???"
+    at exFcb.curBlock,  dd 0
+    iend 
 
 ;Time/Date vars
 td1 db 0    ;Minutes/Year
