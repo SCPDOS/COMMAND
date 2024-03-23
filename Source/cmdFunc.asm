@@ -1211,8 +1211,14 @@ volume:
     movzx eax, byte [r8 + fcb1 + fcb.driveNum] ;Get the 1-based drive number
     dec eax ;Convert to 0 based number
 .dirEP: ;Must be called with VALID 0 based drive number in al
+    call setDTA     ;Ensure we have our DTA set correctly, preserving all regs
+    lea rdx, volFcb
     inc eax ;Get 1 based drive number
-    movzx ebx, al   ;Save drive number in bl
+    mov ebx, eax    ;Save the drive number in ebx
+    mov byte [rdx + exFcb.driveNum], al ;Store drive number we are 
+    mov eax, 1100h ;Find first FCB
+    int 21h
+    push rax
     ;Print the label intro spiel, using the given (valid) drive number
     lea rdx, crlf
     mov ah, 09h
@@ -1224,11 +1230,7 @@ volume:
     add dl, "@" ;Convert to a ASCII char to print
     mov ah, 02h
     int 21h
-    call setDTA     ;Ensure we have our DTA set correctly, preserving all regs
-    lea rdx, volFcb
-    mov byte [rdx + exFcb.driveNum], bl ;Store drive number we are 
-    mov eax, 1100h ;Find first FCB
-    int 21h
+    pop rax
     test al, al ;If this is zero, the call succeeded
     jz .volIDOk
     lea rdx, volNo
