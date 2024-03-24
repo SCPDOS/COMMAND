@@ -120,5 +120,5 @@ cmdLdr:
 initString: 
     db CR,LF,"Scientific Computer Research(R) SCP/DOS(R) Version $"
 initString2:
-    db CR,LF, "          (C)Copyright Scientific Computer Reserach 2022.",CR,LF,"$"
+    db CR,LF, "          (C)Copyright Scientific Computer Research 2024.",CR,LF,"$"
 badVerStr: db "Incorrect DOS version",CR,LF,"$"
