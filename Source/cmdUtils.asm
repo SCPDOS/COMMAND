@@ -399,15 +399,7 @@ findTerminator:
 isALterminator:
 ;Returns: ZF=NZ if al is not a terminator (Not including CR)
 ;         ZF=ZY if al is a terminator
-    cmp al, " "
-    rete
-    cmp al, ";"
-    rete
-    cmp al, "="
-    rete
-    cmp al, ","
-    rete
-    cmp al, TAB
+    call isALseparator
     rete
     cmp al, LF
     return
@@ -425,17 +417,35 @@ isALEndOfCommand:
     cmp al, CR
     return
 
-skipSpaces:
-;Also skips tabs
+skipSeparators:
+;Skips all "standard" command separators. This is not the same as FCB 
+; command separators but a subset thereof. 
+;These are the same across all codepages.
 ;Input: rsi must point to the start of the data string
-;Output: rsi points to the first non-space char
-    cmp byte [rsi], " "
-    je .skip    ;If equal to a space, skip it
-    cmp byte [rsi], TAB
-    retne   ;If not equal to a tab or space, return
-.skip:
-    inc rsi
-    jmp short skipSpaces
+;Output: rsi points to the first non-separator char
+    push rax
+.l1:
+    lodsb
+    call isALseparator
+    jnz .l1
+.exit:
+    pop rax
+    dec rsi ;Point rsi back to the char which is not a command separator
+    return
+
+isALseparator:
+;Returns: ZF=NZ if al is not a command separator 
+;         ZF=ZY if al is a command separator
+    cmp al, " "
+    rete
+    cmp al, ";"
+    rete
+    cmp al, "="
+    rete
+    cmp al, ","
+    rete
+    cmp al, TAB
+    return
 
 printPrompt:
     cmp word [promptPtr], -1

@@ -84,7 +84,6 @@ parseInput:
 ;EndOff is set up before entering this part
 ;Copies a nicely formatted version of the input command line
 ; without any redirections to psp.dta
-    ;lea rsi, qword [cmdBuffer + 2]  ;Goto the command buffer
     lea rdi, qword [r8 + cmdLine]   ;Go to the command line in the psp
     mov rsi, qword [cmdStartPtr]
     test rsi, rsi
@@ -92,7 +91,7 @@ parseInput:
     lea rsi, [cmdBuffer + 1]    ;Goto command buffer - 1
 .notNewCmd:
     inc rsi ;Goto first char in new buffer since rsi points to terminating char
-    call skipSpaces ;Skip any preceeding spaces
+    call skipSeparators ;Skip any preceeding spaces
     lodsw   ;Get the first two chars into ax
     mov word [cmdDrvSpec], ax ;Store these chars as if they are the drvspec
     sub rsi, 2  ;Go back to the start of the command
@@ -112,7 +111,7 @@ parseInput:
     test al, 1  ;Was CF set?
     jnz .exit   ;If an embedded CR was found in the filename, exit!
 .cmdLineProcess:
-    call skipSpaces ;Go to the next char in the input line
+    call skipSeparators ;Go to the next char in the input line
 .redirFound:
     lodsb   ;Get first non-space char (setupRedir skips spaces before ret)
     cmp al, CR  ;If this was a CR, we stop processing
@@ -127,7 +126,7 @@ parseInput:
     jnz .arg2
 .arg1:
     mov byte [arg1Flg], -1
-    call skipSpaces
+    call skipSeparators
     mov rax, rsi
     lea rbx, cmdBuffer
     sub rax, rbx
@@ -137,7 +136,7 @@ parseInput:
     test byte [arg2Flg], -1
     jnz .argCommon
     mov byte [arg2Flg], -1
-    call skipSpaces
+    call skipSeparators
     mov rax, rsi
     lea rbx, cmdBuffer
     sub rax, rbx
@@ -146,7 +145,7 @@ parseInput:
 .argCommon:
     ;More than two arguments? Do nothing more than just copy it
     ; over. If we encounter an embedded CR, exit there too
-    call skipSpaces
+    call skipSeparators
     cmp byte [rsi], CR  ;Are we at the end of the commandline?
     je .exit
     ;If not, we copy it over
@@ -547,11 +546,11 @@ checkAndSetupRedir:
 .inputRedir:
     mov byte [redirIn], -1  ;Set the redir in flag
     lea rdi, rdrInFilespec
-    call skipSpaces ;Skip spaces between < and the filespec
+    call skipSeparators ;Skip spaces between < and the filespec
     call copyCommandTailItem
     ;jc .redirExit
     dec rsi ;Ensure rsi points to the terminating char
-    call skipSpaces
+    call skipSeparators
     ;Setup the redir here for STDIN
     xor ebx, ebx    ;DUP STDIN
     mov eax, 4500h
@@ -580,11 +579,11 @@ checkAndSetupRedir:
     inc rsi ;Go past it too
 .notDouble:
     lea rdi, rdrOutFilespec
-    call skipSpaces
+    call skipSeparators
     call copyCommandTailItem
     ;jc .redirExit
     dec rsi ;Ensure rsi points to the terminating char
-    call skipSpaces
+    call skipSeparators
     ;Setup the redir here for STDOUT
     mov ebx, 1    ;DUP STDOUT
     mov eax, 4500h

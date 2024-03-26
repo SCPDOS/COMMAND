@@ -66,10 +66,10 @@ dir:
 ;If one arg, search that 
 ;If more than one, fail
     lea rsi, cmdBuffer + 2
-    call skipSpaces ;Skip leading spaces
+    call skipSeparators ;Skip leading spaces
     add rsi, 3  ;Go past the DIR (always three chars)
 .lp:
-    call skipSpaces ;Skip spaces after
+    call skipSeparators ;Skip spaces after
     lodsb   ;Get first non space char
     call isALEndOfCommand   ;If this is the end char CR or "|", exit
     jz .eocNoNull
@@ -1187,9 +1187,9 @@ rnlbl:
     iend
 volume:
     lea rsi, cmdBuffer + 2  ;Get the command buffer
-    call skipSpaces
+    call skipSeparators
     add rsi, 3  ;Go past the VOL command
-    call skipSpaces
+    call skipSeparators
     lodsb   ;Get the first char, and point rsi to next char
     call isALEndOfCommand   ;If this char is end of command, use current drive
     jnz .checkDriveLetter
@@ -1200,7 +1200,7 @@ volume:
     jne badDriveError
     mov rdi, rsi    ;Save start of drive spec in rsi
     inc rsi  ;Go past the X: spec
-    call skipSpaces
+    call skipSeparators
     lodsb   ;Get the non-space char in al
     call isALEndOfCommand   ;The next non-space char must be terminator
     jne badDriveError
@@ -1554,7 +1554,7 @@ launchChild:
     cmp al, SPC
     jne short .passName
     ;Now we copy the name 
-    call skipSpaces ;Start by skipping spaces (there are no embedded tabs)
+    call skipSeparators ;Start by skipping spaces (there are no embedded tabs)
     ;rsi points to the first non-space char
 .copyTail:
     lodsb
@@ -1610,17 +1610,4 @@ launchChild:
     lea rdx, badCmd
     mov ah, 09h
     int 21h
-    return
-
-.cmdTailTerminatorCheck:
-;Input: al = Char to check
-;ZF=NZ -> Not a terminator
-;ZF=ZE and CF=NC -> SPC detected
-;ZF=ZE and CF=CY -> CR detected
-    clc     ;Clear CF 
-    cmp al, SPC
-    rete    ;ZF Set
-    cmp al, CR
-    retne   ;CF and ZF clear
-    stc     ;Set CF since ZF is already set
     return
