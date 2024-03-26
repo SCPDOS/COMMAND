@@ -680,10 +680,6 @@ copyCommandTailItemProgram:
     je .endOfInput
     call isALterminator
     jz .exit
-    ;cmp al, byte [pathSep]
-    ;je .exit
-    ;cmp al, byte [switchChar]
-    ;je .exit
     stosb
     jmp short copyCommandTailItemProgram
 .endOfInput:
@@ -715,8 +711,6 @@ copyCommandTailItem:
     jz .exit
     cmp al, byte [pathSep]
     je .pathSep
-    ;cmp al, byte [switchChar]
-    ;je .exit
     stosb
     jmp short copyCommandTailItem
 .pathSep:
@@ -726,8 +720,6 @@ copyCommandTailItem:
     jz .exit
     cmp al, CR
     je .endOfInput
-    ;cmp al, byte [switchChar]
-    ;je .exit
     mov al, byte [pathSep]
     stosb   ;Else store the pathsep
     dec rsi ;Move rsi back a piece
