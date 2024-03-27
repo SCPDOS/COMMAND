@@ -427,7 +427,7 @@ skipSeparators:
 .l1:
     lodsb
     call isALseparator
-    jnz .l1
+    jz .l1
 .exit:
     pop rax
     dec rsi ;Point rsi back to the char which is not a command separator
@@ -435,7 +435,7 @@ skipSeparators:
 
 isALseparator:
 ;Returns: ZF=NZ if al is not a command separator 
-;         ZF=ZY if al is a command separator
+;         ZF=ZE if al is a command separator
     cmp al, " "
     rete
     cmp al, ";"

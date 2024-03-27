@@ -53,7 +53,6 @@ commandMain:
     mov eax, 0C0Ah  ;Do Buffered input
     int 21h
     call printCRLF  ;Note we have accepted input
-
 ;First check we had something typed in of length greater than 0
 ;Must be greater than 0 as executable commands must have extension and filename
     cmp byte [inBuffer + 1], 0  ;Check input length valid
@@ -84,6 +83,7 @@ parseInput:
 ;EndOff is set up before entering this part
 ;Copies a nicely formatted version of the input command line
 ; without any redirections to psp.dta
+    breakpoint
     lea rdi, qword [r8 + cmdLine]   ;Go to the command line in the psp
     mov rsi, qword [cmdStartPtr]
     test rsi, rsi
