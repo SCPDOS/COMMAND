@@ -371,7 +371,7 @@ findTerminatorOrEOC:
 ;Returns with al = terminator and rsi pointing to the char in the string
 ;If a end of command char found, also sets CF
     lodsb
-    cmp al, CR
+    call isALEndOfCommand
     je .endOfInput
     call isALterminator
     jz .exit

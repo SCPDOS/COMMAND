@@ -58,7 +58,7 @@ commandMain:
     cmp byte [inBuffer + 1], 0  ;Check input length valid
     je .inputMain2
     ;Copy over the input text
-    lea rsi, inBuffer
+    lea rsi, inBuffer   ;This buffer is used for all input so copy command line
     lea rdi, cmdBuffer
     mov ecx, cmdBufferL   ;Straight up copy the buffer over
     rep movsb
@@ -83,7 +83,6 @@ parseInput:
 ;EndOff is set up before entering this part
 ;Copies a nicely formatted version of the input command line
 ; without any redirections to psp.dta
-    breakpoint
     lea rdi, qword [r8 + cmdLine]   ;Go to the command line in the psp
     mov rsi, qword [cmdStartPtr]
     test rsi, rsi
@@ -674,9 +673,7 @@ copyCommandTailItemProgram:
 ;Output: Sentence copied with a null terminator inserted.
 ; If CF=CY, embedded CR encountered
     lodsb
-    cmp al, CR
-    je .endOfInput
-    cmp al, "|"
+    call isALEndOfCommand
     je .endOfInput
     call isALterminator
     jz .exit
@@ -699,9 +696,7 @@ copyCommandTailItem:
 ;Output: Sentence copied with a null terminator inserted.
 ; If CF=CY, embedded CR or Pipe encountered
     lodsb
-    cmp al, CR
-    je .endOfInput
-    cmp al, "|"
+    call isALEndOfCommand
     je .endOfInput
     call isALterminator
     jz .exit
@@ -718,7 +713,7 @@ copyCommandTailItem:
     lodsb   ;Get the next char, increment rsi by one
     call isALterminator
     jz .exit
-    cmp al, CR
+    call isALEndOfCommand
     je .endOfInput
     mov al, byte [pathSep]
     stosb   ;Else store the pathsep
