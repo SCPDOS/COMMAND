@@ -550,6 +550,9 @@ cpDelimPathToBufz:
 ;       rdi -> Buffer to store null terminated path in
 ;Output: rsi -> First char past pathname delimiter
 ;       rdi -> One char past null terminator on pathname buffer
+    push rbx
+    mov rbx, rdi    ;Save the head of the path in rbx
+.lp:
     lodsb   ;Get the char
     cmp al, CR
     je .gotRedirPath
@@ -558,16 +561,22 @@ cpDelimPathToBufz:
     cmp al, byte [switchChar]
     je .gotRedirPath
     stosb   ;Store this char and loop next char
-    jmp short cpDelimPathToBufz
+    jmp short .lp
 .gotRedirPath:
     push rax    ;Save the char on stack
     xor al, al  ;Get null terminator char
-    cmp byte [rdi], ":" ;Is this a colon?
+    sub rbx, rdi
+    cmp rbx, -1 ;This is because one char has been written!!
+    je .notColon
+    cmp rbx, -2 ;This is for drive letters, must always have the colon!!
+    je .notColon
+    cmp byte [rdi - 1], ":" ;Is this a colon?
     jne .notColon
-    dec rdi ;We overwrite the colon. Allowed for devices
+    dec rdi     ;We overwrite the colon. 
 .notColon:
     stosb   ;Store the null terminator for the redir path
     pop rax ;Get back the char in al
+    pop rbx
     return
 
 buildCommandPath:
@@ -578,6 +587,7 @@ buildCommandPath:
     add rsi, rax    ;Go to the start of the command
 copyArgumentToSearchSpec:
 ;Copies an arbitrary delimited path pointed to by rsi into rdi and null terminates.
+    mov word [searchSpec], 0    ;Make sure we clean up search spec first!
     lea rdi, searchSpec
     call cpDelimPathToBufz
     return

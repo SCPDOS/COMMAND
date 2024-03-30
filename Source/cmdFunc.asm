@@ -36,7 +36,7 @@ dir:
     mov byte [dirLineCtr], 0
     mov byte [dirFileCtr], 0
     mov byte [dirSrchDir], 0
-    mov byte [searchSpec], 0
+    mov word [searchSpec], 0
     lea rdi, dirSrchFCB ;Start also by initialising the search pattern
     mov byte [rdi + fcb.driveNum], 0    ;Default drive
     mov rax, "????????"
@@ -144,35 +144,52 @@ dir:
     stosb   ;Else, store a pathsep and inc rdi!
 .copyPathLoop:
     lodsb
+    cmp al, byte [pathSep]  ;Is it a pathsep?
+    jne .checkDot  ;If not, store it
+.lpPathseps:
+    cmp byte [rsi], al  ;Is [rsi] a pathsep?
+    jne .checkDot  ;If it isn't store al, check dots
+    inc rsi
+    jmp short .lpPathseps
+.checkDot:
+    cmp al, "."
+    je .dots
+.store:
     stosb
     test al, al ;Was the char we just copied a null?
     jz .exitPathCopy
-    cmp al, "." ;Handle . and .. separately
-    jne .copyPathLoop
-    ;Here handle dot and dot dot
-    mov al, byte [rsi]  ;Look ahead a char!
-    cmp al, "." ;Is this another dot?
-    je .twoDot
-    dec rdi ;Move rdi back to the position we just wrote the dot on
     jmp short .copyPathLoop
+.dots:
+    ;Here handle dot and dot dot
+    ;If the previous char is a pathsep, and the char after is a pathsep or null,
+    ; this is a current dir. Keep rdi where it is. If next char is psep, adv rsi
+    ; by 1. If it is null, go to top of loop.
+    ;Check char before in rdi. If this is a pathsep, we get started.
+    mov ah, byte [pathSep]
+    cmp byte [rdi - 1], ah  
+    jne .store  ;If this is not a pathsep, pass it up for storage. 
+    mov ah, byte [rsi]  ;Now look ahead a char!
+    cmp ah, "." ;Is this another dot?
+    je .twoDot
+    ;This is only a "current dir" when next char is pathsep or null
+    cmp ah, byte [pathSep]
+    je .skipThisPathsep
+    test ah, ah
+    jz .copyPathLoop
+    jmp short .store ;Else, we store the char as normal!
+.skipThisPathsep:
+;If a dot is flanked by two pathseps, skip handling it and the pathsep!
+    inc rsi ;Point to the pathsep
+    jmp short .copyPathLoop ;and rejoin the store
 .twoDot:
-    ;Now search backwards for the previous pathsep
+    ;Currently, do not allow going backwards relatively.
+    ;Will replace this whole procedure with using CHDIR and CWD
     inc rsi ;Move over the second dot
-    mov al, byte [pathSep]
-    xor ecx, ecx
-    dec ecx
-    std
-    repne scasb   ;Search for this pathsep
-    cld
-    cmp byte [rdi], ":" ;rdi points to char before pathsep. Is it drive sep?
-    je badParamError    ;Exit error if so.
-    std
-    repne scasb
-    cld
-    add rdi, 2  ;Now go past this pathsep!
-    cmp byte [rsi + 1], "."  ;Is there a third dot?
-    je badParamError    ;Error if so!
-    jmp short .copyPathLoop   ;Keep going if not
+    mov ah, byte [rsi]
+    cmp ah, byte [pathSep]
+    je badParamError
+    test ah, ah
+    jne badParamError
 .exitPathCopy:
 ;Now we have the full, adjusted path copied over to dirSrchDir!
     sub rdi, 2  ;Go back two chars
@@ -190,6 +207,7 @@ dir:
     mov rdi, rsi
     mov eax, 1211h  ;Normalise path without affecting the registers
     int 2fh
+    breakpoint
     call scanForWildcards
     jz .wcSearchPattern     ;Wildcard found! We have a search pattern!
     mov rdx, rsi
@@ -461,19 +479,6 @@ chdir:
     mov al, byte [arg1FCBret]
     cmp al, -1 
     je badDriveError  ;IF the drive is good, but FCB name blank, either X: or \ 
-    ;cmp byte [r8 + fcb1 + fcb.filename], " "
-    ;jne .setPath
-    ;jmp .setPath
-    ;;If we searched for a . or .., the fcb will be blank. 
-    ;movzx eax, byte [arg1Off]
-    ;lea rsi, qword [r8 + cmdLine]
-    ;add rsi, rax
-    ;mov al, byte [pathSep]
-    ;cmp byte [rsi], al  ;Is the first char a pathsep?
-    ;je .setPath
-    ;cmp byte [rsi], "."
-    ;jne .printDiskCWD
-;.setPath:
     call buildCommandPath   ;Else build a fully qualified pathname
     lea rdx, searchSpec
     mov ah, 3Bh ;CHDIR
@@ -1226,7 +1231,7 @@ volume:
     jnz badDriveError ;Can't have either wildcards nor be invalid (obviously)
     movzx eax, byte [r8 + fcb1 + fcb.driveNum] ;Get the 1-based drive number
     dec eax ;Convert to 0 based number
-.dirEP: ;Must be called with VALID 0 based drive number in al
+.dirEP: ;Must be called with VALID 0 based drive number in al  
     call setDTA     ;Ensure we have our DTA set correctly, preserving all regs
     lea rdx, volFcb
     inc eax ;Get 1 based drive number
