@@ -207,7 +207,6 @@ dir:
     mov rdi, rsi
     mov eax, 1211h  ;Normalise path without affecting the registers
     int 2fh
-    breakpoint
     call scanForWildcards
     jz .wcSearchPattern     ;Wildcard found! We have a search pattern!
     mov rdx, rsi
