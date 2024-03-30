@@ -182,14 +182,28 @@ dir:
     inc rsi ;Point to the pathsep
     jmp short .copyPathLoop ;and rejoin the store
 .twoDot:
-    ;Currently, do not allow going backwards relatively.
-    ;Will replace this whole procedure with using CHDIR and CWD
-    inc rsi ;Move over the second dot
-    mov ah, byte [rsi]
+    ;Woohoo, this works!
+    inc rsi ;Move past the second dot
+    mov ah, byte [rsi]  ;Now pick up char after "." Valid only pathsep or null
     cmp ah, byte [pathSep]
-    je badParamError
+    je .tdOk
     test ah, ah
     jne badParamError
+.tdOk:
+    mov al, byte byte [pathSep]
+    cmp byte [rdi - 2], ":" ;rdi must be immediately past a pathsep here
+    je badParamError
+    sub rdi, 2
+    xor ecx, ecx
+    dec ecx
+    std
+    repne scasb ;Scan backwards for the pathsep
+    cld
+    add rdi, 2  ;Get on the right side of the pathsep
+    test ah, ah ;If null, now pick it up and store it and exit properly
+    jz .copyPathLoop
+    inc rsi ;Else, go past the pathsep, pick up the next char as usual
+    jmp .copyPathLoop ;And loop again
 .exitPathCopy:
 ;Now we have the full, adjusted path copied over to dirSrchDir!
     sub rdi, 2  ;Go back two chars
