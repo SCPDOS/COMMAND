@@ -26,7 +26,7 @@ pipeSTDOUT  dw -1   ;The handle to replace STDOUT with once all piping complete
 
 cmdStatePtr:   ;Symbol to use for clearing command state variables
 ;These variables are valid for a SINGLE command in a command line
-cmdDrvSpec  dw 0    ;Read the first word in to see if the pathspec has drivespec
+;Next two bytes, if set to -1, flags error
 redirIn     db 0    ;If set, we are redirecting input from a file
 redirOut    db 0    ;If 1, we are redirecting output to a file, destructively
 ;                    If 2, we are redirecting output to a file, by appending
@@ -76,17 +76,17 @@ searchSpec  db cmdBufferL dup (0)   ;Contains the pathspec for the search file
 
 ;Internal Function vars
 ;Dir Vars
-dirPrnType  db 0    ;Print type.    Bit[0] set => /W or /w specified
+dirFlags    db 0    ;Dir Flags.     Bit[0] set => /W or /w specified
 ;                                   Bit[1] set => /P or /p specified
+;                                   Bit[2] set => A file/path specified
 dirLineCtr  db 0    ;Counter to keep track of which line we printed (0-23)
 dirFileCtr  db 0    ;Used in /W mode, rollover after 5
 dirDrv      db 0    ;0 based drive number to use
-dirOldCWD   db cmdBufferL dup (0)   ;Space for CWD and any overspill 
-dirPathArg  db cmdBufferL dup (0)   ;Copy the pathspec argument here if any
-dirSrchPat  db 8 dup ("?")    ;We copy the search pattern here
-dirSPExt    db "."
-            db 3 dup ("?")
-
+dirSrchDir  db cmdBufferL dup (0)   ;Search directory 
+dirSrchFCB  db 10h dup ("?")    ;We copy the search pattern here
+dirWideType equ 1
+dirPageType equ 2
+dirFileType equ 4
 ;Volume Vars
 volFcb:
     istruc exFcb
@@ -113,3 +113,5 @@ destHdl     dw -1
 srcHdlInfo  dw 0 ;Used to save the handle device info (bit 7 Set -> Char dev)
 
 copyBuffer  db 128 dup (0)  ;Copy up to 128 bytes at a time
+
+bpActive db 0   ;When not zero, breakpoints are on!

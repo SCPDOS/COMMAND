@@ -1,6 +1,6 @@
 ;Data equates and struct declarations
 
-cmdBufferL  equ 128 ;Length of a command line buffer
+cmdBufferL  equ 130 ;Length of a command line buffer (add two bytes for padding)
 driveSpecL  equ 2   ;Space for X:
 dirPathL    equ 64  ;Length of a directory path
 fcbNameL    equ 11  ;8.3 => 11 chars in name

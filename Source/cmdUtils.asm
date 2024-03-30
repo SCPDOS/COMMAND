@@ -354,86 +354,46 @@ strlen:
 ;Gets the length of a ASCIIZ string
 ;Input: rdi = Source buffer
 ;Output: ecx = Length of string, INCLUDING TERMINATING NULL
+    push rbx
+    mov rbx, rsp
+    push rax    
     push rax
-    push rdi
-    xor al, al
-    xor ecx, ecx    ;ONLY USE ECX!!!
-    dec ecx ;rcx = -1
-    repne scasb
-    not ecx
-    pop rdi
-    pop rax
+    mov eax, 1212h  ;Strlen according to DOS
+    int 2fh
+    mov rsp, rbx
+    pop rbx
     return
 
-findTerminatorOrEOC:
-;Advances rsi to the next string terminator char or the next End of command
-; char
-;Returns with al = terminator and rsi pointing to the char in the string
-;If a end of command char found, also sets CF
-    lodsb
-    call isALEndOfCommand
-    je .endOfInput
-    call isALterminator
-    jz .exit
-    cmp al, byte [pathSep]
-    je .exit
-    cmp al, byte [switchChar]
-    je .exit
-    jmp short findTerminatorOrEOC
-.endOfInput:
-    call .exit
-    stc 
-    return
-.exit:
-    dec rsi ;Point to the terminating char
+ucChar:
+;Input: al = Char to uppercase
+;Output: al = Adjusted char 
+    push rbx
+    mov rbx, rsp    ;Save the stack ptr
+    push rax    ;Push the char twice on the stack
+    push rax
+    mov eax, 1213h  ;Get DOS to uppercase the char
+    int 2fh         ;Returns the processed char in al
+    mov rsp, rbx    ;Return the stack ptr to where it was
+    pop rbx
     return
 
-findTerminator:
-;Advances rsi to the next string terminator char
-;Returns with al = terminator and rsi pointing to the char in the string
-    lodsb
-    call isALterminator
-    jnz findTerminator
-    dec rsi
-    return
-isALterminator:
-;Returns: ZF=NZ if al is not a terminator (Not including CR)
-;         ZF=ZY if al is a terminator
-    call isALseparator
-    rete
-    cmp al, LF
-    return
-
-findEndOfCommand:
-;Moves rsi to the | or CR that terminates this command
-    lodsb
-    call isALEndOfCommand
-    jnz findEndOfCommand
-    dec rsi
-    return
-isALEndOfCommand:
-    cmp al, "|"
-    rete
-    cmp al, CR
-    return
-
-skipSeparators:
-;Skips all "standard" command separators. This is not the same as FCB 
-; command separators but a subset thereof. 
+skipDelimiters:
+;Skips all "standard" command delimiters. This is not the same as FCB 
+; command delimiters but a subset thereof. 
 ;These are the same across all codepages.
 ;Input: rsi must point to the start of the data string
-;Output: rsi points to the first non-separator char
+;Output: rsi points to the first non-delimiter char
     push rax
 .l1:
     lodsb
-    call isALseparator
+    call isALdelimiter
     jz .l1
 .exit:
     pop rax
-    dec rsi ;Point rsi back to the char which is not a command separator
+    dec rsi ;Point rsi back to the char which is not a command delimiter
     return
 
-isALseparator:
+isALdelimiter:
 ;Returns: ZF=NZ if al is not a command separator 
 ;         ZF=ZE if al is a command separator
     cmp al, " "
@@ -583,20 +543,64 @@ FCBToAsciiz:
     xor eax, eax
     stosb   ;Store a null at the end
     return
+    
+cpDelimPathToBufz:
+;Copy a delimited path into buffer and null terminate.
+;Input: rsi -> Point to start of delimiter terminated path
+;       rdi -> Buffer to store null terminated path in
+;Output: rsi -> First char past pathname delimiter
+;       rdi -> One char past null terminator on pathname buffer
+    lodsb   ;Get the char
+    cmp al, CR
+    je .gotRedirPath
+    call isALdelimiter  ;Is this char a delimiter char?
+    jz .gotRedirPath 
+    cmp al, byte [switchChar]
+    je .gotRedirPath
+    stosb   ;Store this char and loop next char
+    jmp short cpDelimPathToBufz
+.gotRedirPath:
+    push rax    ;Save the char on stack
+    xor al, al  ;Get null terminator char
+    cmp byte [rdi], ":" ;Is this a colon?
+    jne .notColon
+    dec rdi ;We overwrite the colon. Allowed for devices
+.notColon:
+    stosb   ;Store the null terminator for the redir path
+    pop rax ;Get back the char in al
+    return
 
 buildCommandPath:
-;Based on the first argument on the command line
-; will build a full ASCIIZ path in searchSpec to the file/dir specified
-    ;If this is a relative path, will handle correctly (tho unnecessary)
+;Copies the first argument into a null delimited path in the searchSpec buffer.
     movzx eax, byte [arg1Off]
-    lea rsi, cmdBuffer
+    mov r8, [pspPtr]
+    lea rsi, qword [r8 + cmdLine]
     add rsi, rax    ;Go to the start of the command
+copyArgumentToSearchSpec:
+;Copies an arbitrary delimited path pointed to by rsi into rdi and null terminates.
     lea rdi, searchSpec
-.buildPath:
-    call copyCommandTailItem    ;Terminates with a 0 for free
-    clc ;I dont care if i encounter an embedded CR rn
+    call cpDelimPathToBufz
     return
-    
+
+scanForWildcards:
+;Input: rsi -> Null terminated path to search for wildcards on
+;Output: ZF=ZE if WC found. Else, ZF=NZ.
+    push rax
+    push rsi
+.lp:
+    lodsb
+    cmp al, "?"
+    je .exit
+    cmp al, "*"
+    je .exit
+    test al, al
+    jnz .lp
+    inc al  ;This will clear the ZF
+.exit:
+    pop rsi
+    pop rax
+    return
+
 printDecimalWord:
 ;Takes qword in rax and print it's decimal representation
 ;Takes the qword in eax and prints its decimal representation
@@ -684,53 +688,6 @@ freezePC:
     pause
     hlt
     jmp short .lp
-
-getFilenamePtrFromFilespec:
-;Gets a pointer to the first char of a filename from a asciiz pathspec
-;Input: rsi = Pathspec to search
-;Output: rsi = Points to the first char of the filename
-    mov rbx, rsi
-    xor eax, eax
-    mov rdi, rsi    ;Go to the source string 
-    call strlen     ;Get it's length
-    dec ecx ;Dont include terminating null
-    jz .exitBad ;Was the string of length zero? Exit bad if so
-    add rsi, rcx    ;Goto last char in path (not null)
-.lp:
-    cmp rbx, rsi    ;Is rdi pointing to the start of the string?
-    rete
-    mov al, byte [rsi]  ;Get the char we currently are at
-    cmp al, ":" ;X: ?
-    je .pointFilename
-    cmp al, byte [pathSep]  ;Is al pathSep?
-    je .pointFilename
-    dec rsi ;Not a terminator, go back a char
-    jmp short .lp
-.pointFilename:
-    inc rsi ;Now point to the first char of the pathname
-    return
-.exitBad:
-    stc
-.exit:
-    return
-
-
-copyArgumentToSearchSpec:
-;Works similarly to the build searchpath but is simpler
-;Null terminates
-    lea rdi, searchSpec
-.copyPath:
-    lodsb
-    call isALEndOfCommand
-    jz .finishCopy
-    call isALterminator
-    jz .finishCopy
-    stosb
-    jmp short .copyPath
-.finishCopy:
-    xor eax, eax
-    stosb
-    return
 
 setDTA:
     push rax
