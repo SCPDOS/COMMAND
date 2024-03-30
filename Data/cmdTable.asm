@@ -98,7 +98,5 @@ functionTable:
     db 5, "SUBST"
     dw subst - startLbl
 
-    db 3, "BPT"
-    dw bpt - startLbl
 ;TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP
     db -1   ;End of table

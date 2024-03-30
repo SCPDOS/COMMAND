@@ -29,20 +29,6 @@ badCmn:
     int 21h
     stc ;Return with CY => Error occured
     return
-bpt:
-    xor byte [bpActive], -1
-    test byte [bpActive], -1
-    jnz .on
-    lea rdx, .l2
-    jmp short .write
-.on:
-    lea rdx, .l1
-.write:
-    mov eax, 0900h
-    int 21h
-    return
-.l1: db "Breakpoints ON",CR,LF,"$"
-.l2: db "Breakpoints OFF",CR,LF,"$"
 
 dir:
 ;Don't allow for searching unmounted network drives... is this a limitation?
@@ -163,10 +149,6 @@ dir:
     jz .exitPathCopy
     cmp al, "." ;Handle . and .. separately
     jne .copyPathLoop
-    test byte [bpActive], -1
-    jz .bp1
-    breakpoint
-.bp1:
     ;Here handle dot and dot dot
     mov al, byte [rsi]  ;Look ahead a char!
     cmp al, "." ;Is this another dot?
