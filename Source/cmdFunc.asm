@@ -872,7 +872,6 @@ cls:
     int 30h
     return
 .doAnsi:
-;If an ANSI driver is not installed, this will simply insert blank lines
 ;4 chars in the ansi routine
 ;Will just put the ANSI escape sequence on the screen if it doesn't 
 ; understand ANSI codes
