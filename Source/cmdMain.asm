@@ -260,11 +260,7 @@ doCommandLine:
     ;If drive specified and cmdName length = 2 => X: type command
     cmp byte [cmdName], 2
     jne .noDriveSpecified   ;Drive specified but proceed as normal
-    mov ah, 0Eh ;Set drive to dl
-    int 21h 
-    mov ah, 19h
-    int 21h     ;Get current drive
-    cmp al, dl  ;If the drive was set, all is well
+    call setDrive
     rete
 .badDrive:
     lea rdx, badDrv

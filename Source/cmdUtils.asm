@@ -2,6 +2,7 @@
 
 printCRLF:
     lea rdx, crlf
+printString:
     mov eax, 0900h  ;Print string
     int 21h
     return
@@ -246,8 +247,7 @@ putLTinPrompt:
     jmp short outChar
 
 putDriveInPrompt:
-    mov ah, 19h ;Get 0-based current drive number in al
-    int 21h
+    call getCurrentDrive
     add al, "A" ;Convert to letter
     mov dl, al
 outChar:
@@ -255,26 +255,31 @@ outChar:
     int 21h
     return
 putCWDInPrompt:
-    lea rdi, currDirStr ;Update the current directory string
-    mov ah, 19h ;Get 0-based current drive number in al
-    int 21h
+    call getCurrentDrive
     mov dl, al  ;Get drive letter in dl for path
     inc dl
     add al, "A" ;Convert to letter
     mov ah, ":"
+    lea rdi, currDirStr ;Update the current directory string
     stosw   ;Store X:, rdi+=2
     mov al, byte [pathSep]
     stosb   ;Store pathSep, inc rdi
     mov ah, 47h ;Get Current Working Directory
     mov rsi, rdi    ;rsi points to buffer to write to
     int 21h
+    jc .badDrive
     call strlen
     add ecx, 2 ;Add two for the X:
-    ;We repurpose the fact that strlen counts the NULL to account for "\"
+    ;We use the fact that strlen counts the NULL to account for "\"
     mov ah, 40h ;Write to handle
     mov ebx, 1  ;STDOUT
     lea rdx, currDirStr
     int 21h
+    return
+.badDrive:
+;If the drive is bad, we print this string instead of drive:\cwd
+    lea rdx, badDrvMsg
+    call printString
     return
 
 BCDtoHex:
@@ -342,6 +347,15 @@ printPackedBCD:
     pop rax
     return
 
+setDrive:
+;Input: dl = 0 based Drive number to set to
+;Output: ZF=ZE: Drive set. ZF=NZ: Drive not set and invalid.
+;AX trashed.
+    mov ah, 0Eh ;Set drive to dl
+    int 21h 
+    call getCurrentDrive
+    cmp al, dl  ;Is this the same drive?
+    return
 getCurrentDrive:
 ;Returns the 0 based current drive in al
     mov ah, 19h

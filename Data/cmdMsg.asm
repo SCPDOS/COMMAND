@@ -49,6 +49,7 @@ badRD   db "Invalid path, not directory,",CR,LF
         db "or directory not empty",CR,LF,"$"
 dirMain db " Directory of  $"
 noPath  db "No Path $"
+badDrvMsg db "Current drive is no longer valid$"
 badDrvSrch  db "Invalid drive in search path",CR,LF,"$"
 badDev  db "Invalid device",CR,LF,"$"
 badLbl  db "Label not found",CR,LF,"$"  ;Used in BAT
