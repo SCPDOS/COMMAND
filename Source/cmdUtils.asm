@@ -2,9 +2,7 @@
 
 printCRLF:
     lea rdx, crlf
-    mov ebx, 1  ;Print on STDOUT
-    mov ah, 40h ;Print a new line
-    mov ecx, 2  ;Two chars to write
+    mov eax, 0900h  ;Print string
     int 21h
     return
 printDate:

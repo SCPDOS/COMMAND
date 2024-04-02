@@ -122,6 +122,7 @@ critErrorHandler:   ;Int 24h
     jne .uip1
     jmp .userInput ;If valid char not found, keep waiting 
 .validInput:
+    call printCRLF   ;Note the input was accepted
     mov al, cl  ;Move the offset into .responses into al
 ;Now check if the input is permitted
     cmp al, 2   ;Check if abort, abort always permitted

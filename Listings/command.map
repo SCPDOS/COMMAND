@@ -12,8 +12,8 @@ Output file:  ./Binaries/COMMAND.COM
 
 Vstart            Start             Stop              Length    Class     Name
                0                 0                 0  00000000  progbits  .text
-               0                 0              32F0  000032F0  progbits  .data
-            32F0              32F0              3504  00000214  progbits  transient
+               0                 0              32EE  000032EE  progbits  .data
+            32EE              32EE              3502  00000214  progbits  transient
 
 -- Sections (detailed) --------------------------------------------------------
 
@@ -31,7 +31,7 @@ vfollows:  not defined
 ---- Section .data ------------------------------------------------------------
 
 class:     progbits
-length:                32F0
+length:                32EE
 start:                    0
 align:                    1
 follows:   not defined
@@ -43,10 +43,10 @@ vfollows:  not defined
 
 class:     progbits
 length:                 214
-start:                 32F0
+start:                 32EE
 align:                    1
 follows:   .data
-vstart:                32F0
+vstart:                32EE
 valign:    not defined
 vfollows:  not defined
 
@@ -968,170 +968,170 @@ Real              Virtual           Name
             2A46              2A46  launchChild.dfltErrExit
             2A51              2A51  ..@201._ret
             2A52              2A52  printCRLF
-            2A67              2A67  ..@202._ret
-            2A68              2A68  printDate
-            2AB3              2AB3  ..@203._ret
-            2AB4              2AB4  printDate.usDate
-            2AF1              2AF1  ..@204._ret
-            2AF2              2AF2  printDate.jpnDate
-            2B2F              2B2F  ..@205._ret
-            2B30              2B30  printDate.printFirst
-            2B3E              2B3E  printDate.skipSpace
-            2B4B              2B4B  ..@206._ret
-            2B4C              2B4C  printDate.printSecond
-            2B5C              2B5C  printDate.printYear
-            2B79              2B79  printDate.twoDigitYear
-            2B89              2B89  ..@207._ret
-            2B8A              2B8A  printTime
-            2BA7              2BA7  ..@208._ret
-            2BA8              2BA8  printTime.ampm
-            2BC1              2BC1  ..@209._ret
-            2BC2              2BC2  printTime.pm
-            2BC7              2BC7  printTime.pm2
-            2BD7              2BD7  ..@210._ret
-            2BD8              2BD8  printTime.printMinutes
-            2BEC              2BEC  printTime.printMinutesAlt
-            2BFC              2BFC  printTime.printHours
-            2C0A              2C0A  printTime.skipSpace
-            2C17              2C17  ..@211._ret
-            2C18              2C18  putVersionInPrompt
-            2C45              2C45  ..@212._ret
-            2C46              2C46  putEscInPrompt
-            2C4A              2C4A  putMoneyInPrompt
-            2C4E              2C4E  putEquInPrompt
-            2C52              2C52  putPipeInPrompt
-            2C56              2C56  putGTinPrompt
-            2C5A              2C5A  putLTinPrompt
-            2C5E              2C5E  putDriveInPrompt
-            2C66              2C66  outChar
-            2C6A              2C6A  ..@213._ret
-            2C6B              2C6B  putCWDInPrompt
-            2CA9              2CA9  ..@214._ret
-            2CAA              2CAA  BCDtoHex
-            2CBE              2CBE  BCDtoHex.bth
-            2CC9              2CC9  hexToBCD
-            2CCF              2CCF  hexToBCD.htb0
-            2CDF              2CDF  hexToBCD.htb1
-            2CE6              2CE6  printPackedBCD
-            2CF9              2CF9  printPackedBCD.upperNybble
-            2D07              2D07  printPackedBCD.lowerNybble
-            2D11              2D11  ..@215._ret
-            2D12              2D12  getCurrentDrive
-            2D16              2D16  ..@216._ret
-            2D17              2D17  strlen
-            2D28              2D28  ..@217._ret
-            2D29              2D29  ucChar
-            2D3A              2D3A  ..@218._ret
-            2D3B              2D3B  skipDelimiters
-            2D3C              2D3C  skipDelimiters.l1
-            2D44              2D44  skipDelimiters.exit
-            2D48              2D48  ..@219._ret
-            2D49              2D49  isALdelimiter
-            2D4B              2D4B  ..@221._base
-            2D4F              2D4F  ..@223._base
-            2D53              2D53  ..@225._base
-            2D57              2D57  ..@227._base
-            2D5B              2D5B  ..@228._ret
-            2D5C              2D5C  printPrompt
-            2D71              2D71  ..@229._ret
-            2D72              2D72  printPrompt.validPrompt
-            2D72              2D72  ..@230._ret
-            2D73              2D73  clearCommandState
-            2D8D              2D8D  ..@231._ret
-            2D8E              2D8E  clearCommandLineState
-            2DB2              2DB2  ..@232._ret
-            2DB3              2DB3  asciiToFCB
-            2DC4              2DC4  asciiFilenameToFCB
-            2DE1              2DE1  asciiFilenameToFCB.processName
-            2DF1              2DF1  asciiFilenameToFCB.extSpace
-            2DFA              2DFA  asciiFilenameToFCB.ext
-            2DFE              2DFE  asciiFilenameToFCB.processExt
-            2E0A              2E0A  asciiFilenameToFCB.exitBadChar
-            2E0C              2E0C  asciiFilenameToFCB.exit
-            2E0D              2E0D  ..@233._ret
-            2E0E              2E0E  FCBToAsciiz
-            2E15              2E15  FCBToAsciiz.scanNameSpace
-            2E28              2E28  FCBToAsciiz.ext
-            2E35              2E35  FCBToAsciiz.validExt
-            2E3F              2E3F  FCBToAsciiz.scanExtSpace
-            2E4A              2E4A  FCBToAsciiz.exit
-            2E4D              2E4D  ..@234._ret
-            2E4E              2E4E  cpDelimPathToBufz
-            2E52              2E52  cpDelimPathToBufz.lp
-            2E69              2E69  cpDelimPathToBufz.gotRedirPath
-            2E8A              2E8A  cpDelimPathToBufz.notColon
-            2E8D              2E8D  ..@235._ret
-            2E8E              2E8E  buildCommandPath
-            2EA6              2EA6  copyArgumentToSearchSpec
-            2EBB              2EBB  ..@236._ret
-            2EBC              2EBC  scanForWildcards
-            2EBE              2EBE  scanForWildcards.lp
-            2ECD              2ECD  scanForWildcards.exit
-            2ECF              2ECF  ..@237._ret
-            2ED0              2ED0  printDecimalWord
-            2EE4              2EE4  printDecimalWord.notZero
-            2EEB              2EEB  printDecimalWord.dpfb0
-            2EFB              2EFB  printDecimalWord.dpfb00
-            2EFF              2EFF  printDecimalWord.dpfb01
-            2F0F              2F0F  printDecimalWord.dpfb1
-            2F1B              2F1B  printDecimalWord.dpfb10
-            2F1D              2F1D  printDecimalWord.dpfb11
-            2F22              2F22  printDecimalWord.dpfb2
-            2F32              2F32  printDecimalWord.dpfb20
-            2F38              2F38  printDecimalWord.dpfb21
-            2F40              2F40  ..@238._ret
-            2F41              2F41  getDecimalWord
-            2F4A              2F4A  getDecimalWord.dpfb0
-            2F60              2F60  getDecimalWord.dpfb1
-            2F67              2F67  ..@239._ret
-            2F68              2F68  freezePC
-            2F73              2F73  freezePC.altEP
-            2F7E              2F7E  freezePC.lp
-            2F83              2F83  setDTA
-            2F95              2F95  ..@240._ret
-            2F96              2F96  critErrorHandler
-            3010              3010  critErrorHandler.userInput
-            301B              301B  critErrorHandler.userAbort
-            3026              3026  critErrorHandler.userRetry
-            3041              3041  critErrorHandler.userIgnore
-            305C              305C  critErrorHandler.userFail
-            3077              3077  critErrorHandler.userMsgEnd
-            3095              3095  critErrorHandler.uip1
-            30A7              30A7  critErrorHandler.validInput
-            30B5              30B5  critErrorHandler.viFail
-            30C0              30C0  critErrorHandler.viIgnore
-            30CB              30CB  critErrorHandler.viRetry
-            30D4              30D4  critErrorHandler.cehExit
-            30DB              30DB  critErrorHandler.charError
-            30E7              30E7  critErrorHandler.ce1
-            30F5              30F5  critErrorHandler.errorMsgTable
-            31DF              31DF  critErrorHandler.drive
-            31E6              31E6  critErrorHandler.readmsg
-            31F5              31F5  critErrorHandler.writemsg
-            3204              3204  critErrorHandler.abortmsg
-            320A              320A  critErrorHandler.ignoremsg
-            3211              3211  critErrorHandler.retrymsg
-            3217              3217  critErrorHandler.failmsg
-            321C              321C  critErrorHandler.betweenMsg
-            321F              321F  critErrorHandler.endMsg
-            3222              3222  critErrorHandler.responses
-            3226              3226  int23h
-            3245              3245  int23h.exit
-            3249              3249  endOfAllocNoMaster
-            3249              3249  masterEnv
-            3257              3257  masterEnv.cspec
-            32F0              32F0  endOfAlloc
+            2A60              2A60  ..@202._ret
+            2A61              2A61  printDate
+            2AAC              2AAC  ..@203._ret
+            2AAD              2AAD  printDate.usDate
+            2AEA              2AEA  ..@204._ret
+            2AEB              2AEB  printDate.jpnDate
+            2B28              2B28  ..@205._ret
+            2B29              2B29  printDate.printFirst
+            2B37              2B37  printDate.skipSpace
+            2B44              2B44  ..@206._ret
+            2B45              2B45  printDate.printSecond
+            2B55              2B55  printDate.printYear
+            2B72              2B72  printDate.twoDigitYear
+            2B82              2B82  ..@207._ret
+            2B83              2B83  printTime
+            2BA0              2BA0  ..@208._ret
+            2BA1              2BA1  printTime.ampm
+            2BBA              2BBA  ..@209._ret
+            2BBB              2BBB  printTime.pm
+            2BC0              2BC0  printTime.pm2
+            2BD0              2BD0  ..@210._ret
+            2BD1              2BD1  printTime.printMinutes
+            2BE5              2BE5  printTime.printMinutesAlt
+            2BF5              2BF5  printTime.printHours
+            2C03              2C03  printTime.skipSpace
+            2C10              2C10  ..@211._ret
+            2C11              2C11  putVersionInPrompt
+            2C3E              2C3E  ..@212._ret
+            2C3F              2C3F  putEscInPrompt
+            2C43              2C43  putMoneyInPrompt
+            2C47              2C47  putEquInPrompt
+            2C4B              2C4B  putPipeInPrompt
+            2C4F              2C4F  putGTinPrompt
+            2C53              2C53  putLTinPrompt
+            2C57              2C57  putDriveInPrompt
+            2C5F              2C5F  outChar
+            2C63              2C63  ..@213._ret
+            2C64              2C64  putCWDInPrompt
+            2CA2              2CA2  ..@214._ret
+            2CA3              2CA3  BCDtoHex
+            2CB7              2CB7  BCDtoHex.bth
+            2CC2              2CC2  hexToBCD
+            2CC8              2CC8  hexToBCD.htb0
+            2CD8              2CD8  hexToBCD.htb1
+            2CDF              2CDF  printPackedBCD
+            2CF2              2CF2  printPackedBCD.upperNybble
+            2D00              2D00  printPackedBCD.lowerNybble
+            2D0A              2D0A  ..@215._ret
+            2D0B              2D0B  getCurrentDrive
+            2D0F              2D0F  ..@216._ret
+            2D10              2D10  strlen
+            2D21              2D21  ..@217._ret
+            2D22              2D22  ucChar
+            2D33              2D33  ..@218._ret
+            2D34              2D34  skipDelimiters
+            2D35              2D35  skipDelimiters.l1
+            2D3D              2D3D  skipDelimiters.exit
+            2D41              2D41  ..@219._ret
+            2D42              2D42  isALdelimiter
+            2D44              2D44  ..@221._base
+            2D48              2D48  ..@223._base
+            2D4C              2D4C  ..@225._base
+            2D50              2D50  ..@227._base
+            2D54              2D54  ..@228._ret
+            2D55              2D55  printPrompt
+            2D6A              2D6A  ..@229._ret
+            2D6B              2D6B  printPrompt.validPrompt
+            2D6B              2D6B  ..@230._ret
+            2D6C              2D6C  clearCommandState
+            2D86              2D86  ..@231._ret
+            2D87              2D87  clearCommandLineState
+            2DAB              2DAB  ..@232._ret
+            2DAC              2DAC  asciiToFCB
+            2DBD              2DBD  asciiFilenameToFCB
+            2DDA              2DDA  asciiFilenameToFCB.processName
+            2DEA              2DEA  asciiFilenameToFCB.extSpace
+            2DF3              2DF3  asciiFilenameToFCB.ext
+            2DF7              2DF7  asciiFilenameToFCB.processExt
+            2E03              2E03  asciiFilenameToFCB.exitBadChar
+            2E05              2E05  asciiFilenameToFCB.exit
+            2E06              2E06  ..@233._ret
+            2E07              2E07  FCBToAsciiz
+            2E0E              2E0E  FCBToAsciiz.scanNameSpace
+            2E21              2E21  FCBToAsciiz.ext
+            2E2E              2E2E  FCBToAsciiz.validExt
+            2E38              2E38  FCBToAsciiz.scanExtSpace
+            2E43              2E43  FCBToAsciiz.exit
+            2E46              2E46  ..@234._ret
+            2E47              2E47  cpDelimPathToBufz
+            2E4B              2E4B  cpDelimPathToBufz.lp
+            2E62              2E62  cpDelimPathToBufz.gotRedirPath
+            2E83              2E83  cpDelimPathToBufz.notColon
+            2E86              2E86  ..@235._ret
+            2E87              2E87  buildCommandPath
+            2E9F              2E9F  copyArgumentToSearchSpec
+            2EB4              2EB4  ..@236._ret
+            2EB5              2EB5  scanForWildcards
+            2EB7              2EB7  scanForWildcards.lp
+            2EC6              2EC6  scanForWildcards.exit
+            2EC8              2EC8  ..@237._ret
+            2EC9              2EC9  printDecimalWord
+            2EDD              2EDD  printDecimalWord.notZero
+            2EE4              2EE4  printDecimalWord.dpfb0
+            2EF4              2EF4  printDecimalWord.dpfb00
+            2EF8              2EF8  printDecimalWord.dpfb01
+            2F08              2F08  printDecimalWord.dpfb1
+            2F14              2F14  printDecimalWord.dpfb10
+            2F16              2F16  printDecimalWord.dpfb11
+            2F1B              2F1B  printDecimalWord.dpfb2
+            2F2B              2F2B  printDecimalWord.dpfb20
+            2F31              2F31  printDecimalWord.dpfb21
+            2F39              2F39  ..@238._ret
+            2F3A              2F3A  getDecimalWord
+            2F43              2F43  getDecimalWord.dpfb0
+            2F59              2F59  getDecimalWord.dpfb1
+            2F60              2F60  ..@239._ret
+            2F61              2F61  freezePC
+            2F6C              2F6C  freezePC.altEP
+            2F77              2F77  freezePC.lp
+            2F7C              2F7C  setDTA
+            2F8E              2F8E  ..@240._ret
+            2F8F              2F8F  critErrorHandler
+            3009              3009  critErrorHandler.userInput
+            3014              3014  critErrorHandler.userAbort
+            301F              301F  critErrorHandler.userRetry
+            303A              303A  critErrorHandler.userIgnore
+            3055              3055  critErrorHandler.userFail
+            3070              3070  critErrorHandler.userMsgEnd
+            308E              308E  critErrorHandler.uip1
+            30A0              30A0  critErrorHandler.validInput
+            30B3              30B3  critErrorHandler.viFail
+            30BE              30BE  critErrorHandler.viIgnore
+            30C9              30C9  critErrorHandler.viRetry
+            30D2              30D2  critErrorHandler.cehExit
+            30D9              30D9  critErrorHandler.charError
+            30E5              30E5  critErrorHandler.ce1
+            30F3              30F3  critErrorHandler.errorMsgTable
+            31DD              31DD  critErrorHandler.drive
+            31E4              31E4  critErrorHandler.readmsg
+            31F3              31F3  critErrorHandler.writemsg
+            3202              3202  critErrorHandler.abortmsg
+            3208              3208  critErrorHandler.ignoremsg
+            320F              320F  critErrorHandler.retrymsg
+            3215              3215  critErrorHandler.failmsg
+            321A              321A  critErrorHandler.betweenMsg
+            321D              321D  critErrorHandler.endMsg
+            3220              3220  critErrorHandler.responses
+            3224              3224  int23h
+            3243              3243  int23h.exit
+            3247              3247  endOfAllocNoMaster
+            3247              3247  masterEnv
+            3255              3255  masterEnv.cspec
+            32EE              32EE  endOfAlloc
 
 ---- Section transient --------------------------------------------------------
 
 Real              Virtual           Name
-            32F0              32F0  cmdLdr
-            3305              3305  cmdLdr.okVersion
-            3384              3384  cmdLdr.skipSwitch
-            3404              3404  cmdLdr.skipMaster
-            342F              342F  cmdLdr.noSwitches
-            3436              3436  cmdLdr.printInit
-            3478              3478  initString
-            34AE              34AE  initString2
-            34EC              34EC  badVerStr
+            32EE              32EE  cmdLdr
+            3303              3303  cmdLdr.okVersion
+            3382              3382  cmdLdr.skipSwitch
+            3402              3402  cmdLdr.skipMaster
+            342D              342D  cmdLdr.noSwitches
+            3434              3434  cmdLdr.printInit
+            3476              3476  initString
+            34AC              34AC  initString2
+            34EA              34EA  badVerStr
 
