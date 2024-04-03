@@ -3,6 +3,9 @@
 ;Only the Int 2Eh entry point will preserve the callers DTA.
 
 ;Common Error Messages, jumped to to return from
+badAccError:
+    lea rdx, accDenMsg
+    jmp short badCmn
 noSelfCopyError:
     lea rdx, noSelfCopy
     jmp short badCmn
@@ -713,7 +716,7 @@ erase:
 .findFile:
     ;Now we find first/find next our way through the files
     mov rdx, rsi    ;rdx must point at searchSpec for findfirst
-    xor ecx, ecx    ;Search for normal file only
+    xor ecx, ecx    ;Search for normal files only
     mov eax, 4E00h  ;Find first
     int 21h
     jc badFnf   ;Here we just print file not found error and return!
@@ -736,10 +739,12 @@ erase:
     ;Here we just check that the file was not a directory. If it was, we add
     ; a \*.*<NUL> over the null terminator
     lea rdx, searchSpec
-    mov ecx, dirDirectory    ;Search for normal file or DIR
+    mov ecx, dirReadOnly | dirDirectory    ;Search for normal, ro and dir
     mov eax, 4E00h  ;Find first
     int 21h
     jc badFnf   ;Here we just print file not found error and return!
+    test byte [cmdFFBlock + ffBlock.attribFnd], dirReadOnly
+    jnz badAccError ;If the file is RO, fail!
     test byte [cmdFFBlock + ffBlock.attribFnd], dirDirectory
     jz .delMain ;If not a dir, must be a file, delete it directly!
     ;Else, we are dealing with a dir
@@ -1108,7 +1113,7 @@ rename:
     cmp al, errDevUnk
     je badParamError
     jmp badDupFnf
-;TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP
+
 touch:
 ;Temporarily used to create files
     test byte [arg1Flg], -1
@@ -1132,13 +1137,17 @@ touch:
     return
 .touch1:
     cmp al, errFilExist ;Does the file exist?
-    jne .touchError ;If not, this is an error!
+    jne .touchError ;If not, this is a proper error!
     mov eax, 3D00h  ;R/O open instead to update the access time!!
     int 21h
     jnc .touchClose ;If this worked, close the handle immediately
 .touchError:
-    lea rdx, touchErr
-    jmp badCmn
+    cmp al, errPnf
+    je badArgError
+    cmp al, errFnf
+    je badFnf
+    jmp badAccError
+    
 
 join:
 ;Mock join command, to test join. Make an external command.

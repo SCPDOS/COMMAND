@@ -49,6 +49,7 @@ badRD   db "Invalid path, not directory,",CR,LF
         db "or directory not empty",CR,LF,"$"
 dirMain db " Directory of  $"
 noPath  db "No Path $"
+accDenMsg  db "Access denied",CR,LF,"$"
 badDrvMsg db "Current drive is no longer valid$"
 badDrvSrch  db "Invalid drive in search path",CR,LF,"$"
 badDev  db "Invalid device",CR,LF,"$"
@@ -78,7 +79,6 @@ memBad1 db CR,LF,"Memory Allocation Error$"
 memBad2 db CR,LF,"Memory Error$"
 memBad3 db CR,LF,"System halted$"
 
-touchErr db "Unable to create file",CR,LF,"$"
 pipeErrMsg  db "Unable to create pipe",CR,LF
 pipeErrMsgL equ $ - pipeErrMsg
 redirErrMsg db "Redirection error",CR,LF
