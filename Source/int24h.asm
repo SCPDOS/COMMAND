@@ -97,7 +97,7 @@ critErrorHandler:   ;Int 24h
     lea rdi, qword [.responses] ;Go to start of string
     mov ah, 01h ;STDIN without Console Echo
     int 21h ;Get char in al
-    cmp al, "a" ;Chack if lowercase
+    cmp al, "a" ;Chack if lowercase, consider using UC char DOS multiplex
     jb .uip1    ;If the value is below, ignore subtraction
     sub al, "a"-"A"  ;Turn the char into uppercase
 .uip1:

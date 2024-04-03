@@ -104,7 +104,8 @@ td2 db 0    ;Hours/Zero
 td3 db 0    ;Hundredths/Day
 td4 db 0    ;Seconds/Month
 
-;Rename/Copy Buffers
+;Rename/Copy/Delete Buffers
+delPath:
 sourcePath  db cmdBufferL dup (0)
 destPath    db cmdBufferL dup (0)
 ;Copy Handles

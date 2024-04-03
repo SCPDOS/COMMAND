@@ -362,18 +362,37 @@ getCurrentDrive:
     int 21h
     return
 
+strcpy:
+;Copies an ASCIIZ string
+;rsi -> Source
+;rdi -> Destination
+    push rcx
+    push rsi
+    push rdi
+
+    push rdi
+    mov rdi, rsi
+    call strlen ;Get the length of the string in rsi
+    pop rdi
+
+    rep movsb   ;Now we have the count, just copy over!
+    pop rdi
+    pop rsi
+    pop rcx
+    return
+
 strlen:
 ;Gets the length of a ASCIIZ string
 ;Input: rdi = Source buffer
 ;Output: ecx = Length of string, INCLUDING TERMINATING NULL
-    push rbx
-    mov rbx, rsp
-    push rax    
-    push rax
+    ;push rbx
+    ;mov rbx, rsp
+    ;push rax    
+    ;push rax
     mov eax, 1212h  ;Strlen according to DOS
     int 2fh
-    mov rsp, rbx
-    pop rbx
+    ;mov rsp, rbx
+    ;pop rbx
     return
 
 ucChar:
@@ -520,6 +539,30 @@ asciiFilenameToFCB:
     xor al, al  ;Return a null terminator
 .exit:
     pop rbx
+    return
+
+findLastPathComponant:
+;Finds the last path componant of an ASCIIZ path string
+;Input: rdi -> Head of the path to find last componant on
+;Output: rdi -> Start of the last componant
+    push rax
+    push rcx
+    xor ecx, ecx
+    dec ecx
+    xor eax, eax
+    repne scasb ;Scan for the null terminator of the string
+    not ecx     ;This gets the count of chars  
+    dec rdi     ;Move rdi back to the null!
+    mov al, byte [pathSep]
+    std
+    repne scasb ;Now scan backwards for the pathsep, or we run out of chars!
+    cld
+    jnz .exit   ;Ran out of chars to scan! Skip the extra inc
+    inc rdi     ;Point at pathsep
+.exit:
+    inc rdi     ;Point at char after pathsep or first char in buffer
+    pop rcx
+    pop rax
     return
 
 FCBToAsciiz:
@@ -719,4 +762,8 @@ setDTA:
     int 21h
     pop rdx
     pop rax
+    return
+
+getDTA:
+    lea rdx, cmdFFBlock
     return

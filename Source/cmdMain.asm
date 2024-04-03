@@ -337,6 +337,8 @@ doCommandLine:
     lea rdi, startLbl
     add rbx, rdi
     call rbx    ;Call this function...
+    retc    ;Always return with CF=CY on error. Error code set to -1
+    mov byte [returnCode], 0 ;Set the retcode to 0 if ok!
     return  ;... and return
 .gotoNextEntry:
     add rbx, 3      ;Go past the first count byte and the address word

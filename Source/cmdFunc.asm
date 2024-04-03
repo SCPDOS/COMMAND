@@ -22,13 +22,17 @@ badDupFnf:
 ;Hybrid error message
     lea rdx, dupName
     jmp short badCmn
+badFnf:
+    lea rdx, fnfMsg
+    jmp short badCmn
 badDirError:
     lea rdx, badDir
 badCmn:
+    mov byte [returnCode], -1    ;Return code defaults to -1 if error (for now!)
     mov eax, 0900h
     int 21h
     stc ;Return with CY => Error occured
-    return
+    return  ;This will be made nuanced later, to agree with DOS behaviour
 
 dir:
 ;Don't allow for searching unmounted network drives... is this a limitation?
@@ -304,7 +308,6 @@ dir:
 
 .searchForFile:
     call setDTA
-    lea r10, cmdFFBlock
     mov ecx, dirReadOnly | dirDirectory
     lea rdx, dirSrchDir
     mov ah, 4Eh ;Find first
@@ -655,10 +658,103 @@ copy:
 erase:
     test byte [arg1Flg], -1
     jz badArgError
-    call buildCommandPath
-    lea rdx, searchSpec
-    mov eax, 4100h  ;Delete File 
+    call setDTA     ;Start by resetting the DTA
+    call buildCommandPath   ;Get the relative path to the file
+.dirLp:
+    lea rdi, searchSpec
+    call findLastPathComponant
+    mov rsi, rdi    ;Save this as the source
+    lea rdi, qword [r8 + fcb1]  ;Use FCB1 for searchpath res
+    mov al, "?"
+    ;Store question marks in the name field
+    push rdi
+    inc rdi ;Goto the first char
+    mov ecx, 11
+    rep stosb
+    pop rdi
+    mov rdx, rsi    ;Save the ptr
+    mov eax, 290Dh  ;Parse the search mask into the FCB block
+    int 21h
+    cmp al, 1
+    jne .noWildcard ;If no wildcards, just delete directly, unless a directory
+    ;Else, we now copy back the search pattern over the last componant!
+    ;No dirs to handle in here
+    lea rsi, qword [rdi + fcb.filename]    ;Now move the ptr to the filename in rsi
+    mov rdi, rdx    ;Move the ptr to the start of the last componant to rdi
+    call FCBToAsciiz    ;Null terminates for free
+    ;Count the number of ?'s, if 11, we print the message
+    lea rsi, qword [r8 + fcb1 + fcb.filename]
     xor ecx, ecx
+.wcScan:
+    lodsb
+    cmp al, "?"
+    jne .endCount
+    inc ecx
+    cmp ecx, 11
+    jne .wcScan
+.ynmsg:
+    lea rdx, ynMes
+    call printString
+    mov ah, 01h ;STDIN without Console Echo
+    int 21h ;Get char in al
+    call ucChar ;Uppercase the char
+    cmp al, "Y" ;If they want it... they'll get it!
+    je .endCount1
+    cmp al, "N"
+    rete    ;Simply return to command line if they don't want it!
+    jmp short .ynmsg    ;Else, tell me what you want!!!
+.endCount1:
+    call printCRLF
+.endCount:
+    ;Now we copy our search template pathstring to delPath
+    lea rdi, delPath
+    lea rsi, searchSpec ;Source the chars from here
+    call strcpy         ;Copy the string over to delPath
+.findFile:
+    ;Now we find first/find next our way through the files
+    mov rdx, rsi    ;rdx must point at searchSpec for findfirst
+    xor ecx, ecx    ;Search for normal file only
+    mov eax, 4E00h  ;Find first
+    int 21h
+    jc badFnf   ;Here we just print file not found error and return!
+    ;Now the file was found, we copy the name over, delete and keep going
+    call findLastPathComponant  ;Now find the last componant in delPath
+    lea rsi, qword [cmdFFBlock + ffBlock.asciizName]
+.delNextFile:
+;rsi and rdi dont move here
+    call strcpy     ;Now copy over ASCIIZname to last path componant of delpath
+    lea rdx, delPath
+    call .delMain   ;Delete delpath
+    retc            ;Return bad if it errors out
+    lea rdx, searchSpec    ;Now point rdx to the search spec
+    mov eax, 4F00h  ;Else, find next file
+    int 21h
+    jnc .delNextFile    
+    clc ;Clear carry to indicate success
+    return
+.noWildcard:
+    ;Here we just check that the file was not a directory. If it was, we add
+    ; a \*.*<NUL> over the null terminator
+    lea rdx, searchSpec
+    mov ecx, dirDirectory    ;Search for normal file or DIR
+    mov eax, 4E00h  ;Find first
+    int 21h
+    jc badFnf   ;Here we just print file not found error and return!
+    test byte [cmdFFBlock + ffBlock.attribFnd], dirDirectory
+    jz .delMain ;If not a dir, must be a file, delete it directly!
+    ;Else, we are dealing with a dir
+    mov rdi, rdx
+    xor ecx, ecx
+    dec ecx
+    repne scasb ;Go to the end of the line!
+    dec rdi
+    movzx eax, byte [pathSep]
+    stosb
+    mov eax, "*.*"  ;Null terminated for us!
+    stosd
+    jmp .dirLp    ;Now restart the process with extended path!
+.delMain:   ;Call with rdx -> buffer!
+    mov eax, 4100h  ;Delete File 
     int 21h
     jc badArgError
     return
@@ -1019,14 +1115,27 @@ touch:
     jz badArgError
     call buildCommandPath
     lea rdx, searchSpec
-    mov eax, 3C00h  ;Create file 
+    mov eax, 5B00h  ;Create unique file 
     xor ecx, ecx
     int 21h
-    jc .touchError
-    movzx ebx, ax
+    jc .touch1
+.touchClose:
+    movzx ebx, ax   ;Save the handle here
+    mov eax, 120Dh  ;Get date/time words from the DOS
+    int 2fh
+    mov ecx, eax    ;Move the time here
+    xchg edx, ecx   ;Get them in the right place
+    mov eax, 5701h  ;Set the date/time for bx
+    int 21h
     mov eax, 3e00h  ;Close file immediately
     int 21h
     return
+.touch1:
+    cmp al, errFilExist ;Does the file exist?
+    jne .touchError ;If not, this is an error!
+    mov eax, 3D00h  ;R/O open instead to update the access time!!
+    int 21h
+    jnc .touchClose ;If this worked, close the handle immediately
 .touchError:
     lea rdx, touchErr
     jmp badCmn
@@ -1618,7 +1727,6 @@ launchChild:
     int 21h
     jmp .dfltErrExit    ;If something goes wrong, error out
 .noExtCheckExt:
-    ;mov eax, dword [cmdFFBlock + ffBlock.asciizName + filename.fExt]
     lea rsi, dword [cmdFFBlock + ffBlock.asciizName]
     lea rdi, fcbCmdSpec
     call asciiFilenameToFCB
