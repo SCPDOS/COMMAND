@@ -106,8 +106,11 @@ td4 db 0    ;Seconds/Month
 
 ;Rename/Copy/Delete Buffers
 delPath:
-sourcePath  db cmdBufferL dup (0)
-destPath    db cmdBufferL dup (0)
+srcSpec     db cmdBufferL dup (0)
+destSpec    db cmdBufferL dup (0)
+srcPtr      dq 0    ;Where to copy the pattern to
+destPtr     dq 0    ;Where to copy the pattern to
+renName     db 11 dup (" ") ;Build a name pattern here in FCB format
 ;Copy Handles
 sourceHdl   dw -1
 destHdl     dw -1

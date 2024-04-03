@@ -363,36 +363,37 @@ getCurrentDrive:
     return
 
 strcpy:
-;Copies an ASCIIZ string
+;Copies an ASCIIZ string but leaves the pointers at the end of the strings
 ;rsi -> Source
 ;rdi -> Destination
     push rcx
-    push rsi
-    push rdi
-
     push rdi
     mov rdi, rsi
     call strlen ;Get the length of the string in rsi
     pop rdi
-
     rep movsb   ;Now we have the count, just copy over!
+    pop rcx
+    return
+
+strcpy2:
+;Copies an ASCIIZ string, but preserves the ptrs
+;rsi -> Source
+;rdi -> Destination
+    push rsi
+    push rdi
+    call strcpy 
     pop rdi
     pop rsi
-    pop rcx
     return
 
 strlen:
 ;Gets the length of a ASCIIZ string
 ;Input: rdi = Source buffer
 ;Output: ecx = Length of string, INCLUDING TERMINATING NULL
-    ;push rbx
-    ;mov rbx, rsp
-    ;push rax    
-    ;push rax
-    mov eax, 1212h  ;Strlen according to DOS
+    push rax
+    mov eax, 1212h  ;Strlen according to DOS, trashes eax
     int 2fh
-    ;mov rsp, rbx
-    ;pop rbx
+    pop rax
     return
 
 ucChar:
@@ -607,6 +608,7 @@ cpDelimPathToBufz:
 ;       rdi -> One char past null terminator on pathname buffer
     push rbx
     mov rbx, rdi    ;Save the head of the path in rbx
+    mov byte [rdi], 0   ;Null terminate this path before starting!
 .lp:
     lodsb   ;Get the char
     cmp al, CR
@@ -641,8 +643,8 @@ buildCommandPath:
     lea rsi, qword [r8 + cmdLine]
     add rsi, rax    ;Go to the start of the command
 copyArgumentToSearchSpec:
-;Copies an arbitrary delimited path pointed to by rsi into rdi and null terminates.
-    mov word [searchSpec], 0    ;Make sure we clean up search spec first!
+;Copies an arbitrary delimited path pointed to by rsi into searchSpec
+; and null terminates
     lea rdi, searchSpec
     call cpDelimPathToBufz
     return

@@ -235,8 +235,8 @@ dir:
     je .wcSearchPattern     ;Move the ptr to end of path and add search patt.
 .notNull:
     call setDTA ;Set the DTA
-    mov ecx, dirReadOnly | dirDirectory
-    mov ah, 4Eh ;Find first
+    mov ecx, dirDirectory   ;Dir, normal and read only files!
+    mov eax, 4E00h ;Find first
     int 21h
     jc .wcSearchPattern ;If this errors, file not found, we have a search pattern
 ;Now we have searched for the file, is a directory?
@@ -311,9 +311,9 @@ dir:
 
 .searchForFile:
     call setDTA
-    mov ecx, dirReadOnly | dirDirectory
+    mov ecx, dirDirectory   ;Search for normal, ro and dir
     lea rdx, dirSrchDir
-    mov ah, 4Eh ;Find first
+    mov eax, 4E00h ;Find first
     int 21h
     jc .dirNoMoreFiles
 .findNext:
@@ -555,23 +555,23 @@ copy:
     lea rsi, qword [r8 + cmdLine]
     mov rbx, rsi    ;Save the ptr to the start of the string in rbx
     add rsi, rax    ;Go to the start of the command
-    lea rdi, sourcePath
+    lea rdi, srcSpec
     call cpDelimPathToBufz    
     movzx eax, byte [arg2Off]
     mov rsi, rbx    ;Get back the start of the ptr
     add rsi, rax    ;Go to the start of the command
-    lea rdi, destPath
+    lea rdi, destSpec
     call cpDelimPathToBufz   
 ;Before we open, we check if the two filenames are equal
 ; If so, crap out.
-    lea rsi, sourcePath
-    lea rdi, destPath
+    lea rsi, srcSpec
+    lea rdi, destSpec
     mov eax, 121Eh
     int 2Fh
     jz .sameFilename
     ;Open source with read permission
     ;Open destination with write permission
-    lea rdx, sourcePath
+    lea rdx, srcSpec
     mov eax, 3D00h  ;Read open
     int 21h
     jc badParamError
@@ -582,7 +582,7 @@ copy:
     int 21h
     mov word [srcHdlInfo], dx   ;Store information here
 
-    lea rdx, destPath
+    lea rdx, destSpec
     mov eax, 3C00h  ;Create the file
     xor ecx, ecx    ;No file attributes
     int 21h
@@ -712,11 +712,11 @@ erase:
     ;Now we copy our search template pathstring to delPath
     lea rdi, delPath
     lea rsi, searchSpec ;Source the chars from here
-    call strcpy         ;Copy the string over to delPath
+    call strcpy2         ;Copy the string over to delPath
 .findFile:
     ;Now we find first/find next our way through the files
     mov rdx, rsi    ;rdx must point at searchSpec for findfirst
-    xor ecx, ecx    ;Search for normal files only
+    xor ecx, ecx    ;Search for normal and ro files only
     mov eax, 4E00h  ;Find first
     int 21h
     jc badFnf   ;Here we just print file not found error and return!
@@ -725,10 +725,10 @@ erase:
     lea rsi, qword [cmdFFBlock + ffBlock.asciizName]
 .delNextFile:
 ;rsi and rdi dont move here
-    call strcpy     ;Now copy over ASCIIZname to last path componant of delpath
+    call strcpy2     ;Now copy over ASCIIZname to last path componant of delpath
     lea rdx, delPath
-    call .delMain   ;Delete delpath
-    retc            ;Return bad if it errors out
+    mov eax, 4100h  ;Delete File 
+    int 21h         ;If this fails to delete it, fail silently
     lea rdx, searchSpec    ;Now point rdx to the search spec
     mov eax, 4F00h  ;Else, find next file
     int 21h
@@ -739,12 +739,10 @@ erase:
     ;Here we just check that the file was not a directory. If it was, we add
     ; a \*.*<NUL> over the null terminator
     lea rdx, searchSpec
-    mov ecx, dirReadOnly | dirDirectory    ;Search for normal, ro and dir
+    mov ecx, dirDirectory    ;Search for normal, RO and dir
     mov eax, 4E00h  ;Find first
     int 21h
     jc badFnf   ;Here we just print file not found error and return!
-    test byte [cmdFFBlock + ffBlock.attribFnd], dirReadOnly
-    jnz badAccError ;If the file is RO, fail!
     test byte [cmdFFBlock + ffBlock.attribFnd], dirDirectory
     jz .delMain ;If not a dir, must be a file, delete it directly!
     ;Else, we are dealing with a dir
@@ -761,7 +759,10 @@ erase:
 .delMain:   ;Call with rdx -> buffer!
     mov eax, 4100h  ;Delete File 
     int 21h
-    jc badArgError
+    retnc   ;Return if CF=NC
+    cmp al, errAccDen
+    je badAccError ;If the file is RO, fail!
+    jmp badFileError
     return
 date:
     lea rdx, curDate
@@ -1088,31 +1089,137 @@ rename:
     test byte [arg1Flg], -1
     jz badArgError
     test byte [arg2Flg], -1
-    jz badArgError
-    movzx eax, byte [arg1Off]
-    mov r8, [pspPtr]
-    lea rsi, qword [r8 + cmdLine]
-    mov rbx, rsi    ;Save the ptr to the start of the string in rbx
-    add rsi, rax    ;Go to the start of the command
-    lea rdi, sourcePath
-    call cpDelimPathToBufz    
+    jz badArgError    
+    ;Initialise the variables!
+    lea rsi, srcSpec
+    mov qword [srcPtr], rsi
+    lea rsi, destSpec
+    mov qword [destPtr], rsi
+    ;Check the second path is just a filename!
     movzx eax, byte [arg2Off]
-    mov rsi, rbx    ;Get back the start of the ptr
-    add rsi, rax    ;Go to the start of the command
-    lea rdi, destPath
-    call cpDelimPathToBufz   
-    lea rdx, sourcePath
-    lea rdi, destPath
+    mov r8, qword [pspPtr]
+    lea rsi, qword [r8 + cmdLine]
+    add rsi, rax    ;Point to the path componant
+    lea rdi, searchSpec
+    push rdi
+    call cpDelimPathToBufz  ;Copy the path to rdi
+    pop rdi
+    cmp byte [rdi + 1], ":"  ;Is this a drive sep?
+    je badArgError  ;Cannot pass a path as the second argument
+    mov rsi, rdi
+.destScan:
+    lodsb   ;Get the char
+    cmp al, byte [pathSep]  ;Ensure no path seps
+    je badArgError
+    test al, al
+    jnz .destScan
+;Now store question marks over all of fcb1 and fcb2's name and drive specifier
+    lea rdi, qword [r8 + fcb1]  ;Use FCB1 for searchpath res
+    mov rax, "????????"
+    mov ecx, 3  ;24 bytes
+    rep stosq
+    stosd   ;Plus 4 to get 28 = 16 + 1 + 11
+    lea rsi, searchSpec
+    lea rdi, qword [r8 + fcb2]  ;Place destination pattern here
+    mov eax, 290Dh
+    int 21h     
+    push rax    ;Save the WC signature
+    call buildCommandPath   ;Copy the source path+searchspec to searchSpec
+    lea rdi, searchSpec
+    call findLastPathComponant  ;Go to the end of the path in rdi
+    mov rsi, rdi
+    mov rbx, rdi    ;Save the componant in rbx
+    lea rdi, qword [r8 + fcb1]  ;Now copy source pattern over!
+    mov eax, 290Dh
+    int 21h
+    pop rcx ;Get back the WC signature from the destination path!
+    mov ah, cl
+    test ax, ax ;If neither path has wildcards, go straight to renaming
+    jz .noWC
+    lea rsi, searchSpec ;Are we are the head of the buffer?
+    ;Now we check if we have a path to actually handle
+    cmp rbx, rsi
+    je .noPath
+    mov byte [rbx - 1], 0   ;The previous char is a pathsep, overwrite it!
+    lea rsi, searchSpec
+    lea rdi, srcSpec
+    push rsi
+    call strcpy ;Copy the string, leave the ptrs past the null
+    pop rsi
+    dec rdi     ;Point rdi to the null
+    mov al, byte [pathSep]
+    stosb       ;Store the pathsep and advance the pointer
+    mov qword [srcPtr], rdi ;Store this ptr here
+    lea rdi, destSpec
+    call strcpy ;Copy the string, leave the ptrs past the null
+    dec rdi     ;Point rdi to the null
+    stosb       ;Store the pathsep and adv the ptr
+    mov qword [destPtr], rdi
+    mov byte [rbx - 1], al  ;Now replace the null with a pathsep again!
+.noPath:
+    ;Now we have where to copy the files to, we can start our work!
+    call setDTA
+    lea rdx, searchSpec
+    xor ecx, ecx    ;Rename works on normal and read only files only!
+    mov eax, 4E00h  ;Find first!
+    int 21h
+    jc badDupFnf    ;If no file was found!
+.wcLoop:
+    ;Now build an FCB form of the name of the file we found in fcb1
+    lea rsi, cmdFFBlock + ffBlock.asciizName
+    lea rdi, qword [r8 + fcb1]
+    mov eax, 2901h  ;Now we copy the name over, cleaning the FCB name
+    int 21h 
+    ;Now depending on source and dest chars, we build a filename in renName
+    lea rsi, qword [r8 + fcb2 + fcb.filename]    
+    lea rdi, renName    ;Start by copying the destination pattern
+    push rdi
+    movsq
+    movsw
+    movsb
+    pop rdi
+    lea rsi, qword [r8 + fcb1 + fcb.filename] ;Now start sourcing chars!
+    mov ecx, 11 ;11 chars to copy!
+.wcNameMake:
+    lodsb   ;Get the char from the source string
+    cmp byte [rdi], "?" ;Are we over a WC?
+    jne .noStore    ;Dont store the char there
+    mov byte [rdi], al  ;If we are over a wc, store the char there!
+.noStore:
+    inc rdi ;Goto next char position
+    dec ecx
+    jnz .wcNameMake
+;renName now has the FCB name for the file we wish to make!
+;Now make the two paths!
+    lea rsi, cmdFFBlock + ffBlock.asciizName
+    mov rdi, qword [srcPtr]
+    call strcpy ;Doesn't matter that we preserve the pointers
+    lea rsi, renName
+    mov rdi, qword [destPtr]
+    call FCBToAsciiz
+    lea rdx, srcSpec
+    lea rdi, destSpec
+    mov eax, 5600h
+    int 21h     ;Fail silently on wildcard rename
+    mov eax, 4F00h  ;Find next
+    int 21h
+    jnc .wcLoop     ;And process it too!
+    return          ;Else just return!
+.noWC:
+    call buildCommandPath   ;Copy the source arg into searchspec
+    movzx eax, byte [arg2Off]
+    lea rsi, qword [r8 + cmdLine]
+    add rsi, rax    ;Go to the start of the command to source chars
+    lea rdi, destSpec
+    push rdi
+    call cpDelimPathToBufz
+    pop rdi
+    lea rdx, searchSpec
     mov eax, 5600h
     int 21h
     retnc   ;Return if all oki!
-    cmp al, errBadDrv
-    je badDriveError
-    cmp al, errBadFmt
-    je badDirError
-    cmp al, errDevUnk
-    je badParamError
-    jmp badDupFnf
+    jmp badDupFnf   ;Always just return this
+
 
 touch:
 ;Temporarily used to create files
@@ -1653,8 +1760,8 @@ launchChild:
     xor al, al  ;Store terminating null
     stosb
 .search:
-    mov ecx, dirIncFiles
-    mov ah, 4Eh ;Find First File
+    mov ecx, dirIncFiles    ;Normal, RO, Hidden and System files
+    mov eax, 4E00h ;Find First File
     int 21h
     jc .dfltErrExit
     call .noExtCheckExt
