@@ -1038,7 +1038,6 @@ Real              Virtual           Name
             2F58              2F58  outChar
             2F5C              2F5C  ..@222._ret
             2F5D              2F5D  putCWDInPrompt
-            2F95              2F95  putCWDInPrompt.prnt
             2FA1              2FA1  ..@223._ret
             2FA2              2FA2  putCWDInPrompt.badDrive
             2FAE              2FAE  ..@224._ret

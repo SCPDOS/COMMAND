@@ -4904,198 +4904,196 @@
    270 00002F81 721F                <1>     jc .badDrive
    271 00002F83 E8B9000000          <1>     call strlen
    272 00002F88 81C102000000        <1>     add ecx, 2 ;Add two for the X:
-   273 00002F8E 488D35C7D0FFFF      <1>     lea rsi, currDirStr
-   274                              <1> .prnt:
-   275 00002F95 AC                  <1>     lodsb
-   276 00002F96 88C2                <1>     mov dl, al
-   277 00002F98 E8BBFFFFFF          <1>     call outChar
-   278 00002F9D FFC9                <1>     dec ecx
-   279 00002F9F 75F4                <1>     jnz .prnt
-   280                              <1>     return
+   273                              <1>     ;We repurpose the fact that strlen counts the NULL to account for "\"
+   274 00002F8E B800400000          <1>     mov eax, 4000h ;Write to handle
+   275 00002F93 BB01000000          <1>     mov ebx, 1  ;STDOUT
+   276 00002F98 488D15BDD0FFFF      <1>     lea rdx, currDirStr
+   277 00002F9F CD21                <1>     int 21h
+   278                              <1>     return
     13                              <2> %%_ret:
     14 00002FA1 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-   281                              <1> .badDrive:
-   282                              <1> ;If the drive is bad, we print this string instead of drive:\cwd
-   283 00002FA2 488D15C1DBFFFF      <1>     lea rdx, badDrvMsg
-   284 00002FA9 E8A3FDFFFF          <1>     call printString
-   285                              <1>     return
+   279                              <1> .badDrive:
+   280                              <1> ;If the drive is bad, we print this string instead of drive:\cwd
+   281 00002FA2 488D15C1DBFFFF      <1>     lea rdx, badDrvMsg
+   282 00002FA9 E8A3FDFFFF          <1>     call printString
+   283                              <1>     return
     13                              <2> %%_ret:
     14 00002FAE C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-   286                              <1> 
-   287                              <1> BCDtoHex:
-   288                              <1> ;Converts a BCD value to a Hex byte
-   289                              <1> ;Takes input in al, returns in al (zero-ed upper seven bytes)
-   290 00002FAF 51                  <1>     push rcx
-   291 00002FB0 0FB6C0              <1>     movzx eax, al   ;Zero extend
-   292 00002FB3 89C1                <1>     mov ecx, eax    ;Save al in ecx
-   293 00002FB5 250F000000          <1>     and eax, 0Fh    ;Get lower nybble
-   294 00002FBA 81E1F0000000        <1>     and ecx, 0F0h   ;Get upper nybble
-   295 00002FC0 C1E904              <1>     shr ecx, 4      ;Shift upper nybble value down
-   296                              <1> .bth:
-   297 00002FC3 050A000000          <1>     add eax, 10
-   298 00002FC8 FFC9                <1>     dec ecx
-   299 00002FCA 75F7                <1>     jnz .bth
-   300 00002FCC 59                  <1>     pop rcx
-   301 00002FCD C3                  <1>     ret
-   302                              <1> 
-   303                              <1> hexToBCD:
-   304                              <1> ;Converts a Hex byte into two BCD digits
-   305                              <1> ;Takes input in al, returns in al (zero-ed upper seven bytes)
-   306 00002FCE 51                  <1>     push rcx
-   307 00002FCF 0FB6C0              <1>     movzx eax, al   ;Zero extend
-   308 00002FD2 31C9                <1>     xor ecx, ecx
-   309                              <1> .htb0:
-   310 00002FD4 3D0A000000          <1>     cmp eax, 10
-   311 00002FD9 7209                <1>     jb .htb1
-   312 00002FDB 2D0A000000          <1>     sub eax, 10
-   313 00002FE0 FFC1                <1>     inc ecx
-   314 00002FE2 EBF0                <1>     jmp short .htb0
-   315                              <1> .htb1:
-   316 00002FE4 C1E104              <1>     shl ecx, 4  ;Move to upper nybble
-   317 00002FE7 08C8                <1>     or al, cl   ;Move upper nybble into al upper nybble
-   318 00002FE9 59                  <1>     pop rcx
-   319 00002FEA C3                  <1>     ret
-   320                              <1> 
-   321                              <1> printPackedBCD:
-   322                              <1> ;Gets a packed BCD digit in al and prints al[7:4] if non zero,
-   323                              <1> ; then prints al[3:0]. Prints a space if the upper nybble is zero
-   324                              <1> ;Preserves all registers
-   325 00002FEB 50                  <1>     push rax
-   326 00002FEC 52                  <1>     push rdx
-   327 00002FED 88C4                <1>     mov ah, al
-   328 00002FEF 240F                <1>     and al, 0Fh     ;Isolate lower nybble
-   329 00002FF1 80E4F0              <1>     and ah, 0F0h    ;Isolate upper nybble
-   330 00002FF4 7508                <1>     jnz .upperNybble
-   331 00002FF6 B220                <1>     mov dl, " "
-   332 00002FF8 B402                <1>     mov ah, 02h
-   333 00002FFA CD21                <1>     int 21h
-   334 00002FFC EB0E                <1>     jmp short .lowerNybble
-   335                              <1> .upperNybble:
-   336 00002FFE 50                  <1>     push rax
-   337 00002FFF C0EC04              <1>     shr ah, 4
-   338 00003002 80C430              <1>     add ah, "0"  ;Convert to an ASCII digit
-   339 00003005 88E2                <1>     mov dl, ah
-   340 00003007 B402                <1>     mov ah, 02h ;Print DL
-   341 00003009 CD21                <1>     int 21h
-   342 0000300B 58                  <1>     pop rax
-   343                              <1> .lowerNybble:
-   344 0000300C 0430                <1>     add al, "0"
-   345 0000300E 88C2                <1>     mov dl, al
-   346 00003010 B402                <1>     mov ah, 02h ;Print DL
-   347 00003012 CD21                <1>     int 21h
-   348 00003014 5A                  <1>     pop rdx
-   349 00003015 58                  <1>     pop rax
-   350                              <1>     return
+   284                              <1> 
+   285                              <1> BCDtoHex:
+   286                              <1> ;Converts a BCD value to a Hex byte
+   287                              <1> ;Takes input in al, returns in al (zero-ed upper seven bytes)
+   288 00002FAF 51                  <1>     push rcx
+   289 00002FB0 0FB6C0              <1>     movzx eax, al   ;Zero extend
+   290 00002FB3 89C1                <1>     mov ecx, eax    ;Save al in ecx
+   291 00002FB5 250F000000          <1>     and eax, 0Fh    ;Get lower nybble
+   292 00002FBA 81E1F0000000        <1>     and ecx, 0F0h   ;Get upper nybble
+   293 00002FC0 C1E904              <1>     shr ecx, 4      ;Shift upper nybble value down
+   294                              <1> .bth:
+   295 00002FC3 050A000000          <1>     add eax, 10
+   296 00002FC8 FFC9                <1>     dec ecx
+   297 00002FCA 75F7                <1>     jnz .bth
+   298 00002FCC 59                  <1>     pop rcx
+   299 00002FCD C3                  <1>     ret
+   300                              <1> 
+   301                              <1> hexToBCD:
+   302                              <1> ;Converts a Hex byte into two BCD digits
+   303                              <1> ;Takes input in al, returns in al (zero-ed upper seven bytes)
+   304 00002FCE 51                  <1>     push rcx
+   305 00002FCF 0FB6C0              <1>     movzx eax, al   ;Zero extend
+   306 00002FD2 31C9                <1>     xor ecx, ecx
+   307                              <1> .htb0:
+   308 00002FD4 3D0A000000          <1>     cmp eax, 10
+   309 00002FD9 7209                <1>     jb .htb1
+   310 00002FDB 2D0A000000          <1>     sub eax, 10
+   311 00002FE0 FFC1                <1>     inc ecx
+   312 00002FE2 EBF0                <1>     jmp short .htb0
+   313                              <1> .htb1:
+   314 00002FE4 C1E104              <1>     shl ecx, 4  ;Move to upper nybble
+   315 00002FE7 08C8                <1>     or al, cl   ;Move upper nybble into al upper nybble
+   316 00002FE9 59                  <1>     pop rcx
+   317 00002FEA C3                  <1>     ret
+   318                              <1> 
+   319                              <1> printPackedBCD:
+   320                              <1> ;Gets a packed BCD digit in al and prints al[7:4] if non zero,
+   321                              <1> ; then prints al[3:0]. Prints a space if the upper nybble is zero
+   322                              <1> ;Preserves all registers
+   323 00002FEB 50                  <1>     push rax
+   324 00002FEC 52                  <1>     push rdx
+   325 00002FED 88C4                <1>     mov ah, al
+   326 00002FEF 240F                <1>     and al, 0Fh     ;Isolate lower nybble
+   327 00002FF1 80E4F0              <1>     and ah, 0F0h    ;Isolate upper nybble
+   328 00002FF4 7508                <1>     jnz .upperNybble
+   329 00002FF6 B220                <1>     mov dl, " "
+   330 00002FF8 B402                <1>     mov ah, 02h
+   331 00002FFA CD21                <1>     int 21h
+   332 00002FFC EB0E                <1>     jmp short .lowerNybble
+   333                              <1> .upperNybble:
+   334 00002FFE 50                  <1>     push rax
+   335 00002FFF C0EC04              <1>     shr ah, 4
+   336 00003002 80C430              <1>     add ah, "0"  ;Convert to an ASCII digit
+   337 00003005 88E2                <1>     mov dl, ah
+   338 00003007 B402                <1>     mov ah, 02h ;Print DL
+   339 00003009 CD21                <1>     int 21h
+   340 0000300B 58                  <1>     pop rax
+   341                              <1> .lowerNybble:
+   342 0000300C 0430                <1>     add al, "0"
+   343 0000300E 88C2                <1>     mov dl, al
+   344 00003010 B402                <1>     mov ah, 02h ;Print DL
+   345 00003012 CD21                <1>     int 21h
+   346 00003014 5A                  <1>     pop rdx
+   347 00003015 58                  <1>     pop rax
+   348                              <1>     return
     13                              <2> %%_ret:
     14 00003016 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-   351                              <1> 
-   352                              <1> setDrive:
-   353                              <1> ;Input: dl = 0 based Drive number to set to
-   354                              <1> ;Output: ZF=ZE: Drive set. ZF=NZ: Drive not set and invalid.
-   355                              <1> ;AX trashed.
-   356 00003017 B40E                <1>     mov ah, 0Eh ;Set drive to dl
-   357 00003019 CD21                <1>     int 21h 
-   358 0000301B E803000000          <1>     call getCurrentDrive
-   359 00003020 38D0                <1>     cmp al, dl  ;Is this the same drive?
-   360                              <1>     return
+   349                              <1> 
+   350                              <1> setDrive:
+   351                              <1> ;Input: dl = 0 based Drive number to set to
+   352                              <1> ;Output: ZF=ZE: Drive set. ZF=NZ: Drive not set and invalid.
+   353                              <1> ;AX trashed.
+   354 00003017 B40E                <1>     mov ah, 0Eh ;Set drive to dl
+   355 00003019 CD21                <1>     int 21h 
+   356 0000301B E803000000          <1>     call getCurrentDrive
+   357 00003020 38D0                <1>     cmp al, dl  ;Is this the same drive?
+   358                              <1>     return
     13                              <2> %%_ret:
     14 00003022 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-   361                              <1> getCurrentDrive:
-   362                              <1> ;Returns the 0 based current drive in al
-   363 00003023 B419                <1>     mov ah, 19h
-   364 00003025 CD21                <1>     int 21h
-   365                              <1>     return
+   359                              <1> getCurrentDrive:
+   360                              <1> ;Returns the 0 based current drive in al
+   361 00003023 B419                <1>     mov ah, 19h
+   362 00003025 CD21                <1>     int 21h
+   363                              <1>     return
     13                              <2> %%_ret:
     14 00003027 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-   366                              <1> 
-   367                              <1> strcpy:
-   368                              <1> ;Copies an ASCIIZ string but leaves the pointers at the end of the strings
-   369                              <1> ;rsi -> Source
-   370                              <1> ;rdi -> Destination
-   371 00003028 51                  <1>     push rcx
-   372 00003029 57                  <1>     push rdi
-   373 0000302A 4889F7              <1>     mov rdi, rsi
-   374 0000302D E80F000000          <1>     call strlen ;Get the length of the string in rsi
-   375 00003032 5F                  <1>     pop rdi
-   376 00003033 F3A4                <1>     rep movsb   ;Now we have the count, just copy over!
-   377 00003035 59                  <1>     pop rcx
-   378                              <1>     return
+   364                              <1> 
+   365                              <1> strcpy:
+   366                              <1> ;Copies an ASCIIZ string but leaves the pointers at the end of the strings
+   367                              <1> ;rsi -> Source
+   368                              <1> ;rdi -> Destination
+   369 00003028 51                  <1>     push rcx
+   370 00003029 57                  <1>     push rdi
+   371 0000302A 4889F7              <1>     mov rdi, rsi
+   372 0000302D E80F000000          <1>     call strlen ;Get the length of the string in rsi
+   373 00003032 5F                  <1>     pop rdi
+   374 00003033 F3A4                <1>     rep movsb   ;Now we have the count, just copy over!
+   375 00003035 59                  <1>     pop rcx
+   376                              <1>     return
     13                              <2> %%_ret:
     14 00003036 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-   379                              <1> 
-   380                              <1> strcpy2:
-   381                              <1> ;Copies an ASCIIZ string, but preserves the ptrs
-   382                              <1> ;rsi -> Source
-   383                              <1> ;rdi -> Destination
-   384 00003037 56                  <1>     push rsi
-   385 00003038 57                  <1>     push rdi
-   386 00003039 E8EAFFFFFF          <1>     call strcpy 
-   387 0000303E 5F                  <1>     pop rdi
-   388 0000303F 5E                  <1>     pop rsi
-   389                              <1>     return
+   377                              <1> 
+   378                              <1> strcpy2:
+   379                              <1> ;Copies an ASCIIZ string, but preserves the ptrs
+   380                              <1> ;rsi -> Source
+   381                              <1> ;rdi -> Destination
+   382 00003037 56                  <1>     push rsi
+   383 00003038 57                  <1>     push rdi
+   384 00003039 E8EAFFFFFF          <1>     call strcpy 
+   385 0000303E 5F                  <1>     pop rdi
+   386 0000303F 5E                  <1>     pop rsi
+   387                              <1>     return
     13                              <2> %%_ret:
     14 00003040 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-   390                              <1> 
-   391                              <1> strlen:
-   392                              <1> ;Gets the length of a ASCIIZ string
-   393                              <1> ;Input: rdi = Source buffer
-   394                              <1> ;Output: ecx = Length of string, INCLUDING TERMINATING NULL
-   395 00003041 50                  <1>     push rax
-   396 00003042 B812120000          <1>     mov eax, 1212h  ;Strlen according to DOS, trashes eax
-   397 00003047 CD2F                <1>     int 2fh
-   398 00003049 58                  <1>     pop rax
-   399                              <1>     return
+   388                              <1> 
+   389                              <1> strlen:
+   390                              <1> ;Gets the length of a ASCIIZ string
+   391                              <1> ;Input: rdi = Source buffer
+   392                              <1> ;Output: ecx = Length of string, INCLUDING TERMINATING NULL
+   393 00003041 50                  <1>     push rax
+   394 00003042 B812120000          <1>     mov eax, 1212h  ;Strlen according to DOS, trashes eax
+   395 00003047 CD2F                <1>     int 2fh
+   396 00003049 58                  <1>     pop rax
+   397                              <1>     return
     13                              <2> %%_ret:
     14 0000304A C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-   400                              <1> 
-   401                              <1> ucChar:
-   402                              <1> ;Input: al = Char to uppercase
-   403                              <1> ;Output: al = Adjusted char 
-   404 0000304B 53                  <1>     push rbx
-   405 0000304C 4889E3              <1>     mov rbx, rsp    ;Save the stack ptr
-   406 0000304F 50                  <1>     push rax    ;Push the char twice on the stack
-   407 00003050 50                  <1>     push rax
-   408 00003051 B813120000          <1>     mov eax, 1213h  ;Get DOS to uppercase the char
-   409 00003056 CD2F                <1>     int 2fh         ;Returns the processed char in al
-   410 00003058 4889DC              <1>     mov rsp, rbx    ;Return the stack ptr to where it was
-   411 0000305B 5B                  <1>     pop rbx
-   412                              <1>     return
+   398                              <1> 
+   399                              <1> ucChar:
+   400                              <1> ;Input: al = Char to uppercase
+   401                              <1> ;Output: al = Adjusted char 
+   402 0000304B 53                  <1>     push rbx
+   403 0000304C 4889E3              <1>     mov rbx, rsp    ;Save the stack ptr
+   404 0000304F 50                  <1>     push rax    ;Push the char twice on the stack
+   405 00003050 50                  <1>     push rax
+   406 00003051 B813120000          <1>     mov eax, 1213h  ;Get DOS to uppercase the char
+   407 00003056 CD2F                <1>     int 2fh         ;Returns the processed char in al
+   408 00003058 4889DC              <1>     mov rsp, rbx    ;Return the stack ptr to where it was
+   409 0000305B 5B                  <1>     pop rbx
+   410                              <1>     return
     13                              <2> %%_ret:
     14 0000305C C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-   413                              <1> 
-   414                              <1> skipDelimiters:
-   415                              <1> ;Skips all "standard" command delimiters. This is not the same as FCB 
-   416                              <1> ; command delimiters but a subset thereof. 
-   417                              <1> ;These are the same across all codepages.
-   418                              <1> ;Input: rsi must point to the start of the data string
-   419                              <1> ;Output: rsi points to the first non-delimiter char
-   420 0000305D 50                  <1>     push rax
-   421                              <1> .l1:
-   422 0000305E AC                  <1>     lodsb
-   423 0000305F E807000000          <1>     call isALdelimiter
-   424 00003064 74F8                <1>     jz .l1
-   425                              <1> .exit:
-   426 00003066 58                  <1>     pop rax
-   427 00003067 48FFCE              <1>     dec rsi ;Point rsi back to the char which is not a command delimiter
-   428                              <1>     return
+   411                              <1> 
+   412                              <1> skipDelimiters:
+   413                              <1> ;Skips all "standard" command delimiters. This is not the same as FCB 
+   414                              <1> ; command delimiters but a subset thereof. 
+   415                              <1> ;These are the same across all codepages.
+   416                              <1> ;Input: rsi must point to the start of the data string
+   417                              <1> ;Output: rsi points to the first non-delimiter char
+   418 0000305D 50                  <1>     push rax
+   419                              <1> .l1:
+   420 0000305E AC                  <1>     lodsb
+   421 0000305F E807000000          <1>     call isALdelimiter
+   422 00003064 74F8                <1>     jz .l1
+   423                              <1> .exit:
+   424 00003066 58                  <1>     pop rax
+   425 00003067 48FFCE              <1>     dec rsi ;Point rsi back to the char which is not a command delimiter
+   426                              <1>     return
     13                              <2> %%_ret:
     14 0000306A C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-   429                              <1> 
-   430                              <1> isALdelimiter:
-   431                              <1> ;Returns: ZF=NZ if al is not a command separator 
-   432                              <1> ;         ZF=ZE if al is a command separator
-   433 0000306B 3C20                <1>     cmp al, " "
-   434                              <1>     rete
+   427                              <1> 
+   428                              <1> isALdelimiter:
+   429                              <1> ;Returns: ZF=NZ if al is not a command separator 
+   430                              <1> ;         ZF=ZE if al is a command separator
+   431 0000306B 3C20                <1>     cmp al, " "
+   432                              <1>     rete
     49                              <2> cret e
     19                              <3> %%_base:
     20                              <3> %assign baseVar %%_base-$$
@@ -5116,8 +5114,8 @@
     35                              <3>  return
     36                              <3> %%a:
     37                              <3>  %endif
-   435 0000306F 3C3B                <1>     cmp al, ";"
-   436                              <1>     rete
+   433 0000306F 3C3B                <1>     cmp al, ";"
+   434                              <1>     rete
     49                              <2> cret e
     19                              <3> %%_base:
     20                              <3> %assign baseVar %%_base-$$
@@ -5138,8 +5136,8 @@
     35                              <3>  return
     36                              <3> %%a:
     37                              <3>  %endif
-   437 00003073 3C3D                <1>     cmp al, "="
-   438                              <1>     rete
+   435 00003073 3C3D                <1>     cmp al, "="
+   436                              <1>     rete
     49                              <2> cret e
     19                              <3> %%_base:
     20                              <3> %assign baseVar %%_base-$$
@@ -5160,8 +5158,8 @@
     35                              <3>  return
     36                              <3> %%a:
     37                              <3>  %endif
-   439 00003077 3C2C                <1>     cmp al, ","
-   440                              <1>     rete
+   437 00003077 3C2C                <1>     cmp al, ","
+   438                              <1>     rete
     49                              <2> cret e
     19                              <3> %%_base:
     20                              <3> %assign baseVar %%_base-$$
@@ -5182,384 +5180,384 @@
     35                              <3>  return
     36                              <3> %%a:
     37                              <3>  %endif
-   441 0000307B 3C09                <1>     cmp al, TAB
-   442                              <1>     return
+   439 0000307B 3C09                <1>     cmp al, TAB
+   440                              <1>     return
     13                              <2> %%_ret:
     14 0000307D C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-   443                              <1> 
-   444                              <1> printPrompt:
-   445 0000307E 66813DA2CFFFFFFFFF  <1>     cmp word [promptPtr], -1
-   446 00003087 750B                <1>     jne .validPrompt
-   447                              <1>     ;Here we print the default prompt
-   448 00003089 E8CFFEFFFF          <1>     call putCWDInPrompt
-   449 0000308E E8B4FEFFFF          <1>     call putGTinPrompt
-   450                              <1>     return
+   441                              <1> 
+   442                              <1> printPrompt:
+   443 0000307E 66813DA2CFFFFFFFFF  <1>     cmp word [promptPtr], -1
+   444 00003087 750B                <1>     jne .validPrompt
+   445                              <1>     ;Here we print the default prompt
+   446 00003089 E8CFFEFFFF          <1>     call putCWDInPrompt
+   447 0000308E E8B4FEFFFF          <1>     call putGTinPrompt
+   448                              <1>     return
     13                              <2> %%_ret:
     14 00003093 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-   451                              <1> .validPrompt:
-   452                              <1>     return
+   449                              <1> .validPrompt:
+   450                              <1>     return
     13                              <2> %%_ret:
     14 00003094 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-   453                              <1> 
-   454                              <1> clearCommandState:
-   455                              <1> ;Clears the command state
-   456 00003095 488D3D18D0FFFF      <1>     lea rdi, cmdStatePtr
-   457 0000309C B90C000000          <1>     mov ecx, cmdStateL
-   458 000030A1 31C0                <1>     xor eax, eax
-   459 000030A3 F3AA                <1>     rep stosb
-   460 000030A5 C70507D0FFFFFFFFFF- <1>     mov dword [redirSTDIN], -1
-   460 000030AE FF                  <1>
-   461                              <1>     return
+   451                              <1> 
+   452                              <1> clearCommandState:
+   453                              <1> ;Clears the command state
+   454 00003095 488D3D18D0FFFF      <1>     lea rdi, cmdStatePtr
+   455 0000309C B90C000000          <1>     mov ecx, cmdStateL
+   456 000030A1 31C0                <1>     xor eax, eax
+   457 000030A3 F3AA                <1>     rep stosb
+   458 000030A5 C70507D0FFFFFFFFFF- <1>     mov dword [redirSTDIN], -1
+   458 000030AE FF                  <1>
+   459                              <1>     return
     13                              <2> %%_ret:
     14 000030AF C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-   462                              <1> 
-   463                              <1> clearCommandLineState:
-   464                              <1> ;Clears the command line state after a 0Dh encountered
-   465 000030B0 488D3DE8CFFFFF      <1>     lea rdi, cmdLineStatePtr
-   466 000030B7 B921000000          <1>     mov ecx, cmdLineStateL
-   467 000030BC 31C0                <1>     xor eax, eax
-   468 000030BE F3AA                <1>     rep stosb
-   469 000030C0 C705E6CFFFFFFFFFFF- <1>     mov dword [pipeSTDIN], -1
-   469 000030C9 FF                  <1>
-   470 000030CA C705E2CFFFFFFFFFFF- <1>     mov dword [redirSTDIN], -1
-   470 000030D3 FF                  <1>
-   471                              <1>     return
+   460                              <1> 
+   461                              <1> clearCommandLineState:
+   462                              <1> ;Clears the command line state after a 0Dh encountered
+   463 000030B0 488D3DE8CFFFFF      <1>     lea rdi, cmdLineStatePtr
+   464 000030B7 B921000000          <1>     mov ecx, cmdLineStateL
+   465 000030BC 31C0                <1>     xor eax, eax
+   466 000030BE F3AA                <1>     rep stosb
+   467 000030C0 C705E6CFFFFFFFFFFF- <1>     mov dword [pipeSTDIN], -1
+   467 000030C9 FF                  <1>
+   468 000030CA C705E2CFFFFFFFFFFF- <1>     mov dword [redirSTDIN], -1
+   468 000030D3 FF                  <1>
+   469                              <1>     return
     13                              <2> %%_ret:
     14 000030D4 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-   472                              <1> 
-   473                              <1> asciiToFCB:
-   474                              <1> ;Converts a filename in the form FILENAME.EXT,0 to FILENAMEEXT
-   475                              <1> ;Don't uppercase any lowercase chars as this could be used with user buffers.
-   476                              <1> ;Also doesn't check if chars are valid
-   477                              <1> ;Names such as SYS.COM get converted to "SYS     COM"
-   478                              <1> ;Name is space padded.
-   479                              <1> ;Input: rsi = ASCII string buffer
-   480                              <1> ;       rdi = FCB name buffer
-   481                              <1> ;Output: al = Char that terminated the source string 
-   482 000030D5 53                  <1>     push rbx    
-   483 000030D6 57                  <1>     push rdi
-   484 000030D7 B90B000000          <1>     mov ecx, 11
-   485 000030DC B020                <1>     mov al, " "
-   486 000030DE F3AA                <1>     rep stosb   ;Fill the buffer with spaces (so we don't need to fill later)
-   487 000030E0 5F                  <1>     pop rdi
-   488 000030E1 4889FB              <1>     mov rbx, rdi    ;Use rbx as the base pointer of this buffer
-   489 000030E4 EB1D                <1>     jmp short asciiFilenameToFCB.processName
-   490                              <1> asciiFilenameToFCB:
-   491                              <1> ;Converts a filename in the form FILENAME.EXT,0 to FILENAMEEXT
-   492                              <1> ;Don't uppercase any lowercase chars as this could be used with user buffers.
-   493                              <1> ;Also doesn't check if chars are valid
-   494                              <1> ;Names such as SYS.COM get converted to "SYS     COM"
-   495                              <1> ;Name is space padded.
-   496                              <1> ;Input: rsi = ASCII string buffer
-   497                              <1> ;       rdi = FCB name buffer
-   498                              <1> ;Output: al = Char that terminated the source string 
-   499 000030E6 53                  <1>     push rbx    
-   500 000030E7 57                  <1>     push rdi
-   501 000030E8 B90B000000          <1>     mov ecx, 11
-   502 000030ED B020                <1>     mov al, " "
-   503 000030EF F3AA                <1>     rep stosb   ;Fill the buffer with spaces (so we don't need to fill later)
-   504 000030F1 5F                  <1>     pop rdi
-   505 000030F2 4889FB              <1>     mov rbx, rdi    ;Use rbx as the base pointer of this buffer
-   506                              <1>     ;Preprocess for Dir Searches
-   507 000030F5 803E2E              <1>     cmp byte [rsi], "."
-   508 000030F8 7509                <1>     jne .processName
-   509 000030FA A4                  <1>     movsb   ;Store the first dot
-   510 000030FB 803E2E              <1>     cmp byte [rsi], "."
-   511 000030FE 752C                <1>     jne .exitBadChar
-   512 00003100 A4                  <1>     movsb
-   513 00003101 EB29                <1>     jmp short .exitBadChar
-   514                              <1> .processName:
-   515 00003103 AC                  <1>     lodsb   ;Get the char in al
-   516 00003104 84C0                <1>     test al, al ;If the char is a null, must be at the end of the name
-   517 00003106 7426                <1>     jz .exit
-   518 00003108 3C20                <1>     cmp al, " " ;If space or a period, go to extension field. If null, exit
-   519 0000310A 7407                <1>     je .extSpace
-   520 0000310C 3C2E                <1>     cmp al, "."
-   521 0000310E 740C                <1>     je .ext
-   522 00003110 AA                  <1>     stosb   ;Store the char
-   523 00003111 EBF0                <1>     jmp short .processName
-   524                              <1> .extSpace:
-   525                              <1> ;Now we scan for a period in the name
-   526 00003113 AC                  <1>     lodsb   ;Get a char and increase rsi
-   527 00003114 84C0                <1>     test al, al
-   528 00003116 7416                <1>     jz .exit
-   529 00003118 3C2E                <1>     cmp al, "."     ;If al is not a period...
-   530 0000311A 75F7                <1>     jne .extSpace   ; keep searching
-   531                              <1> .ext:
-   532 0000311C 488D7B08            <1>     lea rdi, qword [rbx + filename.fExt]    ;Put destination at the extension
-   533                              <1> .processExt:
-   534 00003120 AC                  <1>     lodsb
-   535 00003121 84C0                <1>     test al, al
-   536 00003123 7409                <1>     jz .exit
-   537 00003125 3C20                <1>     cmp al, " "
-   538 00003127 7405                <1>     je .exit
-   539 00003129 AA                  <1>     stosb
-   540 0000312A EBF4                <1>     jmp short .processExt
-   541                              <1> .exitBadChar:
-   542 0000312C 30C0                <1>     xor al, al  ;Return a null terminator
-   543                              <1> .exit:
-   544 0000312E 5B                  <1>     pop rbx
-   545                              <1>     return
+   470                              <1> 
+   471                              <1> asciiToFCB:
+   472                              <1> ;Converts a filename in the form FILENAME.EXT,0 to FILENAMEEXT
+   473                              <1> ;Don't uppercase any lowercase chars as this could be used with user buffers.
+   474                              <1> ;Also doesn't check if chars are valid
+   475                              <1> ;Names such as SYS.COM get converted to "SYS     COM"
+   476                              <1> ;Name is space padded.
+   477                              <1> ;Input: rsi = ASCII string buffer
+   478                              <1> ;       rdi = FCB name buffer
+   479                              <1> ;Output: al = Char that terminated the source string 
+   480 000030D5 53                  <1>     push rbx    
+   481 000030D6 57                  <1>     push rdi
+   482 000030D7 B90B000000          <1>     mov ecx, 11
+   483 000030DC B020                <1>     mov al, " "
+   484 000030DE F3AA                <1>     rep stosb   ;Fill the buffer with spaces (so we don't need to fill later)
+   485 000030E0 5F                  <1>     pop rdi
+   486 000030E1 4889FB              <1>     mov rbx, rdi    ;Use rbx as the base pointer of this buffer
+   487 000030E4 EB1D                <1>     jmp short asciiFilenameToFCB.processName
+   488                              <1> asciiFilenameToFCB:
+   489                              <1> ;Converts a filename in the form FILENAME.EXT,0 to FILENAMEEXT
+   490                              <1> ;Don't uppercase any lowercase chars as this could be used with user buffers.
+   491                              <1> ;Also doesn't check if chars are valid
+   492                              <1> ;Names such as SYS.COM get converted to "SYS     COM"
+   493                              <1> ;Name is space padded.
+   494                              <1> ;Input: rsi = ASCII string buffer
+   495                              <1> ;       rdi = FCB name buffer
+   496                              <1> ;Output: al = Char that terminated the source string 
+   497 000030E6 53                  <1>     push rbx    
+   498 000030E7 57                  <1>     push rdi
+   499 000030E8 B90B000000          <1>     mov ecx, 11
+   500 000030ED B020                <1>     mov al, " "
+   501 000030EF F3AA                <1>     rep stosb   ;Fill the buffer with spaces (so we don't need to fill later)
+   502 000030F1 5F                  <1>     pop rdi
+   503 000030F2 4889FB              <1>     mov rbx, rdi    ;Use rbx as the base pointer of this buffer
+   504                              <1>     ;Preprocess for Dir Searches
+   505 000030F5 803E2E              <1>     cmp byte [rsi], "."
+   506 000030F8 7509                <1>     jne .processName
+   507 000030FA A4                  <1>     movsb   ;Store the first dot
+   508 000030FB 803E2E              <1>     cmp byte [rsi], "."
+   509 000030FE 752C                <1>     jne .exitBadChar
+   510 00003100 A4                  <1>     movsb
+   511 00003101 EB29                <1>     jmp short .exitBadChar
+   512                              <1> .processName:
+   513 00003103 AC                  <1>     lodsb   ;Get the char in al
+   514 00003104 84C0                <1>     test al, al ;If the char is a null, must be at the end of the name
+   515 00003106 7426                <1>     jz .exit
+   516 00003108 3C20                <1>     cmp al, " " ;If space or a period, go to extension field. If null, exit
+   517 0000310A 7407                <1>     je .extSpace
+   518 0000310C 3C2E                <1>     cmp al, "."
+   519 0000310E 740C                <1>     je .ext
+   520 00003110 AA                  <1>     stosb   ;Store the char
+   521 00003111 EBF0                <1>     jmp short .processName
+   522                              <1> .extSpace:
+   523                              <1> ;Now we scan for a period in the name
+   524 00003113 AC                  <1>     lodsb   ;Get a char and increase rsi
+   525 00003114 84C0                <1>     test al, al
+   526 00003116 7416                <1>     jz .exit
+   527 00003118 3C2E                <1>     cmp al, "."     ;If al is not a period...
+   528 0000311A 75F7                <1>     jne .extSpace   ; keep searching
+   529                              <1> .ext:
+   530 0000311C 488D7B08            <1>     lea rdi, qword [rbx + filename.fExt]    ;Put destination at the extension
+   531                              <1> .processExt:
+   532 00003120 AC                  <1>     lodsb
+   533 00003121 84C0                <1>     test al, al
+   534 00003123 7409                <1>     jz .exit
+   535 00003125 3C20                <1>     cmp al, " "
+   536 00003127 7405                <1>     je .exit
+   537 00003129 AA                  <1>     stosb
+   538 0000312A EBF4                <1>     jmp short .processExt
+   539                              <1> .exitBadChar:
+   540 0000312C 30C0                <1>     xor al, al  ;Return a null terminator
+   541                              <1> .exit:
+   542 0000312E 5B                  <1>     pop rbx
+   543                              <1>     return
     13                              <2> %%_ret:
     14 0000312F C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-   546                              <1> 
-   547                              <1> findLastPathComponant:
-   548                              <1> ;Finds the last path componant of an ASCIIZ path string
-   549                              <1> ;Input: rdi -> Head of the path to find last componant on
-   550                              <1> ;Output: rdi -> Start of the last componant
-   551 00003130 50                  <1>     push rax
-   552 00003131 51                  <1>     push rcx
-   553 00003132 31C9                <1>     xor ecx, ecx
-   554 00003134 FFC9                <1>     dec ecx
-   555 00003136 31C0                <1>     xor eax, eax
-   556 00003138 F2AE                <1>     repne scasb ;Scan for the null terminator of the string
-   557 0000313A F7D1                <1>     not ecx     ;This gets the count of chars  
-   558 0000313C 48FFCF              <1>     dec rdi     ;Move rdi back to the null!
-   559 0000313F 8A05E6CEFFFF        <1>     mov al, byte [pathSep]
-   560 00003145 FD                  <1>     std
-   561 00003146 F2AE                <1>     repne scasb ;Now scan backwards for the pathsep, or we run out of chars!
-   562 00003148 FC                  <1>     cld
-   563 00003149 7503                <1>     jnz .exit   ;Ran out of chars to scan! Skip the extra inc
-   564 0000314B 48FFC7              <1>     inc rdi     ;Point at pathsep
-   565                              <1> .exit:
-   566 0000314E 48FFC7              <1>     inc rdi     ;Point at char after pathsep or first char in buffer
-   567 00003151 59                  <1>     pop rcx
-   568 00003152 58                  <1>     pop rax
-   569                              <1>     return
+   544                              <1> 
+   545                              <1> findLastPathComponant:
+   546                              <1> ;Finds the last path componant of an ASCIIZ path string
+   547                              <1> ;Input: rdi -> Head of the path to find last componant on
+   548                              <1> ;Output: rdi -> Start of the last componant
+   549 00003130 50                  <1>     push rax
+   550 00003131 51                  <1>     push rcx
+   551 00003132 31C9                <1>     xor ecx, ecx
+   552 00003134 FFC9                <1>     dec ecx
+   553 00003136 31C0                <1>     xor eax, eax
+   554 00003138 F2AE                <1>     repne scasb ;Scan for the null terminator of the string
+   555 0000313A F7D1                <1>     not ecx     ;This gets the count of chars  
+   556 0000313C 48FFCF              <1>     dec rdi     ;Move rdi back to the null!
+   557 0000313F 8A05E6CEFFFF        <1>     mov al, byte [pathSep]
+   558 00003145 FD                  <1>     std
+   559 00003146 F2AE                <1>     repne scasb ;Now scan backwards for the pathsep, or we run out of chars!
+   560 00003148 FC                  <1>     cld
+   561 00003149 7503                <1>     jnz .exit   ;Ran out of chars to scan! Skip the extra inc
+   562 0000314B 48FFC7              <1>     inc rdi     ;Point at pathsep
+   563                              <1> .exit:
+   564 0000314E 48FFC7              <1>     inc rdi     ;Point at char after pathsep or first char in buffer
+   565 00003151 59                  <1>     pop rcx
+   566 00003152 58                  <1>     pop rax
+   567                              <1>     return
     13                              <2> %%_ret:
     14 00003153 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-   570                              <1> 
-   571                              <1> FCBToAsciiz:
-   572                              <1> ;Converts a filename in the form FILENAMEEXT to FILENAME.EXT,0
-   573                              <1> ;Name is space padded too
-   574                              <1> ;Input: rsi = FCB name buffer
-   575                              <1> ;       rdi = ASCIIZ string buffer
-   576 00003154 B908000000          <1>     mov ecx, 8
-   577 00003159 F3A4                <1>     rep movsb   ;Move the name over
-   578                              <1> .scanNameSpace:
-   579 0000315B 807FFF20            <1>     cmp byte [rdi - 1], " " ;Is the previous char a space?
-   580 0000315F 750D                <1>     jne .ext
-   581 00003161 48FFCF              <1>     dec rdi
-   582 00003164 FFC1                <1>     inc ecx
-   583 00003166 81F908000000        <1>     cmp ecx, 8
-   584 0000316C 72ED                <1>     jb .scanNameSpace
-   585                              <1> .ext:
-   586 0000316E 66813E2020          <1>     cmp word [rsi], "  "    ;Are the first two chars a space?
-   587 00003173 7506                <1>     jne .validExt
-   588 00003175 807E0220            <1>     cmp byte [rsi + 2], " " ;Is the final char a space?
-   589 00003179 7415                <1>     je .exit
-   590                              <1> .validExt:
-   591 0000317B B02E                <1>     mov al, "." ;We have a valid extension, store a period
-   592 0000317D AA                  <1>     stosb
-   593 0000317E B903000000          <1>     mov ecx, 3
-   594 00003183 F3A4                <1>     rep movsb   ;Move the three extension chars over
-   595                              <1> .scanExtSpace:
-   596 00003185 807FFF20            <1>     cmp byte [rdi - 1], " " ;Is the previous char a space
-   597 00003189 7505                <1>     jne .exit
-   598 0000318B 48FFCF              <1>     dec rdi
-   599 0000318E EBF5                <1>     jmp short .scanExtSpace
-   600                              <1> .exit:
-   601 00003190 31C0                <1>     xor eax, eax
-   602 00003192 AA                  <1>     stosb   ;Store a null at the end
-   603                              <1>     return
+   568                              <1> 
+   569                              <1> FCBToAsciiz:
+   570                              <1> ;Converts a filename in the form FILENAMEEXT to FILENAME.EXT,0
+   571                              <1> ;Name is space padded too
+   572                              <1> ;Input: rsi = FCB name buffer
+   573                              <1> ;       rdi = ASCIIZ string buffer
+   574 00003154 B908000000          <1>     mov ecx, 8
+   575 00003159 F3A4                <1>     rep movsb   ;Move the name over
+   576                              <1> .scanNameSpace:
+   577 0000315B 807FFF20            <1>     cmp byte [rdi - 1], " " ;Is the previous char a space?
+   578 0000315F 750D                <1>     jne .ext
+   579 00003161 48FFCF              <1>     dec rdi
+   580 00003164 FFC1                <1>     inc ecx
+   581 00003166 81F908000000        <1>     cmp ecx, 8
+   582 0000316C 72ED                <1>     jb .scanNameSpace
+   583                              <1> .ext:
+   584 0000316E 66813E2020          <1>     cmp word [rsi], "  "    ;Are the first two chars a space?
+   585 00003173 7506                <1>     jne .validExt
+   586 00003175 807E0220            <1>     cmp byte [rsi + 2], " " ;Is the final char a space?
+   587 00003179 7415                <1>     je .exit
+   588                              <1> .validExt:
+   589 0000317B B02E                <1>     mov al, "." ;We have a valid extension, store a period
+   590 0000317D AA                  <1>     stosb
+   591 0000317E B903000000          <1>     mov ecx, 3
+   592 00003183 F3A4                <1>     rep movsb   ;Move the three extension chars over
+   593                              <1> .scanExtSpace:
+   594 00003185 807FFF20            <1>     cmp byte [rdi - 1], " " ;Is the previous char a space
+   595 00003189 7505                <1>     jne .exit
+   596 0000318B 48FFCF              <1>     dec rdi
+   597 0000318E EBF5                <1>     jmp short .scanExtSpace
+   598                              <1> .exit:
+   599 00003190 31C0                <1>     xor eax, eax
+   600 00003192 AA                  <1>     stosb   ;Store a null at the end
+   601                              <1>     return
     13                              <2> %%_ret:
     14 00003193 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-   604                              <1>     
-   605                              <1> cpDelimPathToBufz:
-   606                              <1> ;Copy a delimited path into buffer and null terminate.
-   607                              <1> ;Input: rsi -> Point to start of delimiter terminated path
-   608                              <1> ;       rdi -> Buffer to store null terminated path in
-   609                              <1> ;Output: rsi -> First char past pathname delimiter
-   610                              <1> ;       rdi -> One char past null terminator on pathname buffer
-   611 00003194 53                  <1>     push rbx
-   612 00003195 4889FB              <1>     mov rbx, rdi    ;Save the head of the path in rbx
-   613 00003198 C60700              <1>     mov byte [rdi], 0   ;Null terminate this path before starting!
-   614                              <1> .lp:
-   615 0000319B AC                  <1>     lodsb   ;Get the char
-   616 0000319C 3C0D                <1>     cmp al, CR
-   617 0000319E 7412                <1>     je .gotRedirPath
-   618 000031A0 E8C6FEFFFF          <1>     call isALdelimiter  ;Is this char a delimiter char?
-   619 000031A5 740B                <1>     jz .gotRedirPath 
-   620 000031A7 3A057FCEFFFF        <1>     cmp al, byte [switchChar]
-   621 000031AD 7403                <1>     je .gotRedirPath
-   622 000031AF AA                  <1>     stosb   ;Store this char and loop next char
-   623 000031B0 EBE9                <1>     jmp short .lp
-   624                              <1> .gotRedirPath:
-   625 000031B2 50                  <1>     push rax    ;Save the char on stack
-   626 000031B3 30C0                <1>     xor al, al  ;Get null terminator char
-   627 000031B5 4829FB              <1>     sub rbx, rdi
-   628 000031B8 4881FBFFFFFFFF      <1>     cmp rbx, -1 ;This is because one char has been written!!
-   629 000031BF 7412                <1>     je .notColon
-   630 000031C1 4881FBFEFFFFFF      <1>     cmp rbx, -2 ;This is for drive letters, must always have the colon!!
-   631 000031C8 7409                <1>     je .notColon
-   632 000031CA 807FFF3A            <1>     cmp byte [rdi - 1], ":" ;Is this a colon?
-   633 000031CE 7503                <1>     jne .notColon
-   634 000031D0 48FFCF              <1>     dec rdi     ;We overwrite the colon. 
-   635                              <1> .notColon:
-   636 000031D3 AA                  <1>     stosb   ;Store the null terminator for the redir path
-   637 000031D4 58                  <1>     pop rax ;Get back the char in al
-   638 000031D5 5B                  <1>     pop rbx
-   639                              <1>     return
+   602                              <1>     
+   603                              <1> cpDelimPathToBufz:
+   604                              <1> ;Copy a delimited path into buffer and null terminate.
+   605                              <1> ;Input: rsi -> Point to start of delimiter terminated path
+   606                              <1> ;       rdi -> Buffer to store null terminated path in
+   607                              <1> ;Output: rsi -> First char past pathname delimiter
+   608                              <1> ;       rdi -> One char past null terminator on pathname buffer
+   609 00003194 53                  <1>     push rbx
+   610 00003195 4889FB              <1>     mov rbx, rdi    ;Save the head of the path in rbx
+   611 00003198 C60700              <1>     mov byte [rdi], 0   ;Null terminate this path before starting!
+   612                              <1> .lp:
+   613 0000319B AC                  <1>     lodsb   ;Get the char
+   614 0000319C 3C0D                <1>     cmp al, CR
+   615 0000319E 7412                <1>     je .gotRedirPath
+   616 000031A0 E8C6FEFFFF          <1>     call isALdelimiter  ;Is this char a delimiter char?
+   617 000031A5 740B                <1>     jz .gotRedirPath 
+   618 000031A7 3A057FCEFFFF        <1>     cmp al, byte [switchChar]
+   619 000031AD 7403                <1>     je .gotRedirPath
+   620 000031AF AA                  <1>     stosb   ;Store this char and loop next char
+   621 000031B0 EBE9                <1>     jmp short .lp
+   622                              <1> .gotRedirPath:
+   623 000031B2 50                  <1>     push rax    ;Save the char on stack
+   624 000031B3 30C0                <1>     xor al, al  ;Get null terminator char
+   625 000031B5 4829FB              <1>     sub rbx, rdi
+   626 000031B8 4881FBFFFFFFFF      <1>     cmp rbx, -1 ;This is because one char has been written!!
+   627 000031BF 7412                <1>     je .notColon
+   628 000031C1 4881FBFEFFFFFF      <1>     cmp rbx, -2 ;This is for drive letters, must always have the colon!!
+   629 000031C8 7409                <1>     je .notColon
+   630 000031CA 807FFF3A            <1>     cmp byte [rdi - 1], ":" ;Is this a colon?
+   631 000031CE 7503                <1>     jne .notColon
+   632 000031D0 48FFCF              <1>     dec rdi     ;We overwrite the colon. 
+   633                              <1> .notColon:
+   634 000031D3 AA                  <1>     stosb   ;Store the null terminator for the redir path
+   635 000031D4 58                  <1>     pop rax ;Get back the char in al
+   636 000031D5 5B                  <1>     pop rbx
+   637                              <1>     return
     13                              <2> %%_ret:
     14 000031D6 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-   640                              <1> 
-   641                              <1> buildCommandPath:
-   642                              <1> ;Copies the first argument into a null delimited path in the searchSpec buffer.
-   643 000031D7 0FB605DDCEFFFF      <1>     movzx eax, byte [arg1Off]
-   644 000031DE 4C8B052ACEFFFF      <1>     mov r8, [pspPtr]
-   645 000031E5 498DB081000000      <1>     lea rsi, qword [r8 + cmdLine]
-   646 000031EC 4801C6              <1>     add rsi, rax    ;Go to the start of the command
-   647                              <1> copyArgumentToSearchSpec:
-   648                              <1> ;Copies an arbitrary delimited path pointed to by rsi into searchSpec
-   649                              <1> ; and null terminates
-   650 000031EF 488D3D6CD2FFFF      <1>     lea rdi, searchSpec
-   651 000031F6 E899FFFFFF          <1>     call cpDelimPathToBufz
-   652                              <1>     return
+   638                              <1> 
+   639                              <1> buildCommandPath:
+   640                              <1> ;Copies the first argument into a null delimited path in the searchSpec buffer.
+   641 000031D7 0FB605DDCEFFFF      <1>     movzx eax, byte [arg1Off]
+   642 000031DE 4C8B052ACEFFFF      <1>     mov r8, [pspPtr]
+   643 000031E5 498DB081000000      <1>     lea rsi, qword [r8 + cmdLine]
+   644 000031EC 4801C6              <1>     add rsi, rax    ;Go to the start of the command
+   645                              <1> copyArgumentToSearchSpec:
+   646                              <1> ;Copies an arbitrary delimited path pointed to by rsi into searchSpec
+   647                              <1> ; and null terminates
+   648 000031EF 488D3D6CD2FFFF      <1>     lea rdi, searchSpec
+   649 000031F6 E899FFFFFF          <1>     call cpDelimPathToBufz
+   650                              <1>     return
     13                              <2> %%_ret:
     14 000031FB C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-   653                              <1> 
-   654                              <1> scanForWildcards:
-   655                              <1> ;Input: rsi -> Null terminated path to search for wildcards on
-   656                              <1> ;Output: ZF=ZE if WC found. Else, ZF=NZ.
-   657 000031FC 50                  <1>     push rax
-   658 000031FD 56                  <1>     push rsi
-   659                              <1> .lp:
-   660 000031FE AC                  <1>     lodsb
-   661 000031FF 3C3F                <1>     cmp al, "?"
-   662 00003201 740A                <1>     je .exit
-   663 00003203 3C2A                <1>     cmp al, "*"
-   664 00003205 7406                <1>     je .exit
-   665 00003207 84C0                <1>     test al, al
-   666 00003209 75F3                <1>     jnz .lp
-   667 0000320B FEC0                <1>     inc al  ;This will clear the ZF
-   668                              <1> .exit:
-   669 0000320D 5E                  <1>     pop rsi
-   670 0000320E 58                  <1>     pop rax
-   671                              <1>     return
+   651                              <1> 
+   652                              <1> scanForWildcards:
+   653                              <1> ;Input: rsi -> Null terminated path to search for wildcards on
+   654                              <1> ;Output: ZF=ZE if WC found. Else, ZF=NZ.
+   655 000031FC 50                  <1>     push rax
+   656 000031FD 56                  <1>     push rsi
+   657                              <1> .lp:
+   658 000031FE AC                  <1>     lodsb
+   659 000031FF 3C3F                <1>     cmp al, "?"
+   660 00003201 740A                <1>     je .exit
+   661 00003203 3C2A                <1>     cmp al, "*"
+   662 00003205 7406                <1>     je .exit
+   663 00003207 84C0                <1>     test al, al
+   664 00003209 75F3                <1>     jnz .lp
+   665 0000320B FEC0                <1>     inc al  ;This will clear the ZF
+   666                              <1> .exit:
+   667 0000320D 5E                  <1>     pop rsi
+   668 0000320E 58                  <1>     pop rax
+   669                              <1>     return
     13                              <2> %%_ret:
     14 0000320F C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-   672                              <1> 
-   673                              <1> printDecimalWord:
-   674                              <1> ;Takes qword in rax and print it's decimal representation
-   675                              <1> ;Takes the qword in eax and prints its decimal representation
-   676 00003210 31C9                <1>     xor ecx, ecx
-   677 00003212 31DB                <1>     xor ebx, ebx    ;Store upper 8 nybbles here
-   678 00003214 85C0                <1>     test eax, eax
-   679 00003216 750C                <1>     jnz .notZero
-   680 00003218 B930000000          <1>     mov ecx, "0"
-   681 0000321D BD01000000          <1>     mov ebp, 1  ;Print one digit
-   682 00003222 EB3E                <1>     jmp short .dpfb2
-   683                              <1> .notZero:
-   684 00003224 31ED                <1>     xor ebp, ebp  ;Use bp as #of digits counter
-   685 00003226 BE0A000000          <1>     mov esi, 0Ah  ;Divide by 10
-   686                              <1> .dpfb0:
-   687 0000322B FFC5                <1>     inc ebp
-   688 0000322D 81FD08000000        <1>     cmp ebp, 8
-   689 00003233 7206                <1>     jb .dpfb00
-   690 00003235 48C1E308            <1>     shl rbx, 8    ;Space for next nybble
-   691 00003239 EB04                <1>     jmp short .dpfb01
-   692                              <1> .dpfb00:
-   693 0000323B 48C1E108            <1>     shl rcx, 8    ;Space for next nybble
-   694                              <1> .dpfb01:
-   695 0000323F 31D2                <1>     xor edx, edx
-   696 00003241 48F7F6              <1>     div rsi
-   697 00003244 80C230              <1>     add dl, '0'
-   698 00003247 80FA39              <1>     cmp dl, '9'
-   699 0000324A 7603                <1>     jbe .dpfb1
-   700 0000324C 80C207              <1>     add dl, 'A'-'0'-10
-   701                              <1> .dpfb1:
-   702 0000324F 81FD08000000        <1>     cmp ebp, 8
-   703 00003255 7204                <1>     jb .dpfb10
-   704 00003257 88D3                <1>     mov bl, dl ;Add the bottom bits
-   705 00003259 EB02                <1>     jmp short .dpfb11
-   706                              <1> .dpfb10:
-   707 0000325B 88D1                <1>     mov cl, dl    ;Save remainder byte
-   708                              <1> .dpfb11:
-   709 0000325D 4885C0              <1>     test rax, rax
-   710 00003260 75C9                <1>     jnz .dpfb0
-   711                              <1> .dpfb2:
-   712 00003262 81FD08000000        <1>     cmp ebp, 8
-   713 00003268 7208                <1>     jb .dpfb20
-   714 0000326A 88DA                <1>     mov dl, bl
-   715 0000326C 48C1EB08            <1>     shr rbx, 8
-   716 00003270 EB06                <1>     jmp short .dpfb21
-   717                              <1> .dpfb20:
-   718 00003272 88CA                <1>     mov dl, cl    ;Get most sig digit into al
-   719 00003274 48C1E908            <1>     shr rcx, 8    ;Get next digit down
-   720                              <1> .dpfb21:
-   721 00003278 B402                <1>     mov ah, 02h
-   722 0000327A CD21                <1>     int 21h
-   723 0000327C FFCD                <1>     dec ebp
-   724 0000327E 75E2                <1>     jnz .dpfb2
-   725                              <1>     return
+   670                              <1> 
+   671                              <1> printDecimalWord:
+   672                              <1> ;Takes qword in rax and print it's decimal representation
+   673                              <1> ;Takes the qword in eax and prints its decimal representation
+   674 00003210 31C9                <1>     xor ecx, ecx
+   675 00003212 31DB                <1>     xor ebx, ebx    ;Store upper 8 nybbles here
+   676 00003214 85C0                <1>     test eax, eax
+   677 00003216 750C                <1>     jnz .notZero
+   678 00003218 B930000000          <1>     mov ecx, "0"
+   679 0000321D BD01000000          <1>     mov ebp, 1  ;Print one digit
+   680 00003222 EB3E                <1>     jmp short .dpfb2
+   681                              <1> .notZero:
+   682 00003224 31ED                <1>     xor ebp, ebp  ;Use bp as #of digits counter
+   683 00003226 BE0A000000          <1>     mov esi, 0Ah  ;Divide by 10
+   684                              <1> .dpfb0:
+   685 0000322B FFC5                <1>     inc ebp
+   686 0000322D 81FD08000000        <1>     cmp ebp, 8
+   687 00003233 7206                <1>     jb .dpfb00
+   688 00003235 48C1E308            <1>     shl rbx, 8    ;Space for next nybble
+   689 00003239 EB04                <1>     jmp short .dpfb01
+   690                              <1> .dpfb00:
+   691 0000323B 48C1E108            <1>     shl rcx, 8    ;Space for next nybble
+   692                              <1> .dpfb01:
+   693 0000323F 31D2                <1>     xor edx, edx
+   694 00003241 48F7F6              <1>     div rsi
+   695 00003244 80C230              <1>     add dl, '0'
+   696 00003247 80FA39              <1>     cmp dl, '9'
+   697 0000324A 7603                <1>     jbe .dpfb1
+   698 0000324C 80C207              <1>     add dl, 'A'-'0'-10
+   699                              <1> .dpfb1:
+   700 0000324F 81FD08000000        <1>     cmp ebp, 8
+   701 00003255 7204                <1>     jb .dpfb10
+   702 00003257 88D3                <1>     mov bl, dl ;Add the bottom bits
+   703 00003259 EB02                <1>     jmp short .dpfb11
+   704                              <1> .dpfb10:
+   705 0000325B 88D1                <1>     mov cl, dl    ;Save remainder byte
+   706                              <1> .dpfb11:
+   707 0000325D 4885C0              <1>     test rax, rax
+   708 00003260 75C9                <1>     jnz .dpfb0
+   709                              <1> .dpfb2:
+   710 00003262 81FD08000000        <1>     cmp ebp, 8
+   711 00003268 7208                <1>     jb .dpfb20
+   712 0000326A 88DA                <1>     mov dl, bl
+   713 0000326C 48C1EB08            <1>     shr rbx, 8
+   714 00003270 EB06                <1>     jmp short .dpfb21
+   715                              <1> .dpfb20:
+   716 00003272 88CA                <1>     mov dl, cl    ;Get most sig digit into al
+   717 00003274 48C1E908            <1>     shr rcx, 8    ;Get next digit down
+   718                              <1> .dpfb21:
+   719 00003278 B402                <1>     mov ah, 02h
+   720 0000327A CD21                <1>     int 21h
+   721 0000327C FFCD                <1>     dec ebp
+   722 0000327E 75E2                <1>     jnz .dpfb2
+   723                              <1>     return
     13                              <2> %%_ret:
     14 00003280 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-   726                              <1> 
-   727                              <1> getDecimalWord:
-   728                              <1> ;Works on MAX A dword in eax
-   729                              <1> ;Gets the decimalised DWORD to print in rcx (at most 8 digits)
-   730 00003281 31C9                <1>     xor ecx, ecx
-   731 00003283 31ED                <1>     xor ebp, ebp  ;Use bp as #of digits counter
-   732 00003285 BB0A000000          <1>     mov ebx, 0Ah  ;Divide by 10
-   733                              <1> .dpfb0:
-   734 0000328A FFC5                <1>     inc ebp
-   735 0000328C 48C1E108            <1>     shl rcx, 8    ;Space for next nybble
-   736 00003290 31D2                <1>     xor edx, edx
-   737 00003292 48F7F3              <1>     div rbx
-   738 00003295 80C230              <1>     add dl, '0'
-   739 00003298 80FA39              <1>     cmp dl, '9'
-   740 0000329B 7603                <1>     jbe .dpfb1
-   741 0000329D 80C207              <1>     add dl, 'A'-'0'-10
-   742                              <1> .dpfb1:
-   743 000032A0 88D1                <1>     mov cl, dl    ;Save remainder byte
-   744 000032A2 4885C0              <1>     test rax, rax
-   745 000032A5 75E3                <1>     jnz .dpfb0
-   746                              <1>     return
+   724                              <1> 
+   725                              <1> getDecimalWord:
+   726                              <1> ;Works on MAX A dword in eax
+   727                              <1> ;Gets the decimalised DWORD to print in rcx (at most 8 digits)
+   728 00003281 31C9                <1>     xor ecx, ecx
+   729 00003283 31ED                <1>     xor ebp, ebp  ;Use bp as #of digits counter
+   730 00003285 BB0A000000          <1>     mov ebx, 0Ah  ;Divide by 10
+   731                              <1> .dpfb0:
+   732 0000328A FFC5                <1>     inc ebp
+   733 0000328C 48C1E108            <1>     shl rcx, 8    ;Space for next nybble
+   734 00003290 31D2                <1>     xor edx, edx
+   735 00003292 48F7F3              <1>     div rbx
+   736 00003295 80C230              <1>     add dl, '0'
+   737 00003298 80FA39              <1>     cmp dl, '9'
+   738 0000329B 7603                <1>     jbe .dpfb1
+   739 0000329D 80C207              <1>     add dl, 'A'-'0'-10
+   740                              <1> .dpfb1:
+   741 000032A0 88D1                <1>     mov cl, dl    ;Save remainder byte
+   742 000032A2 4885C0              <1>     test rax, rax
+   743 000032A5 75E3                <1>     jnz .dpfb0
+   744                              <1>     return
     13                              <2> %%_ret:
     14 000032A7 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-   747                              <1> 
-   748                              <1> freezePC:
-   749 000032A8 488D15FCDAFFFF      <1>     lea rdx, memBad1
-   750 000032AF B409                <1>     mov ah, 09h
-   751 000032B1 CD21                <1>     int 21h
-   752                              <1> .altEP:
-   753 000032B3 488D151ADBFFFF      <1>     lea rdx, memBad3
-   754 000032BA B409                <1>     mov ah, 09h
-   755 000032BC CD21                <1>     int 21h
-   756                              <1> .lp:
-   757 000032BE F390                <1>     pause
-   758 000032C0 F4                  <1>     hlt
-   759 000032C1 EBFB                <1>     jmp short .lp
-   760                              <1> 
-   761                              <1> setDTA:
-   762 000032C3 50                  <1>     push rax
-   763 000032C4 52                  <1>     push rdx
-   764 000032C5 488D1504CEFFFF      <1>     lea rdx, cmdFFBlock     ;Use this as the DTA for this request
-   765 000032CC B8001A0000          <1>     mov eax, 1A00h
-   766 000032D1 CD21                <1>     int 21h
-   767 000032D3 5A                  <1>     pop rdx
-   768 000032D4 58                  <1>     pop rax
-   769                              <1>     return
+   745                              <1> 
+   746                              <1> freezePC:
+   747 000032A8 488D15FCDAFFFF      <1>     lea rdx, memBad1
+   748 000032AF B409                <1>     mov ah, 09h
+   749 000032B1 CD21                <1>     int 21h
+   750                              <1> .altEP:
+   751 000032B3 488D151ADBFFFF      <1>     lea rdx, memBad3
+   752 000032BA B409                <1>     mov ah, 09h
+   753 000032BC CD21                <1>     int 21h
+   754                              <1> .lp:
+   755 000032BE F390                <1>     pause
+   756 000032C0 F4                  <1>     hlt
+   757 000032C1 EBFB                <1>     jmp short .lp
+   758                              <1> 
+   759                              <1> setDTA:
+   760 000032C3 50                  <1>     push rax
+   761 000032C4 52                  <1>     push rdx
+   762 000032C5 488D1504CEFFFF      <1>     lea rdx, cmdFFBlock     ;Use this as the DTA for this request
+   763 000032CC B8001A0000          <1>     mov eax, 1A00h
+   764 000032D1 CD21                <1>     int 21h
+   765 000032D3 5A                  <1>     pop rdx
+   766 000032D4 58                  <1>     pop rax
+   767                              <1>     return
     13                              <2> %%_ret:
     14 000032D5 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-   770                              <1> 
-   771                              <1> getDTA:
-   772 000032D6 488D15F3CDFFFF      <1>     lea rdx, cmdFFBlock
-   773                              <1>     return
+   768                              <1> 
+   769                              <1> getDTA:
+   770 000032D6 488D15F3CDFFFF      <1>     lea rdx, cmdFFBlock
+   771                              <1>     return
     13                              <2> %%_ret:
     14 000032DD C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
