@@ -270,11 +270,13 @@ putCWDInPrompt:
     jc .badDrive
     call strlen
     add ecx, 2 ;Add two for the X:
-    ;We use the fact that strlen counts the NULL to account for "\"
-    mov ah, 40h ;Write to handle
-    mov ebx, 1  ;STDOUT
-    lea rdx, currDirStr
-    int 21h
+    lea rsi, currDirStr
+.prnt:
+    lodsb
+    mov dl, al
+    call outChar
+    dec ecx
+    jnz .prnt
     return
 .badDrive:
 ;If the drive is bad, we print this string instead of drive:\cwd
