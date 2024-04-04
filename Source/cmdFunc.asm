@@ -1772,7 +1772,6 @@ launchChild:
     call .noExtCheckExt
     jmp short .moreSearch
 .noMoreFiles:
-    breakpoint
     test ebx, ebx
     jz .dfltErrExit
 ;So we have a valid executable
