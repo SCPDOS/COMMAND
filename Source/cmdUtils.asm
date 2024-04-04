@@ -2,9 +2,8 @@
 
 printCRLF:
     lea rdx, crlf
-    mov ebx, 1  ;Print on STDOUT
-    mov ah, 40h ;Print a new line
-    mov ecx, 2  ;Two chars to write
+printString:
+    mov eax, 0900h  ;Print string
     int 21h
     return
 printDate:
@@ -248,8 +247,7 @@ putLTinPrompt:
     jmp short outChar
 
 putDriveInPrompt:
-    mov ah, 19h ;Get 0-based current drive number in al
-    int 21h
+    call getCurrentDrive
     add al, "A" ;Convert to letter
     mov dl, al
 outChar:
@@ -257,26 +255,33 @@ outChar:
     int 21h
     return
 putCWDInPrompt:
-    lea rdi, currDirStr ;Update the current directory string
-    mov ah, 19h ;Get 0-based current drive number in al
-    int 21h
+    call getCurrentDrive
     mov dl, al  ;Get drive letter in dl for path
     inc dl
     add al, "A" ;Convert to letter
     mov ah, ":"
+    lea rdi, currDirStr ;Update the current directory string
     stosw   ;Store X:, rdi+=2
     mov al, byte [pathSep]
     stosb   ;Store pathSep, inc rdi
     mov ah, 47h ;Get Current Working Directory
     mov rsi, rdi    ;rsi points to buffer to write to
     int 21h
+    jc .badDrive
     call strlen
     add ecx, 2 ;Add two for the X:
-    ;We repurpose the fact that strlen counts the NULL to account for "\"
-    mov ah, 40h ;Write to handle
-    mov ebx, 1  ;STDOUT
-    lea rdx, currDirStr
-    int 21h
+    lea rsi, currDirStr
+.prnt:
+    lodsb
+    mov dl, al
+    call outChar
+    dec ecx
+    jnz .prnt
+    return
+.badDrive:
+;If the drive is bad, we print this string instead of drive:\cwd
+    lea rdx, badDrvMsg
+    call printString
     return
 
 BCDtoHex:
@@ -344,10 +349,43 @@ printPackedBCD:
     pop rax
     return
 
+setDrive:
+;Input: dl = 0 based Drive number to set to
+;Output: ZF=ZE: Drive set. ZF=NZ: Drive not set and invalid.
+;AX trashed.
+    mov ah, 0Eh ;Set drive to dl
+    int 21h 
+    call getCurrentDrive
+    cmp al, dl  ;Is this the same drive?
+    return
 getCurrentDrive:
 ;Returns the 0 based current drive in al
     mov ah, 19h
     int 21h
+    return
+
+strcpy:
+;Copies an ASCIIZ string but leaves the pointers at the end of the strings
+;rsi -> Source
+;rdi -> Destination
+    push rcx
+    push rdi
+    mov rdi, rsi
+    call strlen ;Get the length of the string in rsi
+    pop rdi
+    rep movsb   ;Now we have the count, just copy over!
+    pop rcx
+    return
+
+strcpy2:
+;Copies an ASCIIZ string, but preserves the ptrs
+;rsi -> Source
+;rdi -> Destination
+    push rsi
+    push rdi
+    call strcpy 
+    pop rdi
+    pop rsi
     return
 
 strlen:
@@ -355,85 +393,41 @@ strlen:
 ;Input: rdi = Source buffer
 ;Output: ecx = Length of string, INCLUDING TERMINATING NULL
     push rax
-    push rdi
-    xor al, al
-    xor ecx, ecx    ;ONLY USE ECX!!!
-    dec ecx ;rcx = -1
-    repne scasb
-    not ecx
-    pop rdi
+    mov eax, 1212h  ;Strlen according to DOS, trashes eax
+    int 2fh
     pop rax
     return
 
-findTerminatorOrEOC:
-;Advances rsi to the next string terminator char or the next End of command
-; char
-;Returns with al = terminator and rsi pointing to the char in the string
-;If a end of command char found, also sets CF
-    lodsb
-    cmp al, CR
-    je .endOfInput
-    call isALterminator
-    jz .exit
-    cmp al, byte [pathSep]
-    je .exit
-    cmp al, byte [switchChar]
-    je .exit
-    jmp short findTerminatorOrEOC
-.endOfInput:
-    call .exit
-    stc 
-    return
-.exit:
-    dec rsi ;Point to the terminating char
+ucChar:
+;Input: al = Char to uppercase
+;Output: al = Adjusted char 
+    push rbx
+    mov rbx, rsp    ;Save the stack ptr
+    push rax    ;Push the char twice on the stack
+    push rax
+    mov eax, 1213h  ;Get DOS to uppercase the char
+    int 2fh         ;Returns the processed char in al
+    mov rsp, rbx    ;Return the stack ptr to where it was
+    pop rbx
     return
 
-findTerminator:
-;Advances rsi to the next string terminator char
-;Returns with al = terminator and rsi pointing to the char in the string
-    lodsb
-    call isALterminator
-    jnz findTerminator
-    dec rsi
-    return
-isALterminator:
-;Returns: ZF=NZ if al is not a terminator (Not including CR)
-;         ZF=ZY if al is a terminator
-    call isALseparator
-    rete
-    cmp al, LF
-    return
-
-findEndOfCommand:
-;Moves rsi to the | or CR that terminates this command
-    lodsb
-    call isALEndOfCommand
-    jnz findEndOfCommand
-    dec rsi
-    return
-isALEndOfCommand:
-    cmp al, "|"
-    rete
-    cmp al, CR
-    return
-
-skipSeparators:
-;Skips all "standard" command separators. This is not the same as FCB 
-; command separators but a subset thereof. 
+skipDelimiters:
+;Skips all "standard" command delimiters. This is not the same as FCB 
+; command delimiters but a subset thereof. 
 ;These are the same across all codepages.
 ;Input: rsi must point to the start of the data string
-;Output: rsi points to the first non-separator char
+;Output: rsi points to the first non-delimiter char
     push rax
 .l1:
     lodsb
-    call isALseparator
+    call isALdelimiter
     jz .l1
 .exit:
     pop rax
-    dec rsi ;Point rsi back to the char which is not a command separator
+    dec rsi ;Point rsi back to the char which is not a command delimiter
     return
 
-isALseparator:
+isALdelimiter:
 ;Returns: ZF=NZ if al is not a command separator 
 ;         ZF=ZE if al is a command separator
     cmp al, " "
@@ -550,6 +544,30 @@ asciiFilenameToFCB:
     pop rbx
     return
 
+findLastPathComponant:
+;Finds the last path componant of an ASCIIZ path string
+;Input: rdi -> Head of the path to find last componant on
+;Output: rdi -> Start of the last componant
+    push rax
+    push rcx
+    xor ecx, ecx
+    dec ecx
+    xor eax, eax
+    repne scasb ;Scan for the null terminator of the string
+    not ecx     ;This gets the count of chars  
+    dec rdi     ;Move rdi back to the null!
+    mov al, byte [pathSep]
+    std
+    repne scasb ;Now scan backwards for the pathsep, or we run out of chars!
+    cld
+    jnz .exit   ;Ran out of chars to scan! Skip the extra inc
+    inc rdi     ;Point at pathsep
+.exit:
+    inc rdi     ;Point at char after pathsep or first char in buffer
+    pop rcx
+    pop rax
+    return
+
 FCBToAsciiz:
 ;Converts a filename in the form FILENAMEEXT to FILENAME.EXT,0
 ;Name is space padded too
@@ -583,20 +601,75 @@ FCBToAsciiz:
     xor eax, eax
     stosb   ;Store a null at the end
     return
+    
+cpDelimPathToBufz:
+;Copy a delimited path into buffer and null terminate.
+;Input: rsi -> Point to start of delimiter terminated path
+;       rdi -> Buffer to store null terminated path in
+;Output: rsi -> First char past pathname delimiter
+;       rdi -> One char past null terminator on pathname buffer
+    push rbx
+    mov rbx, rdi    ;Save the head of the path in rbx
+    mov byte [rdi], 0   ;Null terminate this path before starting!
+.lp:
+    lodsb   ;Get the char
+    cmp al, CR
+    je .gotRedirPath
+    call isALdelimiter  ;Is this char a delimiter char?
+    jz .gotRedirPath 
+    cmp al, byte [switchChar]
+    je .gotRedirPath
+    stosb   ;Store this char and loop next char
+    jmp short .lp
+.gotRedirPath:
+    push rax    ;Save the char on stack
+    xor al, al  ;Get null terminator char
+    sub rbx, rdi
+    cmp rbx, -1 ;This is because one char has been written!!
+    je .notColon
+    cmp rbx, -2 ;This is for drive letters, must always have the colon!!
+    je .notColon
+    cmp byte [rdi - 1], ":" ;Is this a colon?
+    jne .notColon
+    dec rdi     ;We overwrite the colon. 
+.notColon:
+    stosb   ;Store the null terminator for the redir path
+    pop rax ;Get back the char in al
+    pop rbx
+    return
 
 buildCommandPath:
-;Based on the first argument on the command line
-; will build a full ASCIIZ path in searchSpec to the file/dir specified
-    ;If this is a relative path, will handle correctly (tho unnecessary)
+;Copies the first argument into a null delimited path in the searchSpec buffer.
     movzx eax, byte [arg1Off]
-    lea rsi, cmdBuffer
+    mov r8, [pspPtr]
+    lea rsi, qword [r8 + cmdLine]
     add rsi, rax    ;Go to the start of the command
+copyArgumentToSearchSpec:
+;Copies an arbitrary delimited path pointed to by rsi into searchSpec
+; and null terminates
     lea rdi, searchSpec
-.buildPath:
-    call copyCommandTailItem    ;Terminates with a 0 for free
-    clc ;I dont care if i encounter an embedded CR rn
+    call cpDelimPathToBufz
     return
-    
+
+scanForWildcards:
+;Input: rsi -> Null terminated path to search for wildcards on
+;Output: ZF=ZE if WC found. Else, ZF=NZ.
+    push rax
+    push rsi
+.lp:
+    lodsb
+    cmp al, "?"
+    je .exit
+    cmp al, "*"
+    je .exit
+    test al, al
+    jnz .lp
+    inc al  ;This will clear the ZF
+.exit:
+    pop rsi
+    pop rax
+    return
+
 printDecimalWord:
 ;Takes qword in rax and print it's decimal representation
 ;Takes the qword in eax and prints its decimal representation
@@ -685,53 +758,6 @@ freezePC:
     hlt
     jmp short .lp
 
-getFilenamePtrFromFilespec:
-;Gets a pointer to the first char of a filename from a asciiz pathspec
-;Input: rsi = Pathspec to search
-;Output: rsi = Points to the first char of the filename
-    mov rbx, rsi
-    xor eax, eax
-    mov rdi, rsi    ;Go to the source string 
-    call strlen     ;Get it's length
-    dec ecx ;Dont include terminating null
-    jz .exitBad ;Was the string of length zero? Exit bad if so
-    add rsi, rcx    ;Goto last char in path (not null)
-.lp:
-    cmp rbx, rsi    ;Is rdi pointing to the start of the string?
-    rete
-    mov al, byte [rsi]  ;Get the char we currently are at
-    cmp al, ":" ;X: ?
-    je .pointFilename
-    cmp al, byte [pathSep]  ;Is al pathSep?
-    je .pointFilename
-    dec rsi ;Not a terminator, go back a char
-    jmp short .lp
-.pointFilename:
-    inc rsi ;Now point to the first char of the pathname
-    return
-.exitBad:
-    stc
-.exit:
-    return
-
-
-copyArgumentToSearchSpec:
-;Works similarly to the build searchpath but is simpler
-;Null terminates
-    lea rdi, searchSpec
-.copyPath:
-    lodsb
-    call isALEndOfCommand
-    jz .finishCopy
-    call isALterminator
-    jz .finishCopy
-    stosb
-    jmp short .copyPath
-.finishCopy:
-    xor eax, eax
-    stosb
-    return
-
 setDTA:
     push rax
     push rdx
@@ -740,4 +766,8 @@ setDTA:
     int 21h
     pop rdx
     pop rax
+    return
+
+getDTA:
+    lea rdx, cmdFFBlock
     return

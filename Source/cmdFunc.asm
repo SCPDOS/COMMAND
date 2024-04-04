@@ -3,6 +3,9 @@
 ;Only the Int 2Eh entry point will preserve the callers DTA.
 
 ;Common Error Messages, jumped to to return from
+badAccError:
+    lea rdx, accDenMsg
+    jmp short badCmn
 noSelfCopyError:
     lea rdx, noSelfCopy
     jmp short badCmn
@@ -22,93 +25,67 @@ badDupFnf:
 ;Hybrid error message
     lea rdx, dupName
     jmp short badCmn
+badFnf:
+    lea rdx, fnfMsg
+    jmp short badCmn
 badDirError:
     lea rdx, badDir
 badCmn:
+    mov byte [returnCode], -1    ;Return code defaults to -1 if error (for now!)
     mov eax, 0900h
     int 21h
     stc ;Return with CY => Error occured
-    return
+    return  ;This will be made nuanced later, to agree with DOS behaviour
 
 dir:
-    ;breakpoint
-    mov byte [dirPrnType], 0    ;Clear DIR flags
+;Don't allow for searching unmounted network drives... is this a limitation?
+    mov byte [dirFlags], 0    ;Clear DIR flags
     mov byte [dirLineCtr], 0
     mov byte [dirFileCtr], 0
-    mov byte [dirPathArg], 0    ;Null terminate the start of the buffer
+    mov byte [dirSrchDir], 0
+    mov word [searchSpec], 0
+    lea rdi, dirSrchFCB ;Start also by initialising the search pattern
+    mov byte [rdi + fcb.driveNum], 0    ;Default drive
     mov rax, "????????"
-    lea rdi, dirSrchPat ;Start also by initialising the search pattern
-    stosq
-    inc rdi ;Go past dot
-    mov word [rdi], ax
-    mov byte [rdi + 2], al
+    mov qword [rdi + fcb.filename], rax
+    mov dword [rdi + fcb.fileext], "???"
     ;Start by scanning for the switches
-    lea rdi, cmdBuffer + 1  ;Goto command line input chars count
-    movzx ecx, byte [rdi]   ;Get number of chars typed
-    inc rdi ;Goto first char typed in
-    mov rsi, rdi    ;Use rsi as start of buffer counter
-    mov al, byte [switchChar]   ;Scan for switchchars
-.switchScan:
-    repne scasb ;Scan for a switchchar
-    jecxz .switchScanDone
-    and al, 0DFh    ;UC it
-    cmp al, "W" ;Wide print mode?
-    jne .notWideSw
-    or byte [dirPrnType], 1 ;Set the correct bit
-    jmp short .switchScan
-.notWideSw:
-    cmp al, "P" ;Pause mode?
-    jne badParamError   ;If a switch other than /P or /W, fail
-    or byte [dirPrnType], 2 ;Set correct bit
-    jmp short .switchScan
-.switchScanDone:
-;If no args, only switches, we search CWD
-;If one arg, search that 
-;If more than one, fail
-    lea rsi, cmdBuffer + 2
-    call skipSeparators ;Skip leading spaces
-    add rsi, 3  ;Go past the DIR (always three chars)
-.lp:
-    call skipSeparators ;Skip spaces after
-    lodsb   ;Get first non space char
-    call isALEndOfCommand   ;If this is the end char CR or "|", exit
-    jz .eocNoNull
-    cmp al, ">"
-    je .eocNoNull
-    cmp al, "<"
-    je .eocNoNull
-    cmp al, byte [switchChar]  ;Is al a switch char?
+    lea rsi, qword [r8 + cmdLine]  ;Goto command line
+    mov rdi, rsi    ;Use rsi as start of buffer counter
+    call skipDelimiters ;Skip leading delimiters
+    add rsi, 3  ;Go past the DIR
+.scanNew:
+    call skipDelimiters ;Set rsi pointing to a non delimiting char
+    lodsb   ;Get this char
+    cmp al, CR
+    je .scanDone
+    cmp al, byte [switchChar]   ;Was this the switch char?
     jne .notSwitch
-    ;Now we skip the switch if it was a switch
-    call findTerminatorOrEOC    ;Go past the switch
-    jc .eocNoNull  ;If we reach the EOC, exit,
-    jmp short .lp
+    lodsb   ;Get the next char
+    call ucChar
+    cmp al, "W"
+    jne .notWide
+    or byte [dirFlags], dirWideType ;Set the correct bit
+    jmp short .scanNew
+.notWide:
+    cmp al, "P"
+    jne badParamError   ;If a switch other than /P or /W, fail
+    or byte [dirFlags], dirPageType ;Set the correct bit
+    jmp short .scanNew
 .notSwitch:
-    ;If not a switch, should be a path. Copy to buffer and keep searching
-    cmp byte [dirPathArg], 0    ;If a second path provided, error
-    jne badArgError
-    lea rdi, dirPathArg ;Store the path to search here AS WRITTEN BY USER
-    dec rsi ;Go back to the start of the string
-.nameCopy:
-    lodsb
-    call isALEndOfCommand
-    jz .eocReached
-    call isALterminator
-    jz .terminateCopy
-    stosb
-    jmp short .nameCopy
-.terminateCopy:
-    xor eax, eax
-    stosb   ;Store a terminating null here if a terminator found.
-    jmp short .lp ;Now search if another 
-.eocReached:
-    xor eax, eax
-    stosb   ;Store a terminating null here if a terminator found.
-.eocNoNull:
-    cmp byte [dirPathArg], 0    ;If no path provided, use CWD for current drive
-    je .currentDrv
+    test byte [dirFlags], dirFileType
+    jnz badParamError   ;If more than one path specified, error out
+    ;Not a switch, so must be a pathspec, copy over to searchSpec
+    dec rsi ;Point back to the char which was not a switchchar
+    call copyArgumentToSearchSpec   
+    dec rsi ;Point back to the terminator char
+    or byte [dirFlags], dirFileType ;Now set path given bit
+    jmp short .scanNew
+.scanDone:
+    test byte [dirFlags], dirFileType    ;If no path, use CWD for curdrv
+    jz .currentDrv
     ;Here we check if we have a drvSpec and path or just drvSpec
-    lea rsi, dirPathArg
+    lea rsi, searchSpec
     cmp byte [rsi + 1], ":"  ;Is this a colon (drvspec check)
     jne .currentDrv
     ;Here the drive is specified, so lets parse filename to verify if drv ok
@@ -120,6 +97,8 @@ dir:
     je badDriveError    ;If the drive is bad, bad parameter
     ;Else the drive in the fcb is valid
     movzx eax, byte [r8 + fcb1 + fcb.driveNum]
+    test al, al
+    jz .currentDrv
     dec al  ;Convert to 0 based drive number
     mov byte [dirDrv], al
     jmp short .dirPrintVol
@@ -127,72 +106,214 @@ dir:
     call getCurrentDrive    ;Get current drive number (0 based) in al
     mov byte [dirDrv], al   ;Store the 0 based drive number in al
 .dirPrintVol:
+    lea rsi, searchSpec
+;Now construct the path on dirSrchDir.
+    lea rdi, dirSrchDir
+    movzx eax, byte [dirDrv] ;Get the 0 based drive number
+    mov dl, al  ;Save the 0 based drive number in dl
+    add al, "A" ;Turn into a letter
+    mov ah, ":"
+    stosw   ;Store X: into the search path
+    mov eax, 121Ah  ;This will either move rsi forwards two or not... either is ok
+    int 2fh
+    cmp al, -1  ;Shouldn't happen at this point
+    je badDriveError
+    ;Now rsi is at the right point, if first char is a pathsep, we dont get cwd
+    mov al, byte [pathSep]
+    cmp byte [rsi], al  ;If this char is a pathsep, its an absolute path
+    je .copyPathLoop    ;Just immediately start copying over chars
+    stosb   ;Store the leading slash here and increment rdi by 1
+    inc dl  ;Increment by 1
+    xchg rsi, rdi   ;Store the cwd in rdi, save rsi
+    mov eax, 4700h  ;Print current working directory
+    int 21h
+    xchg rsi, rdi   ;Get back the ptrs correctly.
+    ;rsi points to the first char in the provided path.
+    ;rdi points to the first char of the cwd.
+    xor eax, eax
+.goToEndOfCwd:
+;Move to the end of the string, could use repne?
+    cmp byte [rdi], al
+    je .prepCopy    ;Exit when rdi points to the null
+    inc rdi
+    jmp short .goToEndOfCwd
+.prepCopy:
+    mov al, byte [pathSep]
+    cmp byte [rsi], al
+    je .copyPathLoop
+    mov ah, ":"
+    xchg al, ah
+    cmp word [rdi - 2], ax
+    je .copyPathLoop
+    mov al, ah
+    cmp byte [rdi - 1], al
+    je .copyPathLoop
+    stosb   ;Else, store a pathsep and inc rdi!
+.copyPathLoop:
+    lodsb
+    cmp al, byte [pathSep]  ;Is it a pathsep?
+    jne .checkDot  ;If not, store it
+.lpPathseps:
+    cmp byte [rsi], al  ;Is [rsi] a pathsep?
+    jne .checkDot  ;If it isn't store al, check dots
+    inc rsi
+    jmp short .lpPathseps
+.checkDot:
+    cmp al, "."
+    je .dots
+.store:
+    stosb
+    test al, al ;Was the char we just copied a null?
+    jz .exitPathCopy
+    jmp short .copyPathLoop
+.dots:
+    ;Here handle dot and dot dot
+    ;If the previous char is a pathsep, and the char after is a pathsep or null,
+    ; this is a current dir. Keep rdi where it is. If next char is psep, adv rsi
+    ; by 1. If it is null, go to top of loop.
+    ;Check char before in rdi. If this is a pathsep, we get started.
+    mov ah, byte [pathSep]
+    cmp byte [rdi - 1], ah  
+    jne .store  ;If this is not a pathsep, pass it up for storage. 
+    mov ah, byte [rsi]  ;Now look ahead a char!
+    cmp ah, "." ;Is this another dot?
+    je .twoDot
+    ;This is only a "current dir" when next char is pathsep or null
+    cmp ah, byte [pathSep]
+    je .skipThisPathsep
+    test ah, ah
+    jz .copyPathLoop
+    jmp short .store ;Else, we store the char as normal!
+.skipThisPathsep:
+;If a dot is flanked by two pathseps, skip handling it and the pathsep!
+    inc rsi ;Point to the pathsep
+    jmp short .copyPathLoop ;and rejoin the store
+.twoDot:
+    ;Woohoo, this works!
+    inc rsi ;Move past the second dot
+    mov ah, byte [rsi]  ;Now pick up char after "." Valid only pathsep or null
+    cmp ah, byte [pathSep]
+    je .tdOk
+    test ah, ah
+    jne badParamError
+.tdOk:
+    mov al, byte byte [pathSep]
+    cmp byte [rdi - 2], ":" ;rdi must be immediately past a pathsep here
+    je badParamError
+    sub rdi, 2
+    xor ecx, ecx
+    dec ecx
+    std
+    repne scasb ;Scan backwards for the pathsep
+    cld
+    add rdi, 2  ;Get on the right side of the pathsep
+    test ah, ah ;If null, now pick it up and store it and exit properly
+    jz .copyPathLoop
+    inc rsi ;Else, go past the pathsep, pick up the next char as usual
+    jmp .copyPathLoop ;And loop again
+.exitPathCopy:
+;Now we have the full, adjusted path copied over to dirSrchDir!
+    sub rdi, 2  ;Go back two chars
+    mov al, byte [pathSep]
+    mov ah, ":"
+    xchg al, ah
+    cmp word [rdi - 1], ax    ;Is this a root dir?
+    je .skipOverwrite
+    mov al, ah
+    cmp byte [rdi], al  ;Is this a trailing pathsep?
+    jne .skipOverwrite
+    mov byte [rdi], 0   ;Overwrite with a null
+.skipOverwrite:
+    lea rsi, dirSrchDir ;Now check if we have any WC's
+    mov rdi, rsi
+    mov eax, 1211h  ;Normalise path without affecting the registers
+    int 2fh
+    call scanForWildcards
+    jz .wcSearchPattern     ;Wildcard found! We have a search pattern!
+    mov rdx, rsi
+    cmp byte [rsi + 3], 0   ;Is this a null path?
+    je .wcSearchPattern     ;Move the ptr to end of path and add search patt.
+.notNull:
+    call setDTA ;Set the DTA
+    mov ecx, dirDirectory   ;Dir, normal and read only files!
+    mov eax, 4E00h ;Find first
+    int 21h
+    jc .wcSearchPattern ;If this errors, file not found, we have a search pattern
+;Now we have searched for the file, is a directory?
+    test byte [cmdFFBlock + ffBlock.attribFnd], dirDirectory
+    jz .wcSearchPattern ;The end of the path is a search pattern
+    ;Here we are searching IN a directory. Default search pattern!
+    xor eax, eax
+    xor ecx, ecx
+    dec ecx
+    repne scasb
+    dec rdi ;Point rdi to the terminating null
+    jmp short .wcDefaultSearch
+.wcSearchPattern:
+;Move the final portion of the path into the dirSrchFCB, overwriting the ?'s
+;and place a null terminator on the pathsep before the final portion in dirSrchDir
+    xor eax, eax
+    xor ecx, ecx
+    dec ecx
+    repne scasb ;Scan forwards
+    ;Here rdi points past the null at the end
+    mov al, byte [pathSep]
+    xor ecx, ecx
+    dec ecx
+    std ;Search backwards
+    repne scasb
+    cld ;Search forwards again
+    inc rdi ;Go back the to the pathsep
+    cmp byte [rdi - 1], ":" ;Is this the slash of the root dir?
+    jne .wcsp1
+    inc rdi ;Go one char forwards
+.wcsp1:
+    ;rdi points either on the pathsep or one char after the pathsep if in root dir
+    push rdi
+    cmp byte [rdi], al  ;If we are on pathsep, go forwards tmporarily
+    jne .wcsp2
+    inc rdi
+.wcsp2:
+    mov rsi, rdi    ;Now we source our chars from here
+    lea rdi, dirSrchFCB
+    mov eax, 290Dh  ;Modify only that which has been specified
+    int 21h
+    pop rdi
+    xor eax, eax
+    mov byte [rdi], al  ;Store the null terminator over the pathsep
+.wcDefaultSearch:
     movzx eax, byte [dirDrv] 
     call volume.dirEP
-    cmp byte [dirPathArg], 0    ;Null path here, 
-    je .printCWD
-    cmp byte [dirPathArg + 3], 0    ;Was this X:,0?
-    je .printCWD
-    ;Here we have a path
-    ;Temp measure, we just fall through ignoring the path provided
-.printCWD:
-    mov dl, byte [dirDrv]
-    mov al, dl
-    add al, "A"
-    mov ah, ":"
-    mov word [searchSpec], ax
-    mov al, byte [pathSep]
-    mov byte [searchSpec + 2], al
-    lea rsi, searchSpec + 3  ;Make space for a X:"\"
-    mov ah, 47h ;Get Current Working Directory
-    inc dl  ;Convert to 1 based number
-    int 21h
-    lea rdi, searchSpec
-    call strlen
-    dec ecx
-    mov byte [rdi + rcx], "$"   ;Replace the null with a string terminator
-    lea rdx, dirMain
+    lea rdx, dirMain    ;Print message intro
     mov ah, 09h
     int 21h
-    mov rdx, rdi    ;Print the current directory we are working on
+    mov byte [rdi], "$"   ;Replace the null with a string terminator
+    lea rdx, dirSrchDir   ;Print the directory we will work on
     mov ah, 09h
     int 21h
+    mov byte [rdi], 0   ;Replace the null with a string terminator
     lea rdx, crlf2
     mov ah, 09h
     int 21h
+;Now we copy the search pattern to look for into the path back from the fcb field.
+;rdi points to the terminating null
+    mov al, byte [pathSep]
+    cmp byte [rdi - 1], al
+    je .root
+    inc rdi
+.root:
+    dec rdi ;Point back to the pathsep
+    stosb   ;Store the pathsep here and advance rdi
+    lea rsi, qword [dirSrchFCB + 1] ;Go to the name field of the FCB
+    call FCBToAsciiz    ;Terminates for free
     call .searchForFile
     return
-    ;If we get no path spec or just a X: path spec then we 
-    ; search the current working directory for that pathspec
-    ;If we get an actual pathspec, we first save the CWD for that drive
-    ; and then we try to make the pathspec the CWD. 
-    ;   If it works, we then search *.* in that folder and return the og CWD.
-    ;   If it fails, we then search one level up, for the search pattern
-    ;    that we compute.
 
-    
-    ;Now we need to print the path to the folder we will be searching in
 .searchForFile:
-    ;Now we search for the files
-    ;RCX must have the number of chars to the end of the pathspec
-    lea rdi, searchSpec
-    mov al, byte [pathSep]
-    cmp byte [rdi + rcx - 1], al
-    je .noAddSlash  ;Deals with special case of root dir
-    mov byte [rdi + rcx], al
-    inc ecx
-.noAddSlash:
-    lea rdi, qword [rdi + rcx]
-    lea rsi, dirSrchPat
-    mov rdx, rdi    ;Ptr to search for in rdx
-    movsq
-    movsd
-    xor al, al
-    stosb   ;Store the terminating null
     call setDTA
-    lea r10, cmdFFBlock
-    mov ecx, dirReadOnly | dirDirectory
-    mov ah, 4Eh ;Find first
+    mov ecx, dirDirectory   ;Search for normal, ro and dir
+    lea rdx, dirSrchDir
+    mov eax, 4E00h ;Find first
     int 21h
     jc .dirNoMoreFiles
 .findNext:
@@ -201,7 +322,7 @@ dir:
     int 21h
     jnc .findNext 
 .dirNoMoreFiles:
-    test byte [dirPrnType], 1
+    test byte [dirFlags], dirWideType
     jz .dirNoEndNewLine
     lea rdx, crlf   ;Only need this for /W
     mov ah, 09h
@@ -261,7 +382,7 @@ dir:
     mov ebx, 1  ;STDOUT
     mov ah, 40h ;Write handle
     int 21h
-    test byte [dirPrnType], 1
+    test byte [dirFlags], dirWideType
     jnz .widePrint
 ;Normal print (Name space ext <> File size <> Acc Date <> Acc Time)
     ;Now check if a DIR
@@ -377,18 +498,6 @@ chdir:
     mov al, byte [arg1FCBret]
     cmp al, -1 
     je badDriveError  ;IF the drive is good, but FCB name blank, either X: or \ 
-    cmp byte [r8 + fcb1 + fcb.filename], " "
-    jne .setPath
-    ;If we searched for a . or .., the fcb will be blank. Make sure we didn't search that
-    movzx eax, byte [arg1Off]
-    lea rsi, cmdBuffer
-    add rsi, rax
-    mov al, byte [pathSep]
-    cmp byte [rsi], al  ;Is the first char a pathsep?
-    je .setPath
-    cmp byte [rsi], "."
-    jne .printDiskCWD
-.setPath:
     call buildCommandPath   ;Else build a fully qualified pathname
     lea rdx, searchSpec
     mov ah, 3Bh ;CHDIR
@@ -441,55 +550,28 @@ copy:
     jz badArgError
     test byte [arg2Flg], -1
     jz badArgError
-    lea rsi, cmdBuffer
     movzx eax, byte [arg1Off]
+    mov r8, [pspPtr]
+    lea rsi, qword [r8 + cmdLine]
+    mov rbx, rsi    ;Save the ptr to the start of the string in rbx
     add rsi, rax    ;Go to the start of the command
-    ;rsi points to terminating char
-    lodsb   ;Get first char in AL
-    dec rsi ;Go back to this char
-    call isALEndOfCommand
-    jc badParamError
-    lea rdi, sourcePath ;Store this in sourcePath
-.copyName1:
-    lodsb
-    call isALEndOfCommand
-    je badParamError
-    call isALterminator
-    jz .endOfName1
-    stosb
-    jmp short .copyName1
-.endOfName1:
-    xor eax, eax
-    stosb   ;Store this 0 at rdi
-    lea rsi, cmdBuffer
+    lea rdi, srcSpec
+    call cpDelimPathToBufz    
     movzx eax, byte [arg2Off]
+    mov rsi, rbx    ;Get back the start of the ptr
     add rsi, rax    ;Go to the start of the command
-    lodsb   ;Get first char in AL
-    dec rsi ;Go back to this char
-    call isALEndOfCommand
-    jc badParamError
-    lea rdi, destPath
-.copyName2:
-    lodsb
-    call isALEndOfCommand
-    je .endOfName2
-    call isALterminator
-    jz .endOfName2
-    stosb
-    jmp short .copyName2
-.endOfName2:
-    xor eax, eax
-    stosb   ;Store this 0 at rdi
+    lea rdi, destSpec
+    call cpDelimPathToBufz   
 ;Before we open, we check if the two filenames are equal
 ; If so, crap out.
-    lea rsi, sourcePath
-    lea rdi, destPath
+    lea rsi, srcSpec
+    lea rdi, destSpec
     mov eax, 121Eh
     int 2Fh
     jz .sameFilename
     ;Open source with read permission
     ;Open destination with write permission
-    lea rdx, sourcePath
+    lea rdx, srcSpec
     mov eax, 3D00h  ;Read open
     int 21h
     jc badParamError
@@ -500,7 +582,7 @@ copy:
     int 21h
     mov word [srcHdlInfo], dx   ;Store information here
 
-    lea rdx, destPath
+    lea rdx, destSpec
     mov eax, 3C00h  ;Create the file
     xor ecx, ecx    ;No file attributes
     int 21h
@@ -579,12 +661,108 @@ copy:
 erase:
     test byte [arg1Flg], -1
     jz badArgError
-    call buildCommandPath
-    lea rdx, searchSpec
-    mov eax, 4100h  ;Delete File 
-    xor ecx, ecx
+    call setDTA     ;Start by resetting the DTA
+    call buildCommandPath   ;Get the relative path to the file
+.dirLp:
+    lea rdi, searchSpec
+    call findLastPathComponant
+    mov rsi, rdi    ;Save this as the source
+    lea rdi, qword [r8 + fcb1]  ;Use FCB1 for searchpath res
+    mov al, "?"
+    ;Store question marks in the name field
+    push rdi
+    inc rdi ;Goto the first char
+    mov ecx, 11
+    rep stosb
+    pop rdi
+    mov rdx, rsi    ;Save the ptr
+    mov eax, 290Dh  ;Parse the search mask into the FCB block
     int 21h
-    jc badArgError
+    cmp al, 1
+    jne .noWildcard ;If no wildcards, just delete directly, unless a directory
+    ;Else, we now copy back the search pattern over the last componant!
+    ;No dirs to handle in here
+    lea rsi, qword [rdi + fcb.filename]    ;Now move the ptr to the filename in rsi
+    mov rdi, rdx    ;Move the ptr to the start of the last componant to rdi
+    call FCBToAsciiz    ;Null terminates for free
+    ;Count the number of ?'s, if 11, we print the message
+    lea rsi, qword [r8 + fcb1 + fcb.filename]
+    xor ecx, ecx
+.wcScan:
+    lodsb
+    cmp al, "?"
+    jne .endCount
+    inc ecx
+    cmp ecx, 11
+    jne .wcScan
+.ynmsg:
+    lea rdx, ynMes
+    call printString
+    mov ah, 01h ;STDIN without Console Echo
+    int 21h ;Get char in al
+    call ucChar ;Uppercase the char
+    cmp al, "Y" ;If they want it... they'll get it!
+    je .endCount1
+    cmp al, "N"
+    rete    ;Simply return to command line if they don't want it!
+    jmp short .ynmsg    ;Else, tell me what you want!!!
+.endCount1:
+    call printCRLF
+.endCount:
+    ;Now we copy our search template pathstring to delPath
+    lea rdi, delPath
+    lea rsi, searchSpec ;Source the chars from here
+    call strcpy2         ;Copy the string over to delPath
+.findFile:
+    ;Now we find first/find next our way through the files
+    mov rdx, rsi    ;rdx must point at searchSpec for findfirst
+    xor ecx, ecx    ;Search for normal and ro files only
+    mov eax, 4E00h  ;Find first
+    int 21h
+    jc badFnf   ;Here we just print file not found error and return!
+    ;Now the file was found, we copy the name over, delete and keep going
+    call findLastPathComponant  ;Now find the last componant in delPath
+    lea rsi, qword [cmdFFBlock + ffBlock.asciizName]
+.delNextFile:
+;rsi and rdi dont move here
+    call strcpy2     ;Now copy over ASCIIZname to last path componant of delpath
+    lea rdx, delPath
+    mov eax, 4100h  ;Delete File 
+    int 21h         ;If this fails to delete it, fail silently
+    lea rdx, searchSpec    ;Now point rdx to the search spec
+    mov eax, 4F00h  ;Else, find next file
+    int 21h
+    jnc .delNextFile    
+    clc ;Clear carry to indicate success
+    return
+.noWildcard:
+    ;Here we just check that the file was not a directory. If it was, we add
+    ; a \*.*<NUL> over the null terminator
+    lea rdx, searchSpec
+    mov ecx, dirDirectory    ;Search for normal, RO and dir
+    mov eax, 4E00h  ;Find first
+    int 21h
+    jc badFnf   ;Here we just print file not found error and return!
+    test byte [cmdFFBlock + ffBlock.attribFnd], dirDirectory
+    jz .delMain ;If not a dir, must be a file, delete it directly!
+    ;Else, we are dealing with a dir
+    mov rdi, rdx
+    xor ecx, ecx
+    dec ecx
+    repne scasb ;Go to the end of the line!
+    dec rdi
+    movzx eax, byte [pathSep]
+    stosb
+    mov eax, "*.*"  ;Null terminated for us!
+    stosd
+    jmp .dirLp    ;Now restart the process with extended path!
+.delMain:   ;Call with rdx -> buffer!
+    mov eax, 4100h  ;Delete File 
+    int 21h
+    retnc   ;Return if CF=NC
+    cmp al, errAccDen
+    je badAccError ;If the file is RO, fail!
+    jmp badFileError
     return
 date:
     lea rdx, curDate
@@ -709,7 +887,7 @@ ctty:
     jz badArgError
     test byte [arg2Flg], -1
     jnz badArgError
-    lea rsi, cmdBuffer
+    lea rsi, qword [r8 + cmdLine]
     movzx eax, byte [arg1Off]
     add rsi, rax  ;Goto the first char of the argument
     cmp byte [rsi + 1], ":" ;If a drive is specified, check if valid
@@ -796,7 +974,6 @@ cls:
     int 30h
     return
 .doAnsi:
-;If an ANSI driver is not installed, this will simply insert blank lines
 ;4 chars in the ansi routine
 ;Will just put the ANSI escape sequence on the screen if it doesn't 
 ; understand ANSI codes
@@ -912,76 +1089,172 @@ rename:
     test byte [arg1Flg], -1
     jz badArgError
     test byte [arg2Flg], -1
-    jz badArgError
-    lea rsi, cmdBuffer
-    movzx eax, byte [arg1Off]
-    add rsi, rax    ;Go to the start of the command
-    ;rsi points to terminating char
-    lodsb   ;Get first char in AL
-    dec rsi ;Go back to this char
-    call isALEndOfCommand
-    jc badParamError
-    lea rdi, sourcePath ;Store this in sourcePath
-.copyName1:
-    lodsb
-    call isALEndOfCommand
-    je badParamError
-    call isALterminator
-    jz .endOfName1
-    stosb
-    jmp short .copyName1
-.endOfName1:
-    xor eax, eax
-    stosb   ;Store this 0 at rdi
-    lea rsi, cmdBuffer
+    jz badArgError    
+    ;Initialise the variables!
+    lea rsi, srcSpec
+    mov qword [srcPtr], rsi
+    lea rsi, destSpec
+    mov qword [destPtr], rsi
+    ;Check the second path is just a filename!
     movzx eax, byte [arg2Off]
-    add rsi, rax    ;Go to the start of the command
-    cmp byte [rsi + 1], ":" ;If dest path char 2 is :, must be X:, not allowed
-    je badParamError
-    lodsb   ;Get first char in AL
-    dec rsi ;Go back to this char
-    call isALEndOfCommand
-    jc badParamError
-    lea rdi, destPath
-.copyName2:
-    lodsb
-    call isALEndOfCommand
-    je .endOfName2
-    call isALterminator
-    jz .endOfName2
-    stosb
-    jmp short .copyName2
-.endOfName2:
-    xor eax, eax
-    stosb   ;Store this 0 at rdi
-    lea rdx, sourcePath
-    lea rdi, destPath
+    mov r8, qword [pspPtr]
+    lea rsi, qword [r8 + cmdLine]
+    add rsi, rax    ;Point to the path componant
+    lea rdi, searchSpec
+    push rdi
+    call cpDelimPathToBufz  ;Copy the path to rdi
+    pop rdi
+    cmp byte [rdi + 1], ":"  ;Is this a drive sep?
+    je badArgError  ;Cannot pass a path as the second argument
+    mov rsi, rdi
+.destScan:
+    lodsb   ;Get the char
+    cmp al, byte [pathSep]  ;Ensure no path seps
+    je badArgError
+    test al, al
+    jnz .destScan
+;Now store question marks over all of fcb1 and fcb2's name and drive specifier
+    lea rdi, qword [r8 + fcb1]  ;Use FCB1 for searchpath res
+    mov rax, "????????"
+    mov ecx, 3  ;24 bytes
+    rep stosq
+    stosd   ;Plus 4 to get 28 = 16 + 1 + 11
+    lea rsi, searchSpec
+    lea rdi, qword [r8 + fcb2]  ;Place destination pattern here
+    mov eax, 290Dh
+    int 21h     
+    push rax    ;Save the WC signature
+    call buildCommandPath   ;Copy the source path+searchspec to searchSpec
+    lea rdi, searchSpec
+    call findLastPathComponant  ;Go to the end of the path in rdi
+    mov rsi, rdi
+    mov rbx, rdi    ;Save the componant in rbx
+    lea rdi, qword [r8 + fcb1]  ;Now copy source pattern over!
+    mov eax, 290Dh
+    int 21h
+    pop rcx ;Get back the WC signature from the destination path!
+    mov ah, cl
+    test ax, ax ;If neither path has wildcards, go straight to renaming
+    jz .noWC
+    lea rsi, searchSpec ;Are we are the head of the buffer?
+    ;Now we check if we have a path to actually handle
+    cmp rbx, rsi
+    je .noPath
+    mov byte [rbx - 1], 0   ;The previous char is a pathsep, overwrite it!
+    lea rsi, searchSpec
+    lea rdi, srcSpec
+    push rsi
+    call strcpy ;Copy the string, leave the ptrs past the null
+    pop rsi
+    dec rdi     ;Point rdi to the null
+    mov al, byte [pathSep]
+    stosb       ;Store the pathsep and advance the pointer
+    mov qword [srcPtr], rdi ;Store this ptr here
+    lea rdi, destSpec
+    call strcpy ;Copy the string, leave the ptrs past the null
+    dec rdi     ;Point rdi to the null
+    stosb       ;Store the pathsep and adv the ptr
+    mov qword [destPtr], rdi
+    mov byte [rbx - 1], al  ;Now replace the null with a pathsep again!
+.noPath:
+    ;Now we have where to copy the files to, we can start our work!
+    call setDTA
+    lea rdx, searchSpec
+    xor ecx, ecx    ;Rename works on normal and read only files only!
+    mov eax, 4E00h  ;Find first!
+    int 21h
+    jc badDupFnf    ;If no file was found!
+.wcLoop:
+    ;Now build an FCB form of the name of the file we found in fcb1
+    lea rsi, cmdFFBlock + ffBlock.asciizName
+    lea rdi, qword [r8 + fcb1]
+    mov eax, 2901h  ;Now we copy the name over, cleaning the FCB name
+    int 21h 
+    ;Now depending on source and dest chars, we build a filename in renName
+    lea rsi, qword [r8 + fcb2 + fcb.filename]    
+    lea rdi, renName    ;Start by copying the destination pattern
+    push rdi
+    movsq
+    movsw
+    movsb
+    pop rdi
+    lea rsi, qword [r8 + fcb1 + fcb.filename] ;Now start sourcing chars!
+    mov ecx, 11 ;11 chars to copy!
+.wcNameMake:
+    lodsb   ;Get the char from the source string
+    cmp byte [rdi], "?" ;Are we over a WC?
+    jne .noStore    ;Dont store the char there
+    mov byte [rdi], al  ;If we are over a wc, store the char there!
+.noStore:
+    inc rdi ;Goto next char position
+    dec ecx
+    jnz .wcNameMake
+;renName now has the FCB name for the file we wish to make!
+;Now make the two paths!
+    lea rsi, cmdFFBlock + ffBlock.asciizName
+    mov rdi, qword [srcPtr]
+    call strcpy ;Doesn't matter that we preserve the pointers
+    lea rsi, renName
+    mov rdi, qword [destPtr]
+    call FCBToAsciiz
+    lea rdx, srcSpec
+    lea rdi, destSpec
+    mov eax, 5600h
+    int 21h     ;Fail silently on wildcard rename
+    mov eax, 4F00h  ;Find next
+    int 21h
+    jnc .wcLoop     ;And process it too!
+    return          ;Else just return!
+.noWC:
+    call buildCommandPath   ;Copy the source arg into searchspec
+    movzx eax, byte [arg2Off]
+    lea rsi, qword [r8 + cmdLine]
+    add rsi, rax    ;Go to the start of the command to source chars
+    lea rdi, destSpec
+    push rdi
+    call cpDelimPathToBufz
+    pop rdi
+    lea rdx, searchSpec
     mov eax, 5600h
     int 21h
     retnc   ;Return if all oki!
-    cmp al, errBadDrv
-    je badDriveError
-    cmp al, errBadFmt
-    je badDirError
-    jmp badDupFnf
-;TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP
+    jmp badDupFnf   ;Always just return this
+
+
 touch:
 ;Temporarily used to create files
     test byte [arg1Flg], -1
     jz badArgError
     call buildCommandPath
     lea rdx, searchSpec
-    mov eax, 3C00h  ;Create file 
+    mov eax, 5B00h  ;Create unique file 
     xor ecx, ecx
     int 21h
-    jc .touchError
-    movzx ebx, ax
+    jc .touch1
+.touchClose:
+    movzx ebx, ax   ;Save the handle here
+    mov eax, 120Dh  ;Get date/time words from the DOS
+    int 2fh
+    mov ecx, eax    ;Move the time here
+    xchg edx, ecx   ;Get them in the right place
+    mov eax, 5701h  ;Set the date/time for bx
+    int 21h
     mov eax, 3e00h  ;Close file immediately
     int 21h
     return
+.touch1:
+    cmp al, errFilExist ;Does the file exist?
+    jne .touchError ;If not, this is a proper error!
+    mov eax, 3D00h  ;R/O open instead to update the access time!!
+    int 21h
+    jnc .touchClose ;If this worked, close the handle immediately
 .touchError:
-    lea rdx, touchErr
-    jmp badCmn
+    cmp al, errPnf
+    je badArgError
+    cmp al, errFnf
+    je badFnf
+    jmp badAccError
+    
 
 join:
 ;Mock join command, to test join. Make an external command.
@@ -1090,23 +1363,13 @@ subst:
 truename:
     test byte [arg1Flg], -1
     jz badArgError
-    ;Explicitly call Truename if we remove truename from this function
-    movzx eax, byte [arg1Off]
-    lea rdx, cmdBuffer
-    add rdx, rax    ;Go to the start of the pathname
-    mov ecx, 120    ;Only search within 128 chars
-    mov al, CR     ;Search for the first space char after the argument
-    mov rdi, rdx
-    repne scasb
-    dec rdi ;Go back a char
-    mov byte [rdi], 0   ;Make ASCIIZ
-    mov rbp, rdi    ;Have rbp point to the end of the string
-    mov rsi, rdx    ;Point rsi to start of path
-    lea rdi, searchSpec ;Store the path here
+    call buildCommandPath   ;Get the first argument into the searchSpec
+    lea rsi, searchSpec     ;Store the path here
+    mov rdi, rsi    ;Normalise the pathspec here
     mov eax, 6000h  ;TRUENAME
     int 21h
     jnc .writePath
-    cmp al, 2
+    cmp al, errFnf
     je badFileError
     jmp badParamError
 .writePath:
@@ -1186,31 +1449,26 @@ rnlbl:
     at exRenFcb.newExt,     db "L2 "
     iend
 volume:
-    lea rsi, cmdBuffer + 2  ;Get the command buffer
-    call skipSeparators
-    add rsi, 3  ;Go past the VOL command
-    call skipSeparators
-    lodsb   ;Get the first char, and point rsi to next char
-    call isALEndOfCommand   ;If this char is end of command, use current drive
-    jnz .checkDriveLetter
+;Only one argument. VOL X: (you can have more trash after the colon)
+    test byte [arg2Flg], -1
+    jnz badArgError
+    test byte [arg1Flg], -1
+    jnz .notCurrentDrive
     call getCurrentDrive    ;Get 0-based current drive number in al
     jmp short .dirEP
-.checkDriveLetter:
-    cmp byte [rsi], ":" ;If this is not a :, fail
-    jne badDriveError
-    mov rdi, rsi    ;Save start of drive spec in rsi
-    inc rsi  ;Go past the X: spec
-    call skipSeparators
-    lodsb   ;Get the non-space char in al
-    call isALEndOfCommand   ;The next non-space char must be terminator
-    jne badDriveError
-;This argument should've been parsed into FCB1 so use that result
+.notCurrentDrive:
+    call buildCommandPath   ;Get the first argument into the searchSpec
+    lea rsi, searchSpec
+    call skipDelimiters     ;Move rsi to the first char of the command
+    lodsw                   ;Get this word
+    cmp ah, ":"             ;If this is not a colon, not a drive, error
+    jne badArgError
     mov al, byte [arg1FCBret]   ;Get the response from the parse
     test al, -1
     jnz badDriveError ;Can't have either wildcards nor be invalid (obviously)
     movzx eax, byte [r8 + fcb1 + fcb.driveNum] ;Get the 1-based drive number
     dec eax ;Convert to 0 based number
-.dirEP: ;Must be called with VALID 0 based drive number in al
+.dirEP: ;Must be called with VALID 0 based drive number in al  
     call setDTA     ;Ensure we have our DTA set correctly, preserving all regs
     lea rdx, volFcb
     inc eax ;Get 1 based drive number
@@ -1402,7 +1660,8 @@ type:
     jz badArgError
     test byte [arg2Flg], -1
     jnz badArgError         ;If this set, error
-    lea rsi, cmdBuffer
+    mov r8, [pspPtr]
+    lea rsi, qword [r8 + cmdLine]
     movzx eax, byte [arg1Off]
     add rsi, rax    ;Point rsi to this argument
     cmp byte [rsi], CR
@@ -1414,7 +1673,7 @@ type:
     je badDriveError
 .noDrive:
     ;Now we open the provided file
-    call copyArgumentToSearchSpec
+    call buildCommandPath
     lea rdx, searchSpec
     mov eax, 3D00h  ;Open in read only mode
     int 21h
@@ -1501,8 +1760,8 @@ launchChild:
     xor al, al  ;Store terminating null
     stosb
 .search:
-    mov ecx, dirIncFiles
-    mov ah, 4Eh ;Find First File
+    mov ecx, dirIncFiles    ;Normal, RO, Hidden and System files
+    mov eax, 4E00h ;Find First File
     int 21h
     jc .dfltErrExit
     call .noExtCheckExt
@@ -1554,7 +1813,7 @@ launchChild:
     cmp al, SPC
     jne short .passName
     ;Now we copy the name 
-    call skipSeparators ;Start by skipping spaces (there are no embedded tabs)
+    call skipDelimiters ;Start by skipping spaces (there are no embedded tabs)
     ;rsi points to the first non-space char
 .copyTail:
     lodsb
@@ -1584,7 +1843,6 @@ launchChild:
     int 21h
     jmp .dfltErrExit    ;If something goes wrong, error out
 .noExtCheckExt:
-    ;mov eax, dword [cmdFFBlock + ffBlock.asciizName + filename.fExt]
     lea rsi, dword [cmdFFBlock + ffBlock.asciizName]
     lea rdi, fcbCmdSpec
     call asciiFilenameToFCB

@@ -55,7 +55,7 @@ functionTable:
     db 6, "RENAME"
     dw rename - startLbl
 
-    db 4, "MOVE"
+    db 3, "REN"
     dw rename - startLbl
     
     db 8, "TRUENAME"

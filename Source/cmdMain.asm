@@ -39,7 +39,10 @@ applicationReturn:  ;Return point from a task, all regs preserved
     cmp ebx, ecx
     jbe .handleClose    ;Keep looping whilst below or equal
 commandMain:
-;Setup Commandline
+;Setup Commandline. First check if batch mode is active, then fall.
+;=========================
+;   BATCH HANDLING HERE
+;=========================
     mov rsp, qword [stackTop]    ;Reset internal stack pointer pos
     cld ;Ensure stringops are done the right way
     mov byte [inBuffer], 80h    ;Reset the buffer length
@@ -49,8 +52,13 @@ commandMain:
     call clearCommandLineState
     call printPrompt
 
+    mov eax, 5D09h  ;Flush network printers
+    int 21h
+    mov eax, 5D08h  ;Set net printer state
+    mov edx, 1      ;Start new print job
+    int 21h
     lea rdx, inBuffer
-    mov eax, 0C0Ah  ;Do Buffered input
+    mov eax, 0A00h  ;Do Buffered input
     int 21h
     call printCRLF  ;Note we have accepted input
 ;First check we had something typed in of length greater than 0
@@ -58,12 +66,13 @@ commandMain:
     cmp byte [inBuffer + 1], 0  ;Check input length valid
     je .inputMain2
     ;Copy over the input text
-    lea rsi, inBuffer
+    lea rsi, inBuffer   ;This buffer is used for all input so copy command line
     lea rdi, cmdBuffer
     mov ecx, cmdBufferL   ;Straight up copy the buffer over
     rep movsb
 .pipeLoop:
-    call parseInput
+    call preProcessBuffer
+    call analyseCmdline
     call doCommandLine
 .pipeProceed:
     call cleanUpRedir
@@ -71,6 +80,8 @@ commandMain:
     mov qword [cmdStartPtr], rax
     test byte [pipeFlag], -1  ;If we have any pipes active, we proceed here
     jz .inputMain
+    cmp byte [rax], CR  ;Are we done?
+    je .inputMain
     call clearCommandState  ;Else, clear the command state and start again
     jmp short .pipeLoop
 .dfltErrExit:
@@ -79,95 +90,97 @@ commandMain:
     int 21h
     jmp .inputMain
 
-parseInput:
-;EndOff is set up before entering this part
-;Copies a nicely formatted version of the input command line
-; without any redirections to psp.dta
-    breakpoint
-    lea rdi, qword [r8 + cmdLine]   ;Go to the command line in the psp
+preProcessBuffer:
+;Start by preprocessing the path, escape quotes and handle redirections.
+;Each normal char gets copied over to psp.dta + 1 except for those special chars.
+;Places the count of chars save CR in byte 0 of psp.dta.
+;Places the ptr to the first byte past pipe or CR in cmdEndPtr
+;Throughout: CL has char count, CH has number of quotes.
+    xor ecx, ecx
+    mov r8, qword [pspPtr]  ;Ensure we have our pspPtr pointing to the right place
     mov rsi, qword [cmdStartPtr]
     test rsi, rsi
     jnz .notNewCmd
-    lea rsi, [cmdBuffer + 1]    ;Goto command buffer - 1
+    lea rsi, [cmdBuffer + 2]    ;Goto command buffer + 2
 .notNewCmd:
-    inc rsi ;Goto first char in new buffer since rsi points to terminating char
-    call skipSeparators ;Skip any preceeding spaces
-    lodsw   ;Get the first two chars into ax
-    mov word [cmdDrvSpec], ax ;Store these chars as if they are the drvspec
-    sub rsi, 2  ;Go back to the start of the command
-    push rsi
-    push rdi
-    lea rdi, cmdPathSpec    ;We copy the command name/path here
-    push rdi
-    call copyCommandTailItemProgram
-    pop rdi
-    pushfq  ;Save the CF state
-    call strlen
-    dec ecx ;Drop the terminating char from the count
-    pop rax ;Get the CF state in al
-    pop rdi
-    pop rsi
-    rep movsb   ;Now we copy the command into the psp command line
-    test al, 1  ;Was CF set?
-    jnz .exit   ;If an embedded CR was found in the filename, exit!
-.cmdLineProcess:
-    call skipSeparators ;Go to the next char in the input line
-.redirFound:
-    lodsb   ;Get first non-space char (setupRedir skips spaces before ret)
-    cmp al, CR  ;If this was a CR, we stop processing
+    mov rdi, rsi    ;Save the pointer
+.countQuotes:
+    lodsb
+    cmp al, '"'
+    jne .notQuoteToCount
+    inc ch      ;Keep count of number of quotes in ch
+    jmp .countQuotes
+.notQuoteToCount:
+    cmp al, CR  ;Keep searching for quotes until CR hit
+    jne .countQuotes
+    mov rsi, rdi    ;Reset to the start of the buffer
+    lea rdi, qword [r8 + cmdLine]   ;We store this nicely formatted string in psp
+.getChar:
+    lodsb           ;Get char in buffer, advance rsi
+    cmp al, '"'     ;Is char a quote?
+    jne .notQuote
+    dec ch          ;We have a quote, now decrement
+    jz .notQuote    ;If we have an odd count of quotes, ignore the last one!
+.searchForClosingQuote:
+    ;Char was quote, now directly store all chars until we hit closing char
+    stosb   ;Store char and inc rdi
+    inc cl
+    lodsb   ;Get next char
+    cmp al, '"'
+    jne .searchForClosingQuote ;If not, keep searching directly
+    dec ch  ;We hit another quote char, so dec the count
+.notQuote:
+    push rcx    ;Save counts, if anything goes wrong, stack is jiggled properly
+    call checkAndSetupRedir ;Intervene redir
+    pop rcx
+    jnz .notRedir       ;Store the char as normal if not a redir
+    jc .pipeHandle      ;Store a CR in the buffer if a pipe
+    jmp short .getChar  ;Get the next char if a < or > redir
+.pipeHandle:
+    mov al, CR  ;Now store a Carriage return 
+    inc rsi ;Ensure we remain one char past the pipe
+.notRedir:
+    stosb       ;Store char and advance rdi
+    cmp al, CR  ;Was this char a CR?
     je .exit
-    call checkAndSetupRedir ;If not, check if we have a redir element
-    jc .exit    ;CF=CY only if pipe, which is equivalent to CR when processing
-    jz .redirFound  ;If we had a < > or >>, proceed to check if next char CR
-    mov al, " "
-    stosb   ;Store a space to make space for the command file parameter
-    dec rsi ;Move rsi back to the first char
-    test byte [arg1Flg], -1
-    jnz .arg2
-.arg1:
-    mov byte [arg1Flg], -1
-    call skipSeparators
-    mov rax, rsi
-    lea rbx, cmdBuffer
-    sub rax, rbx
-    mov byte [arg1Off], al  ;Store the offset 
-    jmp short .argCommon
-.arg2:
-    test byte [arg2Flg], -1
-    jnz .argCommon
-    mov byte [arg2Flg], -1
-    call skipSeparators
-    mov rax, rsi
-    lea rbx, cmdBuffer
-    sub rax, rbx
-    mov byte [arg2Off], al  ;Store the offset 
-    jmp short .argCommon
-.argCommon:
-    ;More than two arguments? Do nothing more than just copy it
-    ; over. If we encounter an embedded CR, exit there too
-    call skipSeparators
-    cmp byte [rsi], CR  ;Are we at the end of the commandline?
-    je .exit
-    ;If not, we copy it over
-    call copyCommandTailItem    ;Stores a terminating null we dont want
-    lea rdi, qword [rdi - 1]    ;Point back at the inserted terminating null
-    jnc .cmdLineProcess
+    inc cl      ;Increment char count
+    jmp short .getChar    ;If not, get next char
 .exit:
-    dec rsi
-    mov qword [cmdEndPtr], rsi
-    mov al, CR
-    stosb   ;Store the terminating CR in the psp command line
-    ;Now compute the command line length 
-    lea rdi, qword [r8 + cmdLine] 
-    mov al, CR
-    xor ecx, ecx    ;ONLY USE ECX!!!
-    dec ecx ;rcx = -1
-    repne scasb
-    not ecx
-    dec cl  ;Dont include terminating CR
+    dec rsi ;move rsi to point back to terminator or one past | 
+    mov qword [cmdEndPtr], rsi  ;Store rsi pointing to the first char past CR or |
     lea rdi, qword [r8 + cmdLineCnt]
-    mov byte [rdi], cl
-    ;Before returning, we copy the command name to cmdName
+    mov byte [rdi], cl  ;Store the count of chars in the psp buffer
+    return
+
+analyseCmdline:
+;Flags first two arguments if they exist, copies the command into its buffer
+; processes the command name into the FCB.  
+    lea rsi, qword [r8 + cmdLine]   ;Go to the command line in the psp
+    mov rbx, rsi            ;Save this ptr in rbx
+    call skipDelimiters     ;Skip any preceeding separators
+    lea rdi, cmdPathSpec    ;We copy the command name/path here
+    call cpDelimPathToBufz  ;Moves rsi to the first char past the delim char
+    dec rsi ;Point it back to the delim char
+    call .skipAndCheckCR
+    je .exit
+    mov byte [arg1Flg], -1  ;Set that we are 
+    mov rax, rsi
+    sub rax, rbx            ;rbx points to the start of the buffer
+    mov byte [arg1Off], al  ;Store the offset 
+.skipArg:
+    lodsb   ;Now we advance the pointer to the second argument or CR
+    cmp al, CR
+    je .exit
+    call isALdelimiter
+    jne .skipArg    ;If not a delimiter, get next char now
+    call .skipAndCheckCR    ;Now skip all the delimiters
+    je .exit            ;If ZF set, this we encountered a CR
+    mov byte [arg2Flg], -1  ;If it is not CR, it is a second argument!
+    mov rax, rsi            
+    sub rax, rbx            ;rbx points to the start of the buffer
+    mov byte [arg2Off], al  ;Store the offset 
+.exit:
+;Before returning, we copy the command name to cmdName and make it useful
     lea rdi, cmdPathSpec
     mov rbx, rdi    ;Use rbx as the ptr to the first char in the commandspec
     xor al, al  ;Search for the terminating null
@@ -202,7 +215,7 @@ parseInput:
     jz .nameLenFnd
     cmp al, "." ;Extension sep also terminates
     je .nameLenFnd
-    and al, 0DFh    ;Else uppercase the char
+    call ucChar ;Else uppercase char
     stosb   ;and store it
     inc ecx
     cmp ecx, 11 ;Max command length is 11
@@ -222,6 +235,11 @@ parseInput:
     lea rdi, cmdSpec
     call FCBToAsciiz
     return
+.skipAndCheckCR:
+;Skips all chars, rsi points to the separator. If it is a CR, set ZF=ZE
+    call skipDelimiters ;Go to the next char in the input line
+    cmp byte [rsi], CR  ;If it is not a CR, it is an argument
+    return
 
 doCommandLine:
     lea rsi, qword [r8 + cmdLine]
@@ -231,7 +249,7 @@ doCommandLine:
     lea rdi, cmdFcb
     mov eax, 2901h  ;Skip leading blanks
     int 21h
-    movzx ebx, word [cmdDrvSpec]    ;Get the drive specifier
+    movzx ebx, word [r8 + cmdLine]    ;Get the drive specifier
     cmp bh, ":"
     jne .noDriveSpecified
     mov dl, bl      ;Move the drive letter in dl
@@ -242,11 +260,7 @@ doCommandLine:
     ;If drive specified and cmdName length = 2 => X: type command
     cmp byte [cmdName], 2
     jne .noDriveSpecified   ;Drive specified but proceed as normal
-    mov ah, 0Eh ;Set drive to dl
-    int 21h 
-    mov ah, 19h
-    int 21h     ;Get current drive
-    cmp al, dl  ;If the drive was set, all is well
+    call setDrive
     rete
 .badDrive:
     lea rdx, badDrv
@@ -259,7 +273,7 @@ doCommandLine:
     test byte [arg1Flg], -1
     jz .fcbArgsDone
     movzx eax, byte [arg1Off]   ;Get the first argument offset
-    lea rsi, cmdBuffer
+    lea rsi, qword [r8 + cmdLine]
     add rsi, rax    ;Point to first argument
     lea rdi, qword [r8 + fcb1]
     mov eax, 2901h
@@ -268,14 +282,14 @@ doCommandLine:
     test byte [arg2Flg], -1
     jz .fcbArgsDone
     movzx eax, byte [arg2Off]
-    lea rsi, cmdBuffer
+    lea rsi, qword [r8 + cmdLine]
     add rsi, rax    ;Point to first argument
     lea rdi, qword [r8 + fcb2]
     mov eax, 2901h
     int 21h
     mov byte [arg2FCBret], al
 .fcbArgsDone:
-    lea rbx, cmdBuffer
+    lea rbx, [r8 + cmdLine]
     lea rsi, cmdName
     mov eax, 0AE00h ;Installable command check
     mov edx, 0FFFFh
@@ -323,6 +337,8 @@ doCommandLine:
     lea rdi, startLbl
     add rbx, rdi
     call rbx    ;Call this function...
+    retc    ;Always return with CF=CY on error. Error code set to -1
+    mov byte [returnCode], 0 ;Set the retcode to 0 if ok!
     return  ;... and return
 .gotoNextEntry:
     add rbx, 3      ;Go past the first count byte and the address word
@@ -491,7 +507,6 @@ cleanUpRedir:
     mov rdx, qword [newPipe]    ;Move the pathname pointer
     mov qword [oldPipe], rdx
     mov word [pipeSTDOUT], -1   ;Set this to free for next use
-
 .redirInClear:
 ;Check redir in
     test byte [redirIn], -1
@@ -531,7 +546,7 @@ checkAndSetupRedir:
 ;Output: ZF=NZ => No redir
 ;        ZF=ZY => Redir
 ;           rsi is moved to the first non-terminating char after redir filespec
-;CF=CY if pipe set or an embedded CR found
+;CF=CY if pipe set or an embedded CR found. rsi points to first char past it!
     push rdi
     cmp al, "<"
     je .inputRedir
@@ -546,11 +561,9 @@ checkAndSetupRedir:
 .inputRedir:
     mov byte [redirIn], -1  ;Set the redir in flag
     lea rdi, rdrInFilespec
-    call skipSeparators ;Skip spaces between < and the filespec
-    call copyCommandTailItem
-    ;jc .redirExit
-    dec rsi ;Ensure rsi points to the terminating char
-    call skipSeparators
+    call skipDelimiters ;Skip spaces between < and the filespec
+    call cpDelimPathToBufz
+    dec rsi ;Point rsi back to the delimiter char as 
     ;Setup the redir here for STDIN
     xor ebx, ebx    ;DUP STDIN
     mov eax, 4500h
@@ -579,11 +592,9 @@ checkAndSetupRedir:
     inc rsi ;Go past it too
 .notDouble:
     lea rdi, rdrOutFilespec
-    call skipSeparators
-    call copyCommandTailItem
-    ;jc .redirExit
-    dec rsi ;Ensure rsi points to the terminating char
-    call skipSeparators
+    call skipDelimiters
+    call cpDelimPathToBufz
+    dec rsi ;Point rsi back to the delimiter char as 
     ;Setup the redir here for STDOUT
     mov ebx, 1    ;DUP STDOUT
     mov eax, 4500h
@@ -595,7 +606,7 @@ checkAndSetupRedir:
     int 21h
     jnc .fileExists
     mov eax, 3C00h
-    mov ecx, 0  ;Make the file with no attributes
+    xor ecx, ecx  ;Make the file with no attributes
     int 21h
     jc .redirError
 .fileExists:
@@ -622,6 +633,11 @@ checkAndSetupRedir:
     jmp .redirExit
 .pipeSetup:
 ;We only need to setup STDOUT redirection to the pipe file
+    push rsi    ;Save rsi pointing to char past |
+    call skipDelimiters ;Check if this is a double ||
+    cmp byte [rsi], "|" 
+    pop rsi
+    je .pipeError
     lea rdx, pipe1Filespec
     cmp byte [rdx], 0
     jz .pathFound
@@ -640,7 +656,7 @@ checkAndSetupRedir:
     mov ebx, 005C3A00h  ;0,"\:",0
     mov bl, al  ;Move the drive letter into low byte of ebx
     mov dword [rdx], ebx    ;Put the \ terminated path
-    mov ecx, 0;dirHidden  ;Hidden attributes
+    xor ecx, ecx      ;Hidden attributes
     mov eax, 5A00h  ;Create a temporary file
     int 21h
     jc .pipeError
@@ -655,84 +671,18 @@ checkAndSetupRedir:
     int 21h
     jc .pipeError
     mov byte [pipeFlag], -1 ;Set the pipe flag up!
-    xor al, al
-    stc
+    xor al, al  ;Set ZF
+    stc         ;But also CF to indicate pipe!
     pop rdi
     return
 .pipeError:
     pop rdi 
-    jmp pipeFailure
+    call pipeFailure
+    jmp commandMain ;Fully reset the state if a pipe failure occurs.
 .redirError:
     pop rdi 
-    jmp redirFailure
-
-copyCommandTailItemProgram:
-;Copies a program name from the command tail until a terminator is found.
-;Stores a terminating null in the destination
-;Input: rsi = Start of the item to copy
-;       rdi = Location for copy
-;Output: Sentence copied with a null terminator inserted.
-; If CF=CY, embedded CR encountered
-    lodsb
-    cmp al, CR
-    je .endOfInput
-    cmp al, "|"
-    je .endOfInput
-    call isALterminator
-    jz .exit
-    stosb
-    jmp short copyCommandTailItemProgram
-.endOfInput:
-    call .exit
-    stc 
-    return
-.exit:
-    xor al, al
-    stosb
-    return
-
-copyCommandTailItem:
-;Copies a sentence from the command tail until a terminator is found.
-;Stores a terminating null in the destination
-;Input: rsi = Start of the item to copy
-;       rdi = Location for copy
-;Output: Sentence copied with a null terminator inserted.
-; If CF=CY, embedded CR or Pipe encountered
-    lodsb
-    cmp al, CR
-    je .endOfInput
-    cmp al, "|"
-    je .endOfInput
-    call isALterminator
-    jz .exit
-    cmp al, "<"
-    jz .exit
-    cmp al, ">"
-    jz .exit
-    cmp al, byte [pathSep]
-    je .pathSep
-    stosb
-    jmp short copyCommandTailItem
-.pathSep:
-;We look ahead, if the last char is a pathsep, we ignore it
-    lodsb   ;Get the next char, increment rsi by one
-    call isALterminator
-    jz .exit
-    cmp al, CR
-    je .endOfInput
-    mov al, byte [pathSep]
-    stosb   ;Else store the pathsep
-    dec rsi ;Move rsi back a piece
-    jmp short copyCommandTailItem
-.endOfInput:
-    call .exit
-    stc 
-    return
-.exit:
-    xor al, al
-    stosb
-    return
-
+    call redirFailure
+    jmp commandMain ;Fully reset the state if a redir failure occurs.
 
 int2Eh:   ;Interrupt interface for parsing and executing command lines
 ;Input: rsi points to the count byte of a command line

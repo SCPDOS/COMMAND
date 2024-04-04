@@ -30,8 +30,7 @@ critErrorHandler:   ;Int 24h
 
     mov bx, ax  ;Save ah in bh and al in bl (if needed)
     lea rdx, crlf
-    mov ah, 09h ;Print String
-    int 21h
+    call printString
 
     and edi, 00FFh   ;Zero the upper bytes of DI just in case
     mov ecx, 0Ch
@@ -44,74 +43,61 @@ critErrorHandler:   ;Int 24h
     add rdi, rdx    ;Add the resultant multiplications
     lea rdx, qword [.errorMsgTable]
     lea rdx, qword [rdx+rdi]   ;Load EA to rdx
-    mov ah, 09h ;Print String
-    int 21h     ;Call DOS to print first part of message
+    call printString     ;Call DOS to print first part of message
 
     lea rdx, qword [.readmsg]
     lea rdi, qword [.writemsg]
     test bh, 1  ;Bit 0 is set if write operation
     cmovnz rdx, rdi ;Move the correct r/w part of the message to rdx
-    mov ah, 09h ;Print String
-    int 21h     ;Call DOS to print error reading/writing portion
+    call printString     ;Call DOS to print error reading/writing portion
 
     test bh, 80h    ;Test bit 7 for char/Disk assertation
     jnz .charError
 ;Disk error continues here
     lea rdx, qword [.drive] ;Drive message
-    mov ah, 09h
-    int 21h
+    call printString
     mov dl, bl  ;Get zero based drive number into dl
     add dl, "A" ;Add ASCII code
     mov ah, 02h ;Print char in dl
     int 21h
 .userInput:
-    lea rdx, crlf  ;Print new line
-    mov ah, 09h
-    int 21h
+    call printCRLF  ;Print new line
 ;Abort, Retry, Ignore, Fail is word order
 ;Last message gets a ?, otherwise a comma followed by a 20h (space)
 .userAbort:
 ;Abort is always an option
     lea rdx, qword [.abortmsg]
-    mov ah, 09h
-    int 21h ;Call DOS to prompt user for ABORT option
+    call printString ;Call DOS to prompt user for ABORT option
 .userRetry:
     test bh, 10h  ;Bit 4 is retry bit
     jz .userIgnore    ;If clear, dont print message
     lea rdx, qword [.betweenMsg]
-    mov ah, 09h
-    int 21h
+    call printString
     lea rdx, qword [.retrymsg]
-    mov ah, 09h
-    int 21h
+    call printString
 .userIgnore:
     test bh, 20h    ;Bit 5 is ignore bit
     jz .userFail
     lea rdx, qword [.betweenMsg]
-    mov ah, 09h
-    int 21h
+    call printString
     lea rdx, qword [.ignoremsg]
-    mov ah, 09h
-    int 21h
+    call printString
 .userFail:
     test bh, 08h    ;Bit 3 is Fail bit
     jz .userMsgEnd
     lea rdx, qword [.betweenMsg]
-    mov ah, 09h
-    int 21h
+    call printString
     lea rdx, qword [.failmsg]
-    mov ah, 09h
-    int 21h
+    call printString
 .userMsgEnd:
     lea rdx, qword [.endMsg]
-    mov ah, 09h
-    int 21h
+    call printString
 ;Get user input now 
     xor ecx, ecx  ;4 Possible Responses
     lea rdi, qword [.responses] ;Go to start of string
     mov ah, 01h ;STDIN without Console Echo
     int 21h ;Get char in al
-    cmp al, "a" ;Chack if lowercase
+    cmp al, "a" ;Chack if lowercase, consider using UC char DOS multiplex
     jb .uip1    ;If the value is below, ignore subtraction
     sub al, "a"-"A"  ;Turn the char into uppercase
 .uip1:
@@ -122,6 +108,7 @@ critErrorHandler:   ;Int 24h
     jne .uip1
     jmp .userInput ;If valid char not found, keep waiting 
 .validInput:
+    call printCRLF   ;Note the input was accepted
     mov al, cl  ;Move the offset into .responses into al
 ;Now check if the input is permitted
     cmp al, 2   ;Check if abort, abort always permitted
