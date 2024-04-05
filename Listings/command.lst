@@ -5769,30 +5769,15 @@
     20                                  endOfAllocNoMaster: ;End of alloc if not the master cmd
     21                                  %include "./Data/cmdEnv.asm"
      1                              <1>     
-     2                              <1> masterEnv:  ;Yeet this is this is a child command processor, length 168 chars!
-     3                              <1> ;Note this environment DOES NOT contain the full path to the program being launched
-     4 0000359C 504154483D00        <1>     db "PATH=",0
-     5 000035A2 434F4D535045433D    <1>     db "COMSPEC="
-     6                              <1> .cspec: 
-     7 000035AA 5F3A5C434F4D4D414E- <1>     db "_:\COMMAND.COM", 0
-     7 000035B3 442E434F4D00        <1>
-     8 000035B9 202020202020202020- <1>     db (165 - ($ - masterEnv)) dup (" ")    ;Pad the environment with spaces
-     8 000035C2 202020202020202020- <1>
-     8 000035CB 202020202020202020- <1>
-     8 000035D4 202020202020202020- <1>
-     8 000035DD 202020202020202020- <1>
-     8 000035E6 202020202020202020- <1>
-     8 000035EF 202020202020202020- <1>
-     8 000035F8 202020202020202020- <1>
-     8 00003601 202020202020202020- <1>
-     8 0000360A 202020202020202020- <1>
-     8 00003613 202020202020202020- <1>
-     8 0000361C 202020202020202020- <1>
-     8 00003625 202020202020202020- <1>
-     8 0000362E 202020202020202020- <1>
-     8 00003637 202020202020202020- <1>
-     8 00003640 20                  <1>
-     9 00003641 0000                <1>     dw 0    ;End of environment marker
+     2                              <1> masterEnv:
+     3                              <1> ;This is copied into an MCB to be used as the environment!
+     4 0000359C 434F4D535045433D    <1>     db "COMSPEC="
+     5                              <1> .cspec: 
+     6 000035A4 5F3A5C434F4D4D414E- <1>     db "_:\COMMAND.COM", 0  ;Part of the comspec!
+     6 000035AD 442E434F4D00        <1>
+     7 000035B3 504154483D0000      <1>     db "PATH=",0,0  ;End of default environment strings
+     8                              <1> menv_len equ $ - masterEnv
+     9                              <1> ;Master environment doesnt contain the "program name string"
     22                                  endOfAlloc: ;End of alloc if the master cmd
     23                                  ;The stack is always setup one stackSize away from the endOfAlloc, aligned to
     24                                  Segment transient align=1 follows=.data
@@ -5804,137 +5789,146 @@
      4 00000002 CD21                <1>     int 21h
      5 00000004 3C01                <1>     cmp al, 01h ;Version 1
      6 00000006 760D                <1>     jbe .okVersion
-     7 00000008 488D15ED010000      <1>     lea rdx, badVerStr
+     7 00000008 488D150C020000      <1>     lea rdx, badVerStr
      8 0000000F B409                <1>     mov ah, 09h
      9 00000011 CD21                <1>     int 21h
-    10 00000013 CD20                <1>     int 20h ;Exit to caller or DOS to print bad command interpreter line
-    11                              <1> .okVersion:
-    12                              <1> ;If ok then store self as parent in the PSP, to prevent accidental closure
-    13 00000015 4C8905(0F000000)    <1>     mov qword [pspPtr], r8  ;Store PSP ptr in internal var 
-    14 0000001C 498B4022            <1>     mov rax, qword [r8 + psp.parentPtr] ;Get PSP parent
-    15 00000020 4D894022            <1>     mov qword [r8 + psp.parentPtr], r8  ;Store self as parent
-    16 00000024 488905(17000000)    <1>     mov qword [realParent], rax ;Preserve the real parent address
-    17                              <1> ;Setup Int 22h, Int 23h and Int 24h
-    18 0000002B 498B400A            <1>     mov rax, qword [r8 + psp.oldInt22h] ;Preserve the original addresses
-    19 0000002F 488905(2E000000)    <1>     mov qword [parentInt22], rax
-    20                              <1> 
-    21 00000036 488D15(DE320000)    <1>     lea rdx, critErrorHandler
-    22 0000003D 4989501A            <1>     mov qword [r8 + psp.oldInt24h], rdx
-    23 00000041 B824250000          <1>     mov eax, 2524h
-    24 00000046 CD21                <1>     int 21h
-    25 00000048 488D15(79350000)    <1>     lea rdx, int23h
-    26 0000004F 49895012            <1>     mov qword [r8 + psp.oldInt23h], rdx
-    27 00000053 B823250000          <1>     mov eax, 2523h
-    28 00000058 CD21                <1>     int 21h
-    29 0000005A 488D15(5A0E0000)    <1>     lea rdx, applicationReturn
-    30 00000061 4989500A            <1>     mov qword [r8 + psp.oldInt22h], rdx
-    31 00000065 B822250000          <1>     mov eax, 2522h
-    32 0000006A CD21                <1>     int 21h
-    33                              <1> ;Get a pointer to DOS Sysvars
-    34 0000006C B452                <1>     mov ah, 52h ;Get sysvars
-    35 0000006E CD21                <1>     int 21h
-    36 00000070 48891D(1F000000)    <1>     mov qword [sysVars], rbx    ;Save ptr to sysVars
-    37                              <1> ;Call for simple internationalisation data
-    38 00000077 B800370000          <1>     mov eax, 3700h  ;Get switchchar in dl
-    39 0000007C CD21                <1>     int 21h
-    40 0000007E 3CFF                <1>     cmp al, -1
-    41 00000080 7412                <1>     je .skipSwitch
-    42 00000082 8815(2C000000)      <1>     mov byte [switchChar], dl   ;Store the switchChar in var
-    43 00000088 80FA2D              <1>     cmp dl, "-" ;Is the switchChar Unix?
-    44 0000008B 7507                <1>     jne .skipSwitch
-    45 0000008D C605(2B000000)2F    <1>     mov byte [pathSep], "/" ;Swap default path separator to UNIX style
-    46                              <1> .skipSwitch:
-    47 00000094 B800380000          <1>     mov eax, 3800h  ;Get current country data
-    48 00000099 488D15(36000000)    <1>     lea rdx, ctryData
-    49 000000A0 CD21                <1>     int 21h ;Write the data to the internal country table
-    50                              <1> ;Now determine if this is the master copy of COMMAND.COM
-    51                              <1> ;Check if Int 2Eh has the same address as Int 2Dh. If so, we are master.
-    52 000000A2 B82E350000          <1>     mov eax, 352Eh  ;Get int 2Eh address
-    53 000000A7 CD21                <1>     int 21h
-    54 000000A9 4889DA              <1>     mov rdx, rbx    ;Save the pointer in rdx
-    55 000000AC B82D350000          <1>     mov eax, 352Dh  ;Get int 2Dh address
-    56 000000B1 CD21                <1>     int 21h
-    57 000000B3 4839DA              <1>     cmp rdx, rbx    ;If these are equal then this is first boot!
-    58 000000B6 755C                <1>     jne .skipMaster
-    59                              <1> ;Ok so we are master command.com
-    60                              <1> ;Now make myself the real parent
-    61 000000B8 C605(2D000000)FF    <1>     mov byte [permaSwitch], -1  ;Set the permanently resident switch on
-    62 000000BF 4C8905(17000000)    <1>     mov qword [realParent], r8
-    63                              <1> ;Set master environment as mine
-    64 000000C6 488D05(9C350000)    <1>     lea rax, masterEnv
-    65 000000CD 4989403E            <1>     mov qword [r8 + psp.envPtr], rax
-    66                              <1> ;Set current Drive in COMSPEC
-    67 000000D1 B019                <1>     mov al, 19h ;Get current Drive
-    68 000000D3 CD21                <1>     int 21h
-    69 000000D5 0441                <1>     add al, "A"
-    70 000000D7 8805(AA350000)      <1>     mov byte [masterEnv.cspec], al
-    71                              <1> ;Set Int 2Eh up
-    72 000000DD 488D15(A2160000)    <1>     lea rdx, int2Eh
-    73 000000E4 B82E250000          <1>     mov eax, 252Eh ;Set this as Int 2Eh
-    74 000000E9 CD21                <1>     int 21h
-    75                              <1> ;Now, open and parse AUTOEXEC.BAT. Build Master Environment here
-    76                              <1> ;If no AUTOEXEC.BAT, request time and date from user
-    77 000000EB 488D15(2F080000)    <1>     lea rdx, crlf
-    78 000000F2 B409                <1>     mov ah, 09h
-    79 000000F4 CD21                <1>     int 21h
-    80 000000F6 E8(C6200000)        <1>     call time
-    81 000000FB E8(FD1F0000)        <1>     call date
-    82 00000100 488D15(2F080000)    <1>     lea rdx, crlf
-    83 00000107 B409                <1>     mov ah, 09h
-    84 00000109 CD21                <1>     int 21h
-    85 0000010B 488D1D(43360000)    <1>     lea rbx, endOfAlloc ;Save the Master Environment
-    86 00000112 EB32                <1>     jmp short .printInit
-    87                              <1> .skipMaster:
-    88 00000114 498DB881000000      <1>     lea rdi, qword [r8 + psp.progTail]
-    89 0000011B 410FB68880000000    <1>     movzx ecx, byte [r8 + psp.parmList]
-    90 00000123 0FB605(2C000000)    <1>     movzx eax, byte [switchChar]
-    91 0000012A F2AE                <1>     repne scasb
-    92 0000012C 67E310              <1>     jecxz .noSwitches
-    93 0000012F 0FB607              <1>     movzx eax, byte [rdi]   ;RDI points to the char after the switch
-    94 00000132 24DF                <1>     and al, 0DFh    ;Convert to UC
-    95 00000134 3C50                <1>     cmp al, "P" ;Is it permanent switch?
-    96 00000136 7507                <1>     jne .noSwitches
-    97 00000138 C605(2D000000)FF    <1>     mov byte [permaSwitch], -1  ;Set the permanently resident switch on
-    98                              <1> .noSwitches:
-    99 0000013F 488D1D(9C350000)    <1>     lea rbx, endOfAllocNoMaster  ;This is the base address to jettison
-   100                              <1> .printInit:
-   101                              <1> ;Finish by printing INIT string.
-   102 00000146 53                  <1>     push rbx
-   103 00000147 488D153A000000      <1>     lea rdx, initString
-   104 0000014E B409                <1>     mov ah, 09h
-   105 00000150 CD21                <1>     int 21h ;Print init string
-   106 00000152 E8(7D290000)        <1>     call version.printVersionNumber
-   107 00000157 488D1560000000      <1>     lea rdx, initString2
-   108 0000015E B409                <1>     mov ah, 09h
-   109 00000160 CD21                <1>     int 21h ;Print init string
-   110 00000162 5B                  <1>     pop rbx
-   111                              <1>     ;Now we add the stack to the alloc and paragraph align
-   112 00000163 4881C340060000      <1>     add rbx, stackSize
-   113 0000016A 4881C311000000      <1>     add rbx, 11h    ;Go one para up
-   114 00000171 48C1EB04            <1>     shr rbx, 4      ;Round to this new para boundary
-   115 00000175 48C1E304            <1>     shl rbx, 4
-   116 00000179 4889DC              <1>     mov rsp, rbx    ;Move the stack pointer to this address
-   117 0000017C 48891D(05000000)    <1>     mov qword [stackTop], rbx   ;Save this value of the stack ptr in var
-   118 00000183 E9(470E0000)        <1>     jmp commandStart    ;We jump with rbx = base address to jettison
-   119                              <1> ;Loader Data here
-   120                              <1> initString: 
-   121 00000188 0D0A536369656E7469- <1>     db CR,LF,"Scientific Computer Research(R) SCP/DOS(R) Version $"
-   121 00000191 66696320436F6D7075- <1>
-   121 0000019A 746572205265736561- <1>
-   121 000001A3 726368285229205343- <1>
-   121 000001AC 502F444F5328522920- <1>
-   121 000001B5 56657273696F6E2024  <1>
-   122                              <1> initString2:
-   123 000001BE 0D0A20202020202020- <1>     db CR,LF, "          (C)Copyright Scientific Computer Research 2024.",CR,LF,"$"
-   123 000001C7 202020284329436F70- <1>
-   123 000001D0 797269676874205363- <1>
-   123 000001D9 69656E746966696320- <1>
-   123 000001E2 436F6D707574657220- <1>
-   123 000001EB 526573656172636820- <1>
-   123 000001F4 323032342E0D0A24    <1>
-   124 000001FC 496E636F7272656374- <1> badVerStr: db "Incorrect DOS version",CR,LF,"$"
-   124 00000205 20444F532076657273- <1>
-   124 0000020E 696F6E0D0A24        <1>
+    10                              <1> .exitBad:
+    11 00000013 CD20                <1>     int 20h ;Exit to caller or DOS to print bad command interpreter line
+    12                              <1> .okVersion:
+    13                              <1> ;If ok then store self as parent in the PSP, to prevent accidental closure
+    14 00000015 4C8905(0F000000)    <1>     mov qword [pspPtr], r8  ;Store PSP ptr in internal var 
+    15 0000001C 498B4022            <1>     mov rax, qword [r8 + psp.parentPtr] ;Get PSP parent
+    16 00000020 4D894022            <1>     mov qword [r8 + psp.parentPtr], r8  ;Store self as parent
+    17 00000024 488905(17000000)    <1>     mov qword [realParent], rax ;Preserve the real parent address
+    18                              <1> ;Setup Int 22h, Int 23h and Int 24h
+    19 0000002B 498B400A            <1>     mov rax, qword [r8 + psp.oldInt22h] ;Preserve the original addresses
+    20 0000002F 488905(2E000000)    <1>     mov qword [parentInt22], rax
+    21                              <1> 
+    22 00000036 488D15(DE320000)    <1>     lea rdx, critErrorHandler
+    23 0000003D 4989501A            <1>     mov qword [r8 + psp.oldInt24h], rdx
+    24 00000041 B824250000          <1>     mov eax, 2524h
+    25 00000046 CD21                <1>     int 21h
+    26 00000048 488D15(79350000)    <1>     lea rdx, int23h
+    27 0000004F 49895012            <1>     mov qword [r8 + psp.oldInt23h], rdx
+    28 00000053 B823250000          <1>     mov eax, 2523h
+    29 00000058 CD21                <1>     int 21h
+    30 0000005A 488D15(5A0E0000)    <1>     lea rdx, applicationReturn
+    31 00000061 4989500A            <1>     mov qword [r8 + psp.oldInt22h], rdx
+    32 00000065 B822250000          <1>     mov eax, 2522h
+    33 0000006A CD21                <1>     int 21h
+    34                              <1> ;Get a pointer to DOS Sysvars
+    35 0000006C B452                <1>     mov ah, 52h ;Get sysvars
+    36 0000006E CD21                <1>     int 21h
+    37 00000070 48891D(1F000000)    <1>     mov qword [sysVars], rbx    ;Save ptr to sysVars
+    38                              <1> ;Call for simple internationalisation data
+    39 00000077 B800370000          <1>     mov eax, 3700h  ;Get switchchar in dl
+    40 0000007C CD21                <1>     int 21h
+    41 0000007E 3CFF                <1>     cmp al, -1
+    42 00000080 7412                <1>     je .skipSwitch
+    43 00000082 8815(2C000000)      <1>     mov byte [switchChar], dl   ;Store the switchChar in var
+    44 00000088 80FA2D              <1>     cmp dl, "-" ;Is the switchChar Unix?
+    45 0000008B 7507                <1>     jne .skipSwitch
+    46 0000008D C605(2B000000)2F    <1>     mov byte [pathSep], "/" ;Swap default path separator to UNIX style
+    47                              <1> .skipSwitch:
+    48 00000094 B800380000          <1>     mov eax, 3800h  ;Get current country data
+    49 00000099 488D15(36000000)    <1>     lea rdx, ctryData
+    50 000000A0 CD21                <1>     int 21h ;Write the data to the internal country table
+    51                              <1> ;Now determine if this is the master copy of COMMAND.COM
+    52                              <1> ;Check if Int 2Eh has the same address as Int 2Dh. If so, we are master.
+    53 000000A2 B82E350000          <1>     mov eax, 352Eh  ;Get int 2Eh address
+    54 000000A7 CD21                <1>     int 21h
+    55 000000A9 4889DA              <1>     mov rdx, rbx    ;Save the pointer in rdx
+    56 000000AC B82D350000          <1>     mov eax, 352Dh  ;Get int 2Dh address
+    57 000000B1 CD21                <1>     int 21h
+    58 000000B3 4839DA              <1>     cmp rdx, rbx    ;If these are equal then this is first boot!
+    59 000000B6 757B                <1>     jne .skipMaster
+    60                              <1> ;Ok so we are master command.com
+    61                              <1> ;Now make myself the real parent
+    62 000000B8 C605(2D000000)FF    <1>     mov byte [permaSwitch], -1  ;Set the permanently resident switch on
+    63 000000BF 4C8905(17000000)    <1>     mov qword [realParent], r8
+    64                              <1> ;Set current Drive in COMSPEC
+    65 000000C6 B800190000          <1>     mov eax, 1900h ;Get current Drive
+    66 000000CB CD21                <1>     int 21h
+    67 000000CD 0441                <1>     add al, "A"
+    68 000000CF 8805(A4350000)      <1>     mov byte [masterEnv.cspec], al
+    69                              <1> ;Set Int 2Eh up
+    70 000000D5 488D15(A2160000)    <1>     lea rdx, int2Eh
+    71 000000DC B82E250000          <1>     mov eax, 252Eh ;Set this as Int 2Eh
+    72 000000E1 CD21                <1>     int 21h
+    73                              <1> ;Now, open and parse AUTOEXEC.BAT. Build Master Environment here
+    74                              <1> ;If no AUTOEXEC.BAT, request time and date from user
+    75 000000E3 BB0A000000          <1>     mov ebx, 10 ;Allocate 160 bytes
+    76 000000E8 B800480000          <1>     mov eax, 4800h
+    77 000000ED CD21                <1>     int 21h
+    78 000000EF 0F821EFFFFFF        <1>     jc .exitBad
+    79                              <1> ;Set master environment as mine
+    80 000000F5 4989403E            <1>     mov qword [r8 + psp.envPtr], rax
+    81 000000F9 488D35(9C350000)    <1>     lea rsi, masterEnv
+    82 00000100 4889C7              <1>     mov rdi, rax
+    83 00000103 B91E000000          <1>     mov ecx, menv_len
+    84 00000108 F3A4                <1>     rep movsb   ;Copy the chars over!
+    85                              <1> 
+    86 0000010A 488D15(2F080000)    <1>     lea rdx, crlf
+    87 00000111 B409                <1>     mov ah, 09h
+    88 00000113 CD21                <1>     int 21h
+    89 00000115 E8(C6200000)        <1>     call time
+    90 0000011A E8(FD1F0000)        <1>     call date
+    91 0000011F 488D15(2F080000)    <1>     lea rdx, crlf
+    92 00000126 B409                <1>     mov ah, 09h
+    93 00000128 CD21                <1>     int 21h
+    94 0000012A 488D1D(BA350000)    <1>     lea rbx, endOfAlloc ;Save the Master Environment
+    95 00000131 EB32                <1>     jmp short .printInit
+    96                              <1> .skipMaster:
+    97 00000133 498DB881000000      <1>     lea rdi, qword [r8 + psp.progTail]
+    98 0000013A 410FB68880000000    <1>     movzx ecx, byte [r8 + psp.parmList]
+    99 00000142 0FB605(2C000000)    <1>     movzx eax, byte [switchChar]
+   100 00000149 F2AE                <1>     repne scasb
+   101 0000014B 67E310              <1>     jecxz .noSwitches
+   102 0000014E 0FB607              <1>     movzx eax, byte [rdi]   ;RDI points to the char after the switch
+   103 00000151 24DF                <1>     and al, 0DFh    ;Convert to UC
+   104 00000153 3C50                <1>     cmp al, "P" ;Is it permanent switch?
+   105 00000155 7507                <1>     jne .noSwitches
+   106 00000157 C605(2D000000)FF    <1>     mov byte [permaSwitch], -1  ;Set the permanently resident switch on
+   107                              <1> .noSwitches:
+   108 0000015E 488D1D(9C350000)    <1>     lea rbx, endOfAllocNoMaster  ;This is the base address to jettison
+   109                              <1> .printInit:
+   110                              <1> ;Finish by printing INIT string.
+   111 00000165 53                  <1>     push rbx
+   112 00000166 488D153A000000      <1>     lea rdx, initString
+   113 0000016D B409                <1>     mov ah, 09h
+   114 0000016F CD21                <1>     int 21h ;Print init string
+   115 00000171 E8(7D290000)        <1>     call version.printVersionNumber
+   116 00000176 488D1560000000      <1>     lea rdx, initString2
+   117 0000017D B409                <1>     mov ah, 09h
+   118 0000017F CD21                <1>     int 21h ;Print init string
+   119 00000181 5B                  <1>     pop rbx
+   120                              <1>     ;Now we add the stack to the alloc and paragraph align
+   121 00000182 4881C340060000      <1>     add rbx, stackSize
+   122 00000189 4881C311000000      <1>     add rbx, 11h    ;Go one para up
+   123 00000190 48C1EB04            <1>     shr rbx, 4      ;Round to this new para boundary
+   124 00000194 48C1E304            <1>     shl rbx, 4
+   125 00000198 4889DC              <1>     mov rsp, rbx    ;Move the stack pointer to this address
+   126 0000019B 48891D(05000000)    <1>     mov qword [stackTop], rbx   ;Save this value of the stack ptr in var
+   127 000001A2 E9(470E0000)        <1>     jmp commandStart    ;We jump with rbx = base address to jettison
+   128                              <1> ;Loader Data here
+   129                              <1> initString: 
+   130 000001A7 0D0A536369656E7469- <1>     db CR,LF,"Scientific Computer Research(R) SCP/DOS(R) Version $"
+   130 000001B0 66696320436F6D7075- <1>
+   130 000001B9 746572205265736561- <1>
+   130 000001C2 726368285229205343- <1>
+   130 000001CB 502F444F5328522920- <1>
+   130 000001D4 56657273696F6E2024  <1>
+   131                              <1> initString2:
+   132 000001DD 0D0A20202020202020- <1>     db CR,LF, "          (C)Copyright Scientific Computer Research 2024.",CR,LF,"$"
+   132 000001E6 202020284329436F70- <1>
+   132 000001EF 797269676874205363- <1>
+   132 000001F8 69656E746966696320- <1>
+   132 00000201 436F6D707574657220- <1>
+   132 0000020A 526573656172636820- <1>
+   132 00000213 323032342E0D0A24    <1>
+   133 0000021B 496E636F7272656374- <1> badVerStr: db "Incorrect DOS version",CR,LF,"$"
+   133 00000224 20444F532076657273- <1>
+   133 0000022D 696F6E0D0A24        <1>
     27                                  
     28                                  stackSize equ 200*8    ;200 QWORD stack
     28          ------------------       info: assembly required 1+3+2 passes

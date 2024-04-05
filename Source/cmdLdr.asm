@@ -7,6 +7,7 @@ cmdLdr:
     lea rdx, badVerStr
     mov ah, 09h
     int 21h
+.exitBad:
     int 20h ;Exit to caller or DOS to print bad command interpreter line
 .okVersion:
 ;If ok then store self as parent in the PSP, to prevent accidental closure
@@ -60,11 +61,8 @@ cmdLdr:
 ;Now make myself the real parent
     mov byte [permaSwitch], -1  ;Set the permanently resident switch on
     mov qword [realParent], r8
-;Set master environment as mine
-    lea rax, masterEnv
-    mov qword [r8 + psp.envPtr], rax
 ;Set current Drive in COMSPEC
-    mov al, 19h ;Get current Drive
+    mov eax, 1900h ;Get current Drive
     int 21h
     add al, "A"
     mov byte [masterEnv.cspec], al
@@ -74,6 +72,17 @@ cmdLdr:
     int 21h
 ;Now, open and parse AUTOEXEC.BAT. Build Master Environment here
 ;If no AUTOEXEC.BAT, request time and date from user
+    mov ebx, 10 ;Allocate 160 bytes
+    mov eax, 4800h
+    int 21h
+    jc .exitBad
+;Set master environment as mine
+    mov qword [r8 + psp.envPtr], rax
+    lea rsi, masterEnv
+    mov rdi, rax
+    mov ecx, menv_len
+    rep movsb   ;Copy the chars over!
+
     lea rdx, crlf
     mov ah, 09h
     int 21h

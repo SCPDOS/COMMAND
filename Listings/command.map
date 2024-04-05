@@ -12,8 +12,8 @@ Output file:  ./Binaries/COMMAND.COM
 
 Vstart            Start             Stop              Length    Class     Name
                0                 0                 0  00000000  progbits  .text
-               0                 0              3643  00003643  progbits  .data
-            3643              3643              3857  00000214  progbits  transient
+               0                 0              35BA  000035BA  progbits  .data
+            35BA              35BA              37ED  00000233  progbits  transient
 
 -- Sections (detailed) --------------------------------------------------------
 
@@ -31,7 +31,7 @@ vfollows:  not defined
 ---- Section .data ------------------------------------------------------------
 
 class:     progbits
-length:                3643
+length:                35BA
 start:                    0
 align:                    1
 follows:   not defined
@@ -42,11 +42,11 @@ vfollows:  not defined
 ---- Section transient --------------------------------------------------------
 
 class:     progbits
-length:                 214
-start:                 3643
+length:                 233
+start:                 35BA
 align:                    1
 follows:   .data
-vstart:                3643
+vstart:                35BA
 valign:    not defined
 vfollows:  not defined
 
@@ -523,6 +523,7 @@ Value     Name
 00000013  redirErrMsgL
 0000000C  join.joinPathL
 0000000C  subst.substPathL
+0000001E  menv_len
 00000640  stackSize
 
 
@@ -1164,19 +1165,20 @@ Real              Virtual           Name
             3598              3598  int23h.exit
             359C              359C  endOfAllocNoMaster
             359C              359C  masterEnv
-            35AA              35AA  masterEnv.cspec
-            3643              3643  endOfAlloc
+            35A4              35A4  masterEnv.cspec
+            35BA              35BA  endOfAlloc
 
 ---- Section transient --------------------------------------------------------
 
 Real              Virtual           Name
-            3643              3643  cmdLdr
-            3658              3658  cmdLdr.okVersion
-            36D7              36D7  cmdLdr.skipSwitch
-            3757              3757  cmdLdr.skipMaster
-            3782              3782  cmdLdr.noSwitches
-            3789              3789  cmdLdr.printInit
-            37CB              37CB  initString
-            3801              3801  initString2
-            383F              383F  badVerStr
+            35BA              35BA  cmdLdr
+            35CD              35CD  cmdLdr.exitBad
+            35CF              35CF  cmdLdr.okVersion
+            364E              364E  cmdLdr.skipSwitch
+            36ED              36ED  cmdLdr.skipMaster
+            3718              3718  cmdLdr.noSwitches
+            371F              371F  cmdLdr.printInit
+            3761              3761  initString
+            3797              3797  initString2
+            37D5              37D5  badVerStr
 
