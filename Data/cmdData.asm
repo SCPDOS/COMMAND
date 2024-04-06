@@ -52,11 +52,10 @@ cmdFFBlock  db ffBlock_size dup (0) ;Internal Find First Block to use as default
 launchBlock db execProg_size dup (0)
 
 inBuffer    db cmdBufferL dup (0)  ;Add one to add space for terminating CR
+inBufferL   equ 126 ;126 chars so we can copy to PSP with terminating CR
+
 cmdBuffer   db cmdBufferL dup (0)  ;This is the to copy input to when processing
 cmdPathSpec db fileSpecZL dup (0)  ;Space for full path to a external command
-
-fcbCmdSpec  db fcbNameL dup (0) ;Used to make a FCB style name for the file
-cmdSpec     db fileNameZL dup (0)   ;ASCIIZ command spec for the command name
 cmdName     db cmdNameL dup (0) ;Command name string prefixed by length of word
 
 rdrInFilespec   db fileSpecZL dup (0)   ;Space for the redir in filespec
@@ -69,8 +68,8 @@ pipe2Filespec   db fileSpecZL dup (0)   ;Space for the pipe file filespec
 newPipe dq 0    ;Pointer to the new pathspec (STDOUT)
 oldPipe dq 0    ;Pointer to the old pathspec (STDIN)
 
-searchSpec  db cmdBufferL dup (0)   ;Contains the pathspec for the search file
-;The above is larger than is needed/supported by DOS to allow for 
+searchSpec  db cmdBufferL dup (0)   ;Main scratch buffer for forming paths!
+;The above is slightly larger than is needed/supported by DOS to allow for 
 ; users overtyping
 
 ;Internal Function vars

@@ -54,8 +54,6 @@ dir:
     ;Start by scanning for the switches
     lea rsi, qword [r8 + cmdLine]  ;Goto command line
     mov rdi, rsi    ;Use rsi as start of buffer counter
-    call skipDelimiters ;Skip leading delimiters
-    add rsi, 3  ;Go past the DIR
 .scanNew:
     call skipDelimiters ;Set rsi pointing to a non delimiting char
     lodsb   ;Get this char
@@ -361,15 +359,15 @@ dir:
     return
 
 .dirPrintFileData:
-;Use fcbCmdSpec to build the file name with space
+;Use cmdFcb to build the file name with space
 ;Start by print the name (same for both cases)
 ;We first check if the file has attributes hidden/system and hide them if so
     test byte [cmdFFBlock + ffBlock.attribFnd], dirIncFiles
     retnz   ;Simply return if either bit is set
     lea rsi, qword [cmdFFBlock + ffBlock.asciizName]
-    lea rdi, fcbCmdSpec
+    lea rdi, cmdFcb
     call asciiFilenameToFCB
-    lea rdx, fcbCmdSpec
+    lea rdx, cmdFcb
     mov ecx, 8  ;Print 8 chars
     mov ebx, 1  ;STDOUT
     mov ah, 40h ;Write handle
@@ -818,7 +816,7 @@ date:
     int 21h
 
     lea rdx, inBuffer
-    mov byte [rdx], 126 ;Enter a string of up to 126 chars in length
+    mov byte [rdx], inBufferL ;Enter a string of up to 126 chars in length
     mov ah, 0Ah
     int 21h
     push rdx
@@ -873,7 +871,7 @@ time:
     int 21h
 
     lea rdx, inBuffer
-    mov byte [rdx], 126 ;Enter a string of up to 126 chars in length
+    mov byte [rdx], inBufferL ;Enter a string of up to 126 chars in length
     mov ah, 0Ah
     int 21h
     push rdx
@@ -1733,8 +1731,8 @@ launchChild:
     ;foo.com and a foo.exe in the same dir and you type foo.exe it launches 
     ;foo.com. We will not honour this behaviour as this kinda sucks!
     ;We know the drive we are on is valid so no need to double check that!
-    call setDTA ;Searching setting
     mov r8, qword [pspPtr]
+    call setDTA         
     ;Start by rebuilding the cmdFcb from the last path componant.
     lea rdi, cmdPathSpec
     call findLastPathComponant  ;Point rdi to last path componant
@@ -1895,10 +1893,26 @@ launchChild:
     lea rsi, qword [cmdFcb + fcb.filename]
     call FCBToAsciiz    ;Get an asciiz suffix
     mov eax, 4E00h  ;Find first
-    mov ecx, dirSystem  ;Normal, RO and System files only searchable!
+    xor ecx, ecx  ;Only Normal and RO files searchable!
     int 21h
     pop rdi
     pop rsi
     pop rcx
     pop rax
     return
+
+set:
+    test byte [arg1Flg], -1
+    jz badArgError  ;Need to give an argument!
+    movzx eax, byte [arg1Off]
+    mov r8, [pspPtr]
+    lea rsi, qword [r8 + cmdLine]
+    add rsi, rax    ;Go to the start of the argument
+    ;rsi -> EnvvarName=string;string;string<CR>
+
+pathEdit:
+    lea rdx, .pMsg
+    mov eax, 0900h
+    int 21h
+    return
+.pMsg db "PATH editing not yet implemented",CR,LF,"$"

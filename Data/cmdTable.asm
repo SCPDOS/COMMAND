@@ -79,6 +79,11 @@ functionTable:
     db 5, "LABEL"
     dw label - startLbl
 
+    db 4, "PATH"
+    dw pathEdit - startLbl
+
+    db 3, "SET"
+    dw set - startLbl
 ;TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP
     db 5, "MKLBL"
     dw mklbl - startLbl

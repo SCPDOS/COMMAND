@@ -45,7 +45,7 @@ commandMain:
 ;=========================
     mov rsp, qword [stackTop]    ;Reset internal stack pointer pos
     cld ;Ensure stringops are done the right way
-    mov byte [inBuffer], 80h    ;Reset the buffer length
+    mov byte [inBuffer], inBufferL    ;Reset the buffer length
 .inputMain:
     call printCRLF
 .inputMain2:
@@ -162,7 +162,7 @@ analyseCmdline:
     call cpDelimPathToBufz  ;Moves rsi to the first char past the delim char
     dec rsi ;Point it back to the delim char
     call .skipAndCheckCR
-    je .exit
+    je .setupCmdVars
     mov byte [arg1Flg], -1  ;Set that we are 
     mov rax, rsi
     sub rax, rbx            ;rbx points to the start of the buffer
@@ -170,70 +170,68 @@ analyseCmdline:
 .skipArg:
     lodsb   ;Now we advance the pointer to the second argument or CR
     cmp al, CR
-    je .exit
+    je .setupCmdVars
     call isALdelimiter
     jne .skipArg    ;If not a delimiter, get next char now
     call .skipAndCheckCR    ;Now skip all the delimiters
-    je .exit            ;If ZF set, this we encountered a CR
+    je .setupCmdVars            ;If ZF set, this we encountered a CR
     mov byte [arg2Flg], -1  ;If it is not CR, it is a second argument!
     mov rax, rsi            
     sub rax, rbx            ;rbx points to the start of the buffer
     mov byte [arg2Off], al  ;Store the offset 
-.exit:
-;Before returning, we copy the command name to cmdName and make it useful
+.setupCmdVars:
+;Before returning, we copy the command name to cmdName and pull
+; the command line tail to NOT have the command in it  
+    mov byte [cmdName], 0   ;Initialise this field to indicate no cmd
     lea rdi, cmdPathSpec
-    mov rbx, rdi    ;Use rbx as the ptr to the first char in the commandspec
-    xor al, al  ;Search for the terminating null
-    mov ecx, fileSpecZL ;Max number of chars the length could be
-    repne scasb
-    dec rdi ;Go to the last char in the command
+    call findLastPathComponant  ;Point rdi to last path componant
+    call strlen ;Get the length of the final path componant
+    cmp ecx, 11
+    ja .exitBad ;Return error
     mov rsi, rdi
-    std ;Now we go backwards to where rsi = rbx OR byte [rsi] = pathSep
-.keepSearching:
+    lea rdi, cmdName
+    dec ecx ;Minus the terminating null
+    mov byte [rdi], cl ;Store the length here
+    inc rdi ;Now goto next char in buffer
+.cpCmdName:
     lodsb
-    cmp al, byte [pathSep]
-    je .cmdStartFnd
-    cmp rsi, rbx
-    jne .keepSearching
-    dec rsi ;Go back two to go forwards again
+    call ucChar ;Uppercase the char
+    stosb
+    dec ecx
+    jnz .cpCmdName
+;Now we pull the command line removing the command name from the command tail
+    mov rsi, rbx  ;rbx points to the de-redired command line 
+;Skip leading separators
+.pctSkipLeading:
+    lodsb   ;Get first char
+    call isALdelimiter
+    je .pctSkipLeading
     dec rsi
-.cmdStartFnd:
-    inc rsi
-    inc rsi ;Go past the pathsep
-    cld ;Go the sane way again
-    lea rdi, qword [cmdName + 1]    ;First byte is for the length of the name
-    push rdi    ;Cleanse the field before usage (not strictly necessary)
-    mov ecx, cmdNameL
-    xor al, al
-    rep stosb
-    pop rdi
-    xor ecx, ecx
-    push rsi    ;Save the location of the start byte of the command name
-.cmdGetChar:
+    ;rsi points to the start of the command
+    lea rdi, cmdPathSpec
+    call strlen ;Get the length of the command
+    dec ecx ;Minus the terminating null
+    add rsi, rcx    ;Now move rsi to the first char past the command name
+    xor ecx, ecx    ;Use as a char counter
+    lea rdi, qword [r8 + cmdLine]    ;First byte is reserved for count
+.pctPullChars:
     lodsb
-    test al, al ;Did we find the terminating null?
-    jz .nameLenFnd
-    cmp al, "." ;Extension sep also terminates
-    je .nameLenFnd
-    call ucChar ;Else uppercase char
-    stosb   ;and store it
-    inc ecx
-    cmp ecx, 11 ;Max command length is 11
-    jb .cmdGetChar
-.nameLenFnd:
-    mov byte [cmdName], cl  ;Store the name length now
-    ;Now finally, create a FCB filespec
-    lea rdi, fcbCmdSpec
-    push rdi
-    mov ecx, fcbNameL
-    mov al, " " ;Fill with spaces
-    rep stosb
-    pop rdi
-    pop rsi ;Get back the location of the start byte of the command name
-    call asciiToFCB
-    lea rsi, fcbCmdSpec
-    lea rdi, cmdSpec
-    call FCBToAsciiz
+    stosb
+    cmp al, CR  ;Was this a terminating CR?
+    je .pctExit
+    inc ecx     ;Increment count
+    jmp short .pctPullChars 
+.pctExit:
+    xchg byte [r8 + cmdLineCnt], cl  ;Swap the counts
+    sub cl, byte [r8 + cmdLineCnt]  ;How many chars did we remove from buffer?
+    ;Since argXOff is computed as an offset FROM the start of the string itself
+    ; this works as we obtain how many chars we have removed from the string
+    sub byte [arg1Off], cl  ;Now subtract their offsets!
+    sub byte [arg2Off], cl  ;If there is no args, this is a null point
+    clc
+    return
+.exitBad:
+    mov byte [cmdName], -1 ;Store -1 to indicate error
     return
 .skipAndCheckCR:
 ;Skips all chars, rsi points to the separator. If it is a CR, set ZF=ZE
@@ -242,24 +240,28 @@ analyseCmdline:
     return
 
 doCommandLine:
-    lea rsi, qword [r8 + cmdLine]
+    mov r8, qword [pspPtr]
+    lea rsi, cmdPathSpec
     ;The following check accounts for the end of a piped command
-    cmp byte [rsi], CR  ;If the first char is a CR, exit the pipe loop
-    rete    ;Do not attempt to execute if the first char is a CR
+    cmp byte [cmdName], 0  ;If the cmd name length is 0, fail!
+    rete
+    cmp byte [cmdName], -1  ;Error condition, command name too long!
+    je badCmdError
     lea rdi, cmdFcb
     mov eax, 2901h  ;Skip leading blanks, clean the FCB name
     int 21h
-    movzx ebx, word [r8 + cmdLine]    ;Get the drive specifier
+    movzx ebx, word [cmdPathSpec]    ;Get the drive specifier
     cmp bh, ":"
     jne .noDriveSpecified
-    mov dl, bl      ;Move the drive letter in dl
-    and dl, 0DFh    ;Make the drive letter upper case
-    sub dl, "A"     ;And make it a 0 based drive letter
-    cmp al, -1  ;Int 21h returns AL = -1 if bad drive specified
+    xchg bl, al     ;Store drive status in bl, get letter in al
+    call ucChar     ;Uppercase al
+    sub al, "A"     ;And make it a 0 based drive letter
+    cmp bl, -1      ;Int 21h returns AL = -1 if bad drive specified
     je .badDrive
     ;If drive specified and cmdName length = 2 => X: type command
     cmp byte [cmdName], 2
     jne .noDriveSpecified   ;Drive specified but proceed as normal
+    mov dl, al  ;Setdrive wants the number in dl
     call setDrive
     rete
 .badDrive:
@@ -289,8 +291,8 @@ doCommandLine:
     int 21h
     mov byte [arg2FCBret], al
 .fcbArgsDone:
-    lea rbx, [r8 + cmdLine]
-    lea rsi, cmdName
+    lea rbx, [r8 + cmdTail] ;Point at processed command tail
+    lea rsi, cmdName        ;Point to command name with len prefix 
     mov eax, 0AE00h ;Installable command check
     mov edx, 0FFFFh
     mov ch, -1
@@ -304,13 +306,14 @@ doCommandLine:
     jz .executeInternal
     ;Here we execute externally and return to the prompt
     ; as if it was an internal execution
-    lea rsi, inBuffer ;Point to this built buffer
-    lea rbx, cmdFcb
+    lea rbx, [r8 + cmdTail] ;Point at processed command tail
+    lea rsi, cmdName        
     mov eax, 0AE01h ;Execute command!
     mov edx, 0FFFFh
     mov ch, -1
-    int 2Fh 
-    return
+    int 2Fh
+    cmp byte [r8 + cmdTail], 0  ;If this is non-zero, we execute internal
+    retz    ;Else, we return silently
 .executeInternal:
 ;Now we compare the name in the cmdFcb field to our commmand list
 ;rsi points after the command terminator in the command tail

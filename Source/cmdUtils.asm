@@ -791,6 +791,10 @@ getDTA:
     lea rdx, cmdFFBlock
     return
 
+;-------------------------------
+; Environment utility functions
+;-------------------------------
+
 cmpEnvVar:
 ;Checks that we have found the environment variable we are looking for.
 ;Input: rsi -> Environment var to verify the name of
@@ -839,3 +843,27 @@ checkEnvGoodAndGet:
     pop rcx
     pop rax
     return
+
+allocEnv:
+;Allocates space in the environment. Assumes environment is good.
+;Input: ecx = Number of bytes to allocate
+;Output: CF=NC: rsi -> Start of alloc region
+;        CF=CY: Not enough space to alloc
+
+freeEnv:
+;Frees space in the environment by zeroing all allocated chars.
+;Input: rdi -> Byte to start zeroing from.
+;Output: All bytes from rdi to first null zero. rdi trashed.
+    push rax
+    xor eax, eax
+.lp:
+    cmp byte [rdi], al
+    je .exit
+    stosb
+    jmp short .lp
+.exit:
+    pop rax
+    return
+
+findEnvSpace:
+;Searches the environment for space
