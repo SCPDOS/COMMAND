@@ -315,8 +315,21 @@ doCommandLine:
     cmp byte [r8 + cmdTail], 0  ;If this is non-zero, we execute internal
     retz    ;Else, we return silently
 .executeInternal:
-;Now we compare the name in the cmdFcb field to our commmand list
-;rsi points after the command terminator in the command tail
+;========================================================================
+; IF IT TRANSPIRES THAT 2Fh/AEh NEEDS THE UNPULLED COMMAND LINE (why?)
+; WE MOVE THE CODE BETWEEN .setupCmdVars AND .skipAndCheckCR HERE,
+; ADJUSTING FOR THE CHECK FOR COMMANDLINE ARGUMENT LENGTH AND ADJUST
+; THE START OF THIS FUNCTION TO USE THE COMMAND LINE PROPER AND CHECK 
+; FOR CR INSTEAD OF 0 LENGTH COMMAND NAME!
+;========================================================================
+;Now we check if the cmdName is equal to the length of the cmdPathSpec.
+;If not, then its immediately an external program!
+    lea rdi, cmdPathSpec
+    call strlen ;Get the length of the input command
+    dec ecx     ;Minus 1 for terminating null
+    cmp byte [cmdName], cl  ;Is it equal to the name of the command?
+    jne launchChild     ;If not, a path was specified, exit!
+;Now we compare the name in the cmdName + 1 field to our commmand list
     lea rbx, functionTable
 .nextEntry:
     movzx ecx, byte [rbx]   ;Get name entry length

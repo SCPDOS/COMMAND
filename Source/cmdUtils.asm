@@ -468,23 +468,6 @@ clearCommandLineState:
     mov dword [redirSTDIN], -1
     return
 
-asciiToFCB:
-;Converts a filename in the form FILENAME.EXT,0 to FILENAMEEXT
-;Don't uppercase any lowercase chars as this could be used with user buffers.
-;Also doesn't check if chars are valid
-;Names such as SYS.COM get converted to "SYS     COM"
-;Name is space padded.
-;Input: rsi = ASCII string buffer
-;       rdi = FCB name buffer
-;Output: al = Char that terminated the source string 
-    push rbx    
-    push rdi
-    mov ecx, 11
-    mov al, " "
-    rep stosb   ;Fill the buffer with spaces (so we don't need to fill later)
-    pop rdi
-    mov rbx, rdi    ;Use rbx as the base pointer of this buffer
-    jmp short asciiFilenameToFCB.processName
 asciiFilenameToFCB:
 ;Converts a filename in the form FILENAME.EXT,0 to FILENAMEEXT
 ;Don't uppercase any lowercase chars as this could be used with user buffers.
