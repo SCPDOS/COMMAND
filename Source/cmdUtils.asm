@@ -599,7 +599,28 @@ FCBToAsciiz:
     xor eax, eax
     stosb   ;Store a null at the end
     return
-    
+
+cpDelimOrCtrlStringToBufz:
+;Copy a delimited or control char terminated string to a buffer
+;Input: rsi -> Point to start of delimiter or ctrlchar terminated string
+;       rdi -> Buffer to store null terminated string in
+;Output: rsi -> First char past string end
+;       rdi -> One char past null terminator on string buffer
+    mov byte [rdi], 0   ;Init by null terminating
+.lp:
+    lodsb
+    cmp al, 20h ;Chars up to 20h are delimiters here
+    jbe .exit
+    call isALdelimiter
+    je .exit
+    stosb
+    jmp short .lp
+.exit:
+    xor eax, eax
+    stosb   ;Store a null terminator
+    return
+
+
 cpDelimPathToBufz:
 ;Copy a delimited path into buffer and null terminate.
 ;Input: rsi -> Point to start of delimiter terminated path
@@ -768,4 +789,53 @@ setDTA:
 
 getDTA:
     lea rdx, cmdFFBlock
+    return
+
+cmpEnvVar:
+;Checks that we have found the environment variable we are looking for.
+;Input: rsi -> Environment var to verify the name of
+;       rdi -> Environment var name to compare against
+;       ecx = Length of the environment variable
+;Output: ZF=ZE: Equal. ZF=NZ: Not equal.
+    push rsi
+    push rdi
+    push rcx
+    rep cmpsb
+    pop rcx
+    pop rdi
+    pop rsi
+    return
+
+checkEnvGoodAndGet:
+;Gets the env ptr and checks that it is double null terminated.
+;Output:
+;   ZF=ZE: Environment is bad. Is not double null terminated.
+;   ZF=NZ: Environment is good. Is double null terminated.
+;           rsi -> Environment pointer
+    push rax
+    push rcx
+    push rdi
+    push r8
+    mov r8, qword [pspPtr]
+    mov rdi, qword [r8 + psp.envPtr]    ;Get the env ptr!
+    test rdi, rdi   ;Null envs are possible. If it happens, just fail!
+    jz .badExit
+    mov ecx, dword [rdi - mcb_size + mcb.blockSize] ;Get the mcb size in para
+    shl ecx, 4          ;Convert to bytes (max number of bytes in the block!)
+;Ensure we have a good environment, i.e. one that is double null terminated.
+    xor eax, eax
+.pathNulScan:
+    repne scasb
+    test ecx, ecx   ;If we are zero on first null, its an error
+    jz .badExit
+    cmp byte [rdi], al  ;Is char two null?
+    jne .pathNulScan    ;If not, keep searching
+    xor eax, eax
+    inc eax ;Clear the ZF
+    mov rsi, qword [r8 + psp.envPtr]    ;Return the env ptr here
+.badExit:
+    pop r8
+    pop rdi
+    pop rcx
+    pop rax
     return

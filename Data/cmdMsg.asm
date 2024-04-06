@@ -90,9 +90,8 @@ threeSpc db "   $"
 twoSpc   db "  $"
 
 badOnOff db "Must specify ON or OFF",CR,LF,"$"
-pathEVar db "PATH="
-promptEVar  db "PROMPT="
 
+promptEVar  db "PROMPT="
 extStr  db "COMEXEBAT"  ;Used for extension searches
 ;If anything goes wrong with piping or redirecting just close first two 
 ; handles and reopen CON

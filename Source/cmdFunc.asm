@@ -1732,7 +1732,9 @@ launchChild:
     ;COMMAND.COM on DOS 3.3 doesn't honour the extension. If there exists a 
     ;foo.com and a foo.exe in the same dir and you type foo.exe it launches 
     ;foo.com. We will not honour this behaviour as this kinda sucks!
+    ;We know the drive we are on is valid so no need to double check that!
     call setDTA ;Searching setting
+    mov r8, qword [pspPtr]
     ;Start by rebuilding the cmdFcb from the last path componant.
     lea rdi, cmdPathSpec
     call findLastPathComponant  ;Point rdi to last path componant
@@ -1742,6 +1744,8 @@ launchChild:
     int 21h
     test al, al     ;Don't allow any wildcards in the name
     jnz badCmdError
+    xor rbp, rbp    ;rbp keeps a ptr to the next PATH componant to search in
+.pathLoop:
     lea rsi, qword [cmdFcb + fcb.fileext]
     lea rdi, extStr
     mov edx, 3  ;Number of valid extension types
@@ -1791,7 +1795,6 @@ launchChild:
 ; a BAT. If it is, separate handling!
     cmp byte [cmdFcb + fcb.fileext], "B"    ;If it is B, its a batch!
     je .batLaunch
-    mov r8, qword [pspPtr]
     lea rbx, launchBlock
     mov rax, qword [r8 + psp.envPtr]    ;Get the env pointer
     mov qword [rbx + execProg.pEnv], rax 
@@ -1804,8 +1807,70 @@ launchChild:
     lea rdx, cmdPathSpec
     mov eax, 4B00h  ;Load and execute!
     int 21h
-.pathHandle:        ;For now just place it here! Will fix later!
     jmp badCmdError    ;If something goes wrong, error out
+.pathHandle:        
+;First check if rbp is null. If it is, its a first time entry
+    test rbp, rbp
+    jnz .pathReentry
+;Now check if the command we recieved included an absolute path.
+;If so, we don't do path substitution and just fail at this point
+    lea rsi, cmdPathSpec
+    lodsw   ;Get the first two chars
+    cmp al, byte [pathSep]  ;If char 1 a pathsep, we are absolute!
+    je badCmdError  ;Therefore, exit bad!
+    test ah, ah ;If the second char is nul, its a 1 char command, must be rel
+    je .pathGetEnv
+    cmp ah, ":" ;If char 2 is colon, must be drive sep (not chardev)
+    jne .pathGetEnv ;Therefore, if not equal, relative path!
+    lodsb   ;Get the third char
+    cmp al, byte [pathSep]  ;If this is a pathsep, we are absolute!
+    je badCmdError  ;Therefore, exit bad!
+.pathGetEnv:
+;Now get a pointer to the environment and search for PATH=
+;We only take the final portion of the path and add it to each path componant
+;This agrees with DOS 3.3
+    call checkEnvGoodAndGet   ;Ensure our env is double null terminated!
+    jz badCmdError  ;If returned ZF=ZE, error out!
+    ;If we are here, env is double null terminated. rsi has the env ptr
+    ;Now we know we dont have to keep track of chars!!
+.pathLp:
+    lea rdi, pathEVar   ;Get a ptr to the path env string
+    mov ecx, 5          ;5 Chars in PATH=
+    call cmpEnvVar      ;Checks if these two environment vars are equal
+    je .pathFound
+    xor eax, eax        ;Search for a null
+    mov rdi, rsi        ;Scan the environment
+    mov ecx, -1         ;Just keep searching
+    repne scasb         ;Now scan for the terminating null
+    cmp byte [rdi], al  ;Now check the second char
+    je badCmdError      ;If second null, no more env to search!
+    mov rsi, rdi        ;Now move to rsi the start of the next env var
+    jmp short .pathLp   ;And scan again!
+.pathFound:
+;Env var found!
+    repe cmpsb          ;Move rdi past the = sign!
+.pathRejoin:
+    cmp byte [rdi], 0   ;Is the first char after equals a null?
+    mov rsi, rdi        ;This is a ; delimited ASCII string
+    lea rdi, searchSpec ;Build the path in searchSpec
+    call cpDelimOrCtrlStringToBufz   
+    dec rsi ;Point rsi to the char which delimited the path
+    mov rbp, rsi    ;Point rbp to this char
+    dec rdi ;Point to the null terminator
+    mov al, byte [pathSep]
+    stosb   ;Store a pathsep onto the null terminator
+    lea rsi, qword [cmdFcb + fcb.filename]
+    call FCBToAsciiz    ;Store the name here and null terminate
+    lea rsi, searchSpec 
+    lea rdi, cmdPathSpec
+    call strcpy         ;Copy the string to the cmdPathSpec
+    jmp .pathLoop       ;And try again, now in this path!
+.pathReentry:
+    cmp byte [rbp], 0   ;Each env string is finally null terminated.
+    je badCmdError
+    inc rbp             ;Go to the start of the next componant
+    mov rdi, rbp        ;So rdi points to the first char of next comp
+    jmp short .pathRejoin   ;Check if null, and if not, proceed again!
 
 .batLaunch:
     lea rdx, .batMsg
@@ -1817,7 +1882,7 @@ launchChild:
 .prepAndSearch:
 ;Copies over the name and extension in UC to the last componant of the 
 ;cmdPathSpec and null terminates. 
-;Input: cmdFcb name.ext setup. 
+;Input: cmdFcb name + ext setup. 
 ;Output: rdx -> Filled in cmdPathSpec 
 ;        CF=NC, file in rdx found. CF=CY, file in rdx not found!
     push rax
