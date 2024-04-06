@@ -12,14 +12,12 @@ Segment .data align=1
 %include "./Data/cmdData.asm"
 %include "./Data/cmdTable.asm"
 %include "./Data/cmdMsg.asm"
+%include "./Data/cmdEnv.asm"
 %include "./Source/cmdMain.asm"
 %include "./Source/cmdFunc.asm"
 %include "./Source/cmdUtils.asm"
 %include "./Source/int24h.asm"
-
-endOfAllocNoMaster: ;End of alloc if not the master cmd
-%include "./Data/cmdEnv.asm"
-endOfAlloc: ;End of alloc if the master cmd
+endOfAlloc: ;End of alloc
 ;The stack is always setup one stackSize away from the endOfAlloc, aligned to
 Segment transient align=1 follows=.data
 ;This segment always gets ejected post load

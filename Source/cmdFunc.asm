@@ -36,7 +36,9 @@ badCmn:
     int 21h
     stc ;Return with CY => Error occured
     return  ;This will be made nuanced later, to agree with DOS behaviour
-
+badCmdError:
+    lea rdx, badCmd
+    jmp short badCmn
 dir:
 ;Don't allow for searching unmounted network drives... is this a limitation?
     mov byte [dirFlags], 0    ;Clear DIR flags
@@ -1725,114 +1727,75 @@ exit:
     return  ;If the exit wasn't successful for some reason, return as normal
 
 launchChild:
-;We run EXEC on this and the child task will return via applicationReturn
-;Here we must search the CWD or all path componants before failing
-;Also this command must be a .COM, .EXE or .BAT so check that first
-    call setDTA
-
-    mov eax, dword [cmdFcb + fcb.fileext]   ;Get a dword, with dummy byte 3
-    and eax, 00FFFFFFh  ;Clear byte three
-    or eax,  20000000h  ;Add a space so it is like "COM "
-    cmp eax, "    " ;Only if we have four spaces do we proceed here
-    je .noExt
-    call checkExtensionExec ;ZF=ZE => Executable
-    jnz .dfltErrExit
-    ;!!!!!!!!!!!TEMPORARY MEASURE TO AVOID LAUNCHING BAT FILES!!!!!!!!!!!
-    jc .dfltErrExit ;Remove this when ready to launch batch files
-    ;!!!!!!!!!!!TEMPORARY MEASURE TO AVOID LAUNCHING BAT FILES!!!!!!!!!!!
-    ;So it is a com or exe that we are searching for for now
+    ;We execute an external command here.
+    ;Here we will behave like COMMAND.COM for later DOS and honour extensions.
+    ;COMMAND.COM on DOS 3.3 doesn't honour the extension. If there exists a 
+    ;foo.com and a foo.exe in the same dir and you type foo.exe it launches 
+    ;foo.com. We will not honour this behaviour as this kinda sucks!
+    call setDTA ;Searching setting
+    ;Start by rebuilding the cmdFcb from the last path componant.
     lea rdi, cmdPathSpec
-    mov rdx, rdi
-    jmp short .search
-.noExt:
-    ;If the filename has no extension, append a .*
-    ;Use bl as flags. bl[0] => COM found, bl[1] => EXE found, bl[2] => BAT found
-    xor ebx, ebx
-    lea rdi, cmdPathSpec
-    mov rdx, rdi
-    xor eax, eax
-    mov ecx, -1
-    repne scasb
-    dec rdi ;Point to the terminating null
-    mov rbp, rdi    ;Temporarily store the ptr to the . in rbp
-    mov ax, ".*"
-    stosw
-    xor al, al  ;Store terminating null
-    stosb
-.search:
-    mov ecx, dirIncFiles    ;Normal, RO, Hidden and System files
-    mov eax, 4E00h ;Find First File
+    call findLastPathComponant  ;Point rdi to last path componant
+    mov rsi, rdi    ;Source here
+    lea rdi, cmdFcb
+    mov eax, 2901h  ;Skip leading blanks, clean the FCB name
     int 21h
-    jc .dfltErrExit
-    call .noExtCheckExt
-.moreSearch:
-    mov ah, 4Fh
-    int 21h
-    jc .noMoreFiles
-    call .noExtCheckExt
-    jmp short .moreSearch
-.noMoreFiles:
-    test ebx, ebx
-    jz .dfltErrExit
-;So we have a valid executable
-    mov rdi, rbp    ;Get back ptr to the .*,0
-    test ebx, 1
-    jz .launchexebat
-    mov eax, ".COM"
-    jmp short .buildTail
-.launchexebat:
-    test ebx, 2
-    jz .launchbat
-    mov eax, ".EXE"
-    jmp short .buildTail
-.launchbat:
-;Temporary For BAT
-    jmp .dfltErrExit
-.buildTail:
-    stosd
-    xor eax, eax
-    stosb   ;Store the terminating null
-;Now we build the cmdtail properly
-    lea rdi, cmdTail
-    mov rdx, rdi    ;Use rdx as the anchor pointer for cmdline
-    mov ecx, 128/8
-    rep stosq   ;Clear the buffer with nulls
-    lea rdi, qword [rdx + 1]    ;Mov rdi to start of cmdtail (not count)
-    lea rsi, qword [r8 + cmdLineCnt]
-    lodsb   ;Get into al the number of chars and move rsi to the tail proper
-    mov ah, al  ;Move the number into ah
-    xor ecx, ecx    ;Use ch for number of chars read, cl for chars copied
-    ;Skip the parsed command name
-.passName:
-    lodsb   ;Get the char in al
-    inc ch
-    cmp ch, 127     ;Exit condition (bad case)
-    je short .finishBuildingTailNoCR
-    cmp al, CR      ;If we get to the CR after name, no tail
-    je short .finishBuildingTail
-    cmp al, SPC
-    jne short .passName
-    ;Now we copy the name 
-    call skipDelimiters ;Start by skipping spaces (there are no embedded tabs)
-    ;rsi points to the first non-space char
-.copyTail:
-    lodsb
-    cmp al, CR
-    je short .finishBuildingTail
-    stosb
-    inc cl
-    cmp cl, 127 ;Exit condition
-    jne .copyTail
-    jmp short .finishBuildingTailNoCR
-.finishBuildingTail:
-    stosb   ;Store the CR
-.finishBuildingTailNoCR:
-    mov byte [rdx], cl  ;Finish by placing count 
-.launch:
+    test al, al     ;Don't allow any wildcards in the name
+    jnz badCmdError
+    lea rsi, qword [cmdFcb + fcb.fileext]
+    lea rdi, extStr
+    mov edx, 3  ;Number of valid extension types
+.extLp:
+    push rsi    ;Save the ptr to the head of the file extension
+    mov ecx, 3  ;Number of chars per extension
+    rep cmpsb   ;Compare the two strings
+    pop rsi
+    test ecx, ecx
+    jz .extFnd      ;If all three chars were equal, we have valid ext!
+    add rdi, rcx    ;Add the remaining chars to rdi
+    dec edx         ;Else one less extension type to check
+    jnz .extLp
+    ;None of the three extensions were ok, so check if it is all spaces.
+    ;If not, error.
+    mov ecx, 3
+    mov rdi, rsi
+    mov al, SPC
+    rep scasb   
+    test ecx, ecx   ;Are all three chars spaces?
+    jnz badCmdError    ;If not, error!
+    ;Now we search first with COM, then EXE, then BAT. 
+    lea rsi, extStr
+    mov ebx, 3  ;Use ebx as the attempt counter
+.extSrchLp:
+    lea rdi, qword [cmdFcb + fcb.fileext]
+    mov ecx, 3
+    rep movsb   ;Copy the extension over!
+    call .prepAndSearch     ;Prep and search path in rdx.
+    jnc .extSrchFnd         ;If CF=NC, find found!
+    dec ebx                 ;Decrement extension counter
+    jnz .extSrchLp
+;Here we have ran out of extensions to search for! Now if the path was rel
+; we start prepending path componants and trying again. To do this, we reset
+; by setting the fcb extension back to all spaces.
+    lea rdi, qword [cmdFcb + fcb.fileext]
+    mov ecx, 3
+    mov al, SPC
+    rep stosb   ;Store back the empty extension!
+    jmp short .pathHandle
+.extFnd:
+;Here if the file had the right extension.
+    call .prepAndSearch    ;Prep and search path in rdx.
+    jc .pathHandle
+.extSrchFnd:
+;Pathspec in rdx exists, so now we prepare to launch it! First check it is not
+; a BAT. If it is, separate handling!
+    cmp byte [cmdFcb + fcb.fileext], "B"    ;If it is B, its a batch!
+    je .batLaunch
+    mov r8, qword [pspPtr]
     lea rbx, launchBlock
     mov rax, qword [r8 + psp.envPtr]    ;Get the env pointer
     mov qword [rbx + execProg.pEnv], rax 
-    lea rax, cmdTail
+    lea rax, qword [r8 + cmdTail]
     mov qword [rbx + execProg.pCmdLine], rax
     lea rax, qword [r8 + fcb1]
     mov qword [rbx + execProg.pfcb1], rax
@@ -1841,31 +1804,36 @@ launchChild:
     lea rdx, cmdPathSpec
     mov eax, 4B00h  ;Load and execute!
     int 21h
-    jmp .dfltErrExit    ;If something goes wrong, error out
-.noExtCheckExt:
-    lea rsi, dword [cmdFFBlock + ffBlock.asciizName]
-    lea rdi, fcbCmdSpec
-    call asciiFilenameToFCB
-    mov eax, dword [fcbCmdSpec + filename.fExt]
-    and eax, 00FFFFFFh  ;Clear byte three
-    or eax,  20000000h  ;Add a space so it is like "COM "
-    cmp eax, "COM "
-    jne .neceexe
-    or ebx, 1
-    return
-.neceexe:
-    cmp eax, "EXE "
-    jne .necebat
-    or ebx, 2
-    return
-.necebat:
-    cmp eax, "BAT "
-    retne
-    or ebx, 4
-    return
+.pathHandle:        ;For now just place it here! Will fix later!
+    jmp badCmdError    ;If something goes wrong, error out
 
-.dfltErrExit:
-    lea rdx, badCmd
-    mov ah, 09h
+.batLaunch:
+    lea rdx, .batMsg
+    mov eax, 0900h
     int 21h
+    return
+.batMsg db "BATCH preprocessor not implemented",CR,LF,"$"
+
+.prepAndSearch:
+;Copies over the name and extension in UC to the last componant of the 
+;cmdPathSpec and null terminates. 
+;Input: cmdFcb name.ext setup. 
+;Output: rdx -> Filled in cmdPathSpec 
+;        CF=NC, file in rdx found. CF=CY, file in rdx not found!
+    push rax
+    push rcx
+    push rsi
+    push rdi
+    lea rdi, cmdPathSpec 
+    mov rdx, rdi    ;Save the path ptr in rdx
+    call findLastPathComponant  ;Point rdi to the final path componant 
+    lea rsi, qword [cmdFcb + fcb.filename]
+    call FCBToAsciiz    ;Get an asciiz suffix
+    mov eax, 4E00h  ;Find first
+    mov ecx, dirSystem  ;Normal, RO and System files only searchable!
+    int 21h
+    pop rdi
+    pop rsi
+    pop rcx
+    pop rax
     return

@@ -15,6 +15,7 @@ cmdNameL    equ filenameL + 1 + 1   ;1 for the count prefix,1 for end null
 fcb1        equ psp.fcb1
 fcb2        equ psp.fcb2
 ;Use the dta as the built command line buffer.
+cmdTail     equ psp.parmList
 cmdLineCnt  equ psp.parmList
 cmdLine     equ psp.progTail
 

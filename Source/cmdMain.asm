@@ -247,7 +247,7 @@ doCommandLine:
     cmp byte [rsi], CR  ;If the first char is a CR, exit the pipe loop
     rete    ;Do not attempt to execute if the first char is a CR
     lea rdi, cmdFcb
-    mov eax, 2901h  ;Skip leading blanks
+    mov eax, 2901h  ;Skip leading blanks, clean the FCB name
     int 21h
     movzx ebx, word [r8 + cmdLine]    ;Get the drive specifier
     cmp bh, ":"
@@ -348,24 +348,6 @@ doCommandLine:
     lea rdx, badCmd
     mov ah, 09h
     int 21h
-    return
-
-
-checkExtensionExec:
-;Checks the extension field of cmdFcb is .COM, .EXE, .BAT in that order
-;Returns: ZF=ZE if executable. ZF=NZ if not executable.
-;         If ZF=ZE and CF=CY => Batch file
-    mov eax, dword [cmdFcb + fcb.fileext]   ;Get a dword, with dummy byte 3
-    and eax, 00FFFFFFh  ;Clear byte three
-    or eax,  20000000h  ;Add a space so it is like "COM "
-    and eax, 0FFDFDFDFh ;Uppercase the three letters
-    cmp eax, "COM "
-    rete
-    cmp eax, "EXE "
-    rete
-    cmp eax, "BAT "
-    retne
-    stc
     return
 
 redirFailure:

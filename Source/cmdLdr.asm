@@ -91,22 +91,20 @@ cmdLdr:
     lea rdx, crlf
     mov ah, 09h
     int 21h
-    lea rbx, endOfAlloc ;Save the Master Environment
     jmp short .printInit
 .skipMaster:
     lea rdi, qword [r8 + psp.progTail]
     movzx ecx, byte [r8 + psp.parmList]
     movzx eax, byte [switchChar]
     repne scasb
-    jecxz .noSwitches
+    jecxz .printInit
     movzx eax, byte [rdi]   ;RDI points to the char after the switch
-    and al, 0DFh    ;Convert to UC
+    call ucChar
     cmp al, "P" ;Is it permanent switch?
-    jne .noSwitches
+    jne .printInit
     mov byte [permaSwitch], -1  ;Set the permanently resident switch on
-.noSwitches:
-    lea rbx, endOfAllocNoMaster  ;This is the base address to jettison
 .printInit:
+    lea rbx, endOfAlloc ;Save the Master Environment
 ;Finish by printing INIT string.
     push rbx
     lea rdx, initString

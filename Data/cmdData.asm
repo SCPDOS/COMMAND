@@ -50,7 +50,6 @@ cmdFcb      db 10h dup (0) ;Internal "fcb" for parsing the command name
 cmdFFBlock  db ffBlock_size dup (0) ;Internal Find First Block to use as default DTA
 
 launchBlock db execProg_size dup (0)
-cmdTail     db cmdBufferL dup (0)   ;This is the tail that is passed to EXEC
 
 inBuffer    db cmdBufferL dup (0)  ;Add one to add space for terminating CR
 cmdBuffer   db cmdBufferL dup (0)  ;This is the to copy input to when processing
