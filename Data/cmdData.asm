@@ -23,7 +23,6 @@ pipeSTDIN   dw -1   ;The handle to replace STDIN with once all piping complete
 pipeSTDOUT  dw -1   ;The handle to replace STDOUT with once all piping complete
 cmdStatePtr:   ;Symbol to use for clearing command state variables
 ;These variables are valid for a SINGLE command in a command line
-redirNull   db 0    ;Set if searching for a pipe post command!
 ;Next two bytes, if set to -1, flags error
 redirIn     db 0    ;If set, we are redirecting input from a file
 redirOut    db 0    ;If 1, we are redirecting output to a file, destructively
@@ -42,6 +41,13 @@ arg2FCBret  db 0    ;AL on return from parse filename for argument 2
 cmdStateL equ $ - cmdStatePtr
 cmdLineStateL equ $ - cmdLineStatePtr
 
+;Batch state variables. Batch changes current dir to dir of batch file!
+batFlag     db 0    ;Batch mode flag. Set to -1 if batch mode on
+batBlockPtr dq 0    ;Ptr to the batch block
+batOgCD     db fileSpecZL dup (0)   ;Original current dir for batch
+batFile     db fileSpecZL dup (0)   ;Path to bat to execute. Qual with path!
+;batCallPtr  dq 0    ;Ptr to the call state block
+
 ;Structs and strings
 
 cmdFcb      db 10h dup (0) ;Internal "fcb" for parsing the command name
@@ -51,8 +57,8 @@ launchBlock db execProg_size dup (0)
 
 inBuffer    db cmdBufferL dup (0)  ;Add one to add space for terminating CR
 inBufferL   equ 127 ;127 chars so we can copy to PSP with terminating CR
-cmdBuffer   db cmdBufferL dup (0)   ;Copied input for processing
-aeBuffer    db cmdBufferL dup (0)   ;Buffer for AE (w/o redir, just pipes)
+cpyBuffer   db cmdBufferL dup (0)   ;Copied input for processing
+cmdBuffer   db cmdBufferL dup (0)   ;Buffer with the command pipeline
 cmdPathSpec db fileSpecZL dup (0)   ;Space for full path to a ext cmd
 cmdName     db cmdNameL dup (0)     ;Cmd name prefixed by length 
 
