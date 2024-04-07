@@ -325,6 +325,7 @@ doCommandLine:
     cmp byte [cmdBuffer], 0 ;If this is non-zero, we execute internal
     jnz .executeInternal
     call cleanUpRedir       ;Close all redirs to reset!
+    call clearCommandLineState  ;And reset the commandline
     pop rsi                 ;Pop the return address off the stack
     lea rsi, aeBuffer       ;Point rsi to the 
     jmp commandMain.copyPoint   ;And copy the cmd over to execute!
