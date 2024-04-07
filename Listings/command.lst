@@ -1631,74 +1631,75 @@
    196                              <1> ;Flags first two arguments if they exist, copies the command into its buffer
    197                              <1> ; processes the command name into the FCB.  
    198 00001053 E89CFFFFFF          <1>     call preProcessBuffer   ;Now preprocess and setup pipes!
-   199 00001058 498DB081000000      <1>     lea rsi, qword [r8 + cmdLine]   ;Go to the command line in the psp
-   200 0000105F 4889F3              <1>     mov rbx, rsi            ;Save this ptr in rbx
-   201 00001062 E8C7210000          <1>     call skipDelimiters     ;Skip any preceeding separators
-   202 00001067 488D3D24F2FFFF      <1>     lea rdi, cmdPathSpec    ;We copy the command name/path here
-   203 0000106E E8F7220000          <1>     call cpDelimPathToBufz  ;Moves rsi to the first char past the delim char
-   204 00001073 48FFCE              <1>     dec rsi ;Point it back to the delim char
-   205 00001076 E880000000          <1>     call .skipAndCheckCR
-   206 0000107B 7439                <1>     je .setupCmdVars
-   207 0000107D C60527F0FFFFFF      <1>     mov byte [arg1Flg], -1  ;Set that we are 
-   208 00001084 4889F0              <1>     mov rax, rsi
-   209 00001087 4829D8              <1>     sub rax, rbx            ;rbx points to the start of the buffer
-   210 0000108A 88051CF0FFFF        <1>     mov byte [arg1Off], al  ;Store the offset 
-   211                              <1> .skipArg:
-   212 00001090 AC                  <1>     lodsb   ;Now we advance the pointer to the second argument or CR
-   213 00001091 3C0D                <1>     cmp al, CR
-   214 00001093 7421                <1>     je .setupCmdVars
-   215 00001095 E8A2210000          <1>     call isALdelimiter
-   216 0000109A 75F4                <1>     jne .skipArg    ;If not a delimiter, get next char now
-   217 0000109C E85A000000          <1>     call .skipAndCheckCR    ;Now skip all the delimiters
-   218 000010A1 7413                <1>     je .setupCmdVars            ;If ZF set, this we encountered a CR
-   219 000010A3 C60504F0FFFFFF      <1>     mov byte [arg2Flg], -1  ;If it is not CR, it is a second argument!
-   220 000010AA 4889F0              <1>     mov rax, rsi            
-   221 000010AD 4829D8              <1>     sub rax, rbx            ;rbx points to the start of the buffer
-   222 000010B0 8805F9EFFFFF        <1>     mov byte [arg2Off], al  ;Store the offset 
-   223                              <1> .setupCmdVars:
-   224                              <1> ;Before returning, we copy the command name to cmdName 
-   225 000010B6 C60524F2FFFF00      <1>     mov byte [cmdName], 0   ;Initialise this field to indicate no cmd
-   226 000010BD 488D3DCEF1FFFF      <1>     lea rdi, cmdPathSpec
-   227 000010C4 E827220000          <1>     call findLastPathComponant  ;Point rdi to last path componant
-   228 000010C9 E844210000          <1>     call strlen ;Get the length of the final path componant
-   229 000010CE 81F90C000000        <1>     cmp ecx, 11 + 1 ;Extra char for the ext separator (dot)
-   230 000010D4 771D                <1>     ja .exitBad     ;Return error
-   231 000010D6 4889FE              <1>     mov rsi, rdi
-   232 000010D9 488D3D01F2FFFF      <1>     lea rdi, cmdName
-   233 000010E0 FFC9                <1>     dec ecx ;Minus the terminating null
-   234 000010E2 880F                <1>     mov byte [rdi], cl ;Store the length here
-   235 000010E4 48FFC7              <1>     inc rdi ;Now goto next char in buffer
-   236                              <1> .cpCmdName:
-   237 000010E7 AC                  <1>     lodsb
-   238 000010E8 E82F210000          <1>     call ucChar ;Uppercase the char
-   239 000010ED AA                  <1>     stosb
-   240 000010EE FFC9                <1>     dec ecx
-   241 000010F0 75F5                <1>     jnz .cpCmdName
-   242                              <1>     return
+   199                              <1> .altEP:
+   200 00001058 498DB081000000      <1>     lea rsi, qword [r8 + cmdLine]   ;Go to the command line in the psp
+   201 0000105F 4889F3              <1>     mov rbx, rsi            ;Save this ptr in rbx
+   202 00001062 E8C7210000          <1>     call skipDelimiters     ;Skip any preceeding separators
+   203 00001067 488D3D24F2FFFF      <1>     lea rdi, cmdPathSpec    ;We copy the command name/path here
+   204 0000106E E8F7220000          <1>     call cpDelimPathToBufz  ;Moves rsi to the first char past the delim char
+   205 00001073 48FFCE              <1>     dec rsi ;Point it back to the delim char
+   206 00001076 E880000000          <1>     call .skipAndCheckCR
+   207 0000107B 7439                <1>     je .setupCmdVars
+   208 0000107D C60527F0FFFFFF      <1>     mov byte [arg1Flg], -1  ;Set that we are 
+   209 00001084 4889F0              <1>     mov rax, rsi
+   210 00001087 4829D8              <1>     sub rax, rbx            ;rbx points to the start of the buffer
+   211 0000108A 88051CF0FFFF        <1>     mov byte [arg1Off], al  ;Store the offset 
+   212                              <1> .skipArg:
+   213 00001090 AC                  <1>     lodsb   ;Now we advance the pointer to the second argument or CR
+   214 00001091 3C0D                <1>     cmp al, CR
+   215 00001093 7421                <1>     je .setupCmdVars
+   216 00001095 E8A2210000          <1>     call isALdelimiter
+   217 0000109A 75F4                <1>     jne .skipArg    ;If not a delimiter, get next char now
+   218 0000109C E85A000000          <1>     call .skipAndCheckCR    ;Now skip all the delimiters
+   219 000010A1 7413                <1>     je .setupCmdVars            ;If ZF set, this we encountered a CR
+   220 000010A3 C60504F0FFFFFF      <1>     mov byte [arg2Flg], -1  ;If it is not CR, it is a second argument!
+   221 000010AA 4889F0              <1>     mov rax, rsi            
+   222 000010AD 4829D8              <1>     sub rax, rbx            ;rbx points to the start of the buffer
+   223 000010B0 8805F9EFFFFF        <1>     mov byte [arg2Off], al  ;Store the offset 
+   224                              <1> .setupCmdVars:
+   225                              <1> ;Before returning, we copy the command name to cmdName 
+   226 000010B6 C60524F2FFFF00      <1>     mov byte [cmdName], 0   ;Initialise this field to indicate no cmd
+   227 000010BD 488D3DCEF1FFFF      <1>     lea rdi, cmdPathSpec
+   228 000010C4 E827220000          <1>     call findLastPathComponant  ;Point rdi to last path componant
+   229 000010C9 E844210000          <1>     call strlen ;Get the length of the final path componant
+   230 000010CE 81F90C000000        <1>     cmp ecx, 11 + 1 ;Extra char for the ext separator (dot)
+   231 000010D4 771D                <1>     ja .exitBad     ;Return error
+   232 000010D6 4889FE              <1>     mov rsi, rdi
+   233 000010D9 488D3D01F2FFFF      <1>     lea rdi, cmdName
+   234 000010E0 FFC9                <1>     dec ecx ;Minus the terminating null
+   235 000010E2 880F                <1>     mov byte [rdi], cl ;Store the length here
+   236 000010E4 48FFC7              <1>     inc rdi ;Now goto next char in buffer
+   237                              <1> .cpCmdName:
+   238 000010E7 AC                  <1>     lodsb
+   239 000010E8 E82F210000          <1>     call ucChar ;Uppercase the char
+   240 000010ED AA                  <1>     stosb
+   241 000010EE FFC9                <1>     dec ecx
+   242 000010F0 75F5                <1>     jnz .cpCmdName
+   243                              <1>     return
     13                              <2> %%_ret:
     14 000010F2 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-   243                              <1> .exitBad:
-   244 000010F3 C605E7F1FFFFFF      <1>     mov byte [cmdName], -1 ;Store -1 to indicate error
-   245                              <1>     return
+   244                              <1> .exitBad:
+   245 000010F3 C605E7F1FFFFFF      <1>     mov byte [cmdName], -1 ;Store -1 to indicate error
+   246                              <1>     return
     13                              <2> %%_ret:
     14 000010FA C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-   246                              <1> .skipAndCheckCR:
-   247                              <1> ;Skips all chars, rsi points to the separator. If it is a CR, set ZF=ZE
-   248 000010FB E82E210000          <1>     call skipDelimiters ;Go to the next char in the input line
-   249 00001100 803E0D              <1>     cmp byte [rsi], CR  ;If it is not a CR, it is an argument
-   250                              <1>     return
+   247                              <1> .skipAndCheckCR:
+   248                              <1> ;Skips all chars, rsi points to the separator. If it is a CR, set ZF=ZE
+   249 000010FB E82E210000          <1>     call skipDelimiters ;Go to the next char in the input line
+   250 00001100 803E0D              <1>     cmp byte [rsi], CR  ;If it is not a CR, it is an argument
+   251                              <1>     return
     13                              <2> %%_ret:
     14 00001103 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-   251                              <1> 
-   252                              <1> doCommandLine:
-   253 00001104 4C8B0504EFFFFF      <1>     mov r8, qword [pspPtr]
-   254 0000110B 488D3580F1FFFF      <1>     lea rsi, cmdPathSpec
-   255                              <1>     ;The following check accounts for the end of a piped command
-   256 00001112 803DC8F1FFFF00      <1>     cmp byte [cmdName], 0  ;If the cmd name length is 0, fail!
-   257                              <1>     rete
+   252                              <1> 
+   253                              <1> doCommandLine:
+   254 00001104 4C8B0504EFFFFF      <1>     mov r8, qword [pspPtr]
+   255 0000110B 488D3580F1FFFF      <1>     lea rsi, cmdPathSpec
+   256                              <1>     ;The following check accounts for the end of a piped command
+   257 00001112 803DC8F1FFFF00      <1>     cmp byte [cmdName], 0  ;If the cmd name length is 0, fail!
+   258                              <1>     rete
     49                              <2> cret e
     19                              <3> %%_base:
     20                              <3> %assign baseVar %%_base-$$
@@ -1719,25 +1720,25 @@
     35                              <3>  return
     36                              <3> %%a:
     37                              <3>  %endif
-   258 0000111B 803DBFF1FFFFFF      <1>     cmp byte [cmdName], -1  ;Error condition, command name too long!
-   259 00001122 0F84B0060000        <1>     je badCmdError
-   260 00001128 488D3D82EFFFFF      <1>     lea rdi, cmdFcb
-   261 0000112F B801290000          <1>     mov eax, 2901h  ;Skip leading blanks, clean the FCB name
-   262 00001134 CD21                <1>     int 21h
-   263 00001136 0FB71D55F1FFFF      <1>     movzx ebx, word [cmdPathSpec]    ;Get the drive specifier
-   264 0000113D 80FF3A              <1>     cmp bh, ":"
-   265 00001140 752D                <1>     jne .noDriveSpecified
-   266 00001142 86D8                <1>     xchg bl, al     ;Store drive status in bl, get letter in al
-   267 00001144 E8D3200000          <1>     call ucChar     ;Uppercase al
-   268 00001149 2C41                <1>     sub al, "A"     ;And make it a 0 based drive letter
-   269 0000114B 80FBFF              <1>     cmp bl, -1      ;Int 21h returns AL = -1 if bad drive specified
-   270 0000114E 7412                <1>     je .badDrive
-   271                              <1>     ;If drive specified and cmdName length = 2 => X: type command
-   272 00001150 803D8AF1FFFF02      <1>     cmp byte [cmdName], 2
-   273 00001157 7516                <1>     jne .noDriveSpecified   ;Drive specified but proceed as normal
-   274 00001159 88C2                <1>     mov dl, al  ;Setdrive wants the number in dl
-   275 0000115B E888200000          <1>     call setDrive
-   276                              <1>     rete
+   259 0000111B 803DBFF1FFFFFF      <1>     cmp byte [cmdName], -1  ;Error condition, command name too long!
+   260 00001122 0F84B0060000        <1>     je badCmdError
+   261 00001128 488D3D82EFFFFF      <1>     lea rdi, cmdFcb
+   262 0000112F B801290000          <1>     mov eax, 2901h  ;Skip leading blanks, clean the FCB name
+   263 00001134 CD21                <1>     int 21h
+   264 00001136 0FB71D55F1FFFF      <1>     movzx ebx, word [cmdPathSpec]    ;Get the drive specifier
+   265 0000113D 80FF3A              <1>     cmp bh, ":"
+   266 00001140 752D                <1>     jne .noDriveSpecified
+   267 00001142 86D8                <1>     xchg bl, al     ;Store drive status in bl, get letter in al
+   268 00001144 E8D3200000          <1>     call ucChar     ;Uppercase al
+   269 00001149 2C41                <1>     sub al, "A"     ;And make it a 0 based drive letter
+   270 0000114B 80FBFF              <1>     cmp bl, -1      ;Int 21h returns AL = -1 if bad drive specified
+   271 0000114E 7412                <1>     je .badDrive
+   272                              <1>     ;If drive specified and cmdName length = 2 => X: type command
+   273 00001150 803D8AF1FFFF02      <1>     cmp byte [cmdName], 2
+   274 00001157 7516                <1>     jne .noDriveSpecified   ;Drive specified but proceed as normal
+   275 00001159 88C2                <1>     mov dl, al  ;Setdrive wants the number in dl
+   276 0000115B E888200000          <1>     call setDrive
+   277                              <1>     rete
     49                              <2> cret e
     19                              <3> %%_base:
     20                              <3> %assign baseVar %%_base-$$
@@ -1758,98 +1759,60 @@
     35                              <3>  return
     36                              <3> %%a:
     37                              <3>  %endif
-   277                              <1> .badDrive:
-   278 00001162 488D1518F8FFFF      <1>     lea rdx, badDrv
-   279 00001169 B409                <1>     mov ah, 09h
-   280 0000116B CD21                <1>     int 21h
-   281 0000116D F9                  <1>     stc
-   282                              <1>     return
+   278                              <1> .badDrive:
+   279 00001162 488D1518F8FFFF      <1>     lea rdx, badDrv
+   280 00001169 B409                <1>     mov ah, 09h
+   281 0000116B CD21                <1>     int 21h
+   282 0000116D F9                  <1>     stc
+   283                              <1>     return
     13                              <2> %%_ret:
     14 0000116E C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-   283                              <1> .noDriveSpecified:
-   284                              <1> ;Now we set the two FCB's in the command line
-   285 0000116F F60535EFFFFFFF      <1>     test byte [arg1Flg], -1
-   286 00001176 744D                <1>     jz .fcbArgsDone
-   287 00001178 0FB6052DEFFFFF      <1>     movzx eax, byte [arg1Off]   ;Get the first argument offset
-   288 0000117F 498DB081000000      <1>     lea rsi, qword [r8 + cmdLine]
-   289 00001186 4801C6              <1>     add rsi, rax    ;Point to first argument
-   290 00001189 498D785C            <1>     lea rdi, qword [r8 + fcb1]
-   291 0000118D B801290000          <1>     mov eax, 2901h
-   292 00001192 CD21                <1>     int 21h
-   293 00001194 880513EFFFFF        <1>     mov byte [arg1FCBret], al
-   294 0000119A F6050DEFFFFFFF      <1>     test byte [arg2Flg], -1
-   295 000011A1 7422                <1>     jz .fcbArgsDone
-   296 000011A3 0FB60505EFFFFF      <1>     movzx eax, byte [arg2Off]
-   297 000011AA 498DB081000000      <1>     lea rsi, qword [r8 + cmdLine]
-   298 000011B1 4801C6              <1>     add rsi, rax    ;Point to first argument
-   299 000011B4 498D786C            <1>     lea rdi, qword [r8 + fcb2]
-   300 000011B8 B801290000          <1>     mov eax, 2901h
-   301 000011BD CD21                <1>     int 21h
-   302 000011BF 8805EBEEFFFF        <1>     mov byte [arg2FCBret], al
-   303                              <1> .fcbArgsDone:
-   304 000011C5 488D1D44F0FFFF      <1>     lea rbx, aeBuffer       ;Take your buffer, ergh
-   305 000011CC 488D350EF1FFFF      <1>     lea rsi, cmdName        ;Point to command name with len prefix 
-   306 000011D3 B800AE0000          <1>     mov eax, 0AE00h ;Installable command check
-   307 000011D8 BAFFFF0000          <1>     mov edx, 0FFFFh
-   308 000011DD B5FF                <1>     mov ch, -1
-   309 000011DF CD2F                <1>     int 2Fh ;Give the TSR time to prepare if it needs to
-   310 000011E1 B800AE0000          <1>     mov eax, 0AE00h ;Installable command check
-   311 000011E6 BAFFFF0000          <1>     mov edx, 0FFFFh
-   312 000011EB 30ED                <1>     xor ch, ch  ;Second call uses ch = 0
-   313 000011ED CD2F                <1>     int 2Fh ;Return: al = -1 if this command a extension to COMMAND.COM
-   314                              <1>             ;        al = 0  if the command should be executed as usual
-   315 000011EF 84C0                <1>     test al, al
-   316 000011F1 743C                <1>     jz .executeInternal
-   317                              <1>     ;Here we execute externally and return to the prompt
-   318                              <1>     ; as if it was an internal execution
-   319 000011F3 488D1D16F0FFFF      <1>     lea rbx, aeBuffer       ;Take your buffer, ergh
-   320 000011FA 488D35E0F0FFFF      <1>     lea rsi, cmdName        
-   321 00001201 B801AE0000          <1>     mov eax, 0AE01h ;Execute command!
-   322 00001206 BAFFFF0000          <1>     mov edx, 0FFFFh
-   323 0000120B B5FF                <1>     mov ch, -1
-   324 0000120D CD2F                <1>     int 2Fh
-   325 0000120F 803D78EFFFFF00      <1>     cmp byte [cmdBuffer], 0 ;If this is non-zero, we execute internal
-   326 00001216 7517                <1>     jnz .executeInternal
-   327 00001218 E895010000          <1>     call cleanUpRedir       ;Close all redirs to reset!
-   328 0000121D E85F200000          <1>     call clearCommandLineState  ;And reset the commandline
-   329 00001222 5E                  <1>     pop rsi                 ;Pop the return address off the stack
-   330 00001223 488D35E6EFFFFF      <1>     lea rsi, aeBuffer       ;Point rsi to the 
-   331 0000122A E9F3FCFFFF          <1>     jmp commandMain.copyPoint   ;And copy the cmd over to execute!
-   332                              <1> .executeInternal:
-   333                              <1> ;Now we check if the cmdName is equal to the length of the cmdPathSpec.
-   334                              <1> ;If not, then its immediately an external program!
-   335 0000122F 488D3D5CF0FFFF      <1>     lea rdi, cmdPathSpec
-   336 00001236 E8D71F0000          <1>     call strlen ;Get the length of the input command
-   337 0000123B FFC9                <1>     dec ecx     ;Minus 1 for terminating null
-   338 0000123D 380D9EF0FFFF        <1>     cmp byte [cmdName], cl  ;Is it equal to the name of the command?
-   339 00001243 0F851C1A0000        <1>     jne launchChild     ;If not, a path was specified, exit!
-   340                              <1> ;Now we compare the name in the cmdName + 1 field to our commmand list
-   341 00001249 488D1DD8F4FFFF      <1>     lea rbx, functionTable
-   342                              <1> .nextEntry:
-   343 00001250 0FB60B              <1>     movzx ecx, byte [rbx]   ;Get name entry length
-   344 00001253 80F9FF              <1>     cmp cl, -1  ;Are we at the end of the table?
-   345 00001256 0F84091A0000        <1>     je launchChild      ;If so, check externally now
-   346 0000125C 380D7FF0FFFF        <1>     cmp byte [cmdName], cl  ;Is command length the same as the tbl entry length?
-   347 00001262 7533                <1>     jnz .gotoNextEntry  ;If not, goto next entry
-   348                              <1>     ;Here they have the same length so lets see if the name is the same
-   349 00001264 56                  <1>     push rsi
-   350                              <1>     ;ecx has the length to compare
-   351 00001265 51                  <1>     push rcx
-   352 00001266 488D7301            <1>     lea rsi, qword [rbx + 1]
-   353 0000126A 488D3D71F0FFFF      <1>     lea rdi, qword [cmdName + 1]   ;Go to the name portion
-   354 00001271 F3A6                <1>     rep cmpsb   ;Check the strings are equal
-   355 00001273 59                  <1>     pop rcx
-   356 00001274 5E                  <1>     pop rsi
-   357 00001275 7520                <1>     jne .gotoNextEntry
-   358                              <1>     ;Here it was found both strings are equal
-   359 00001277 488D7C0B01          <1>     lea rdi, qword [rbx + rcx + 1]  ;make rdi point to offset from startLbl
-   360 0000127C 480FB71F            <1>     movzx rbx, word [rdi]
-   361 00001280 488D3D79EDFFFF      <1>     lea rdi, startLbl
-   362 00001287 4801FB              <1>     add rbx, rdi
-   363 0000128A FFD3                <1>     call rbx    ;Call this function...
-   364                              <1>     retc    ;Always return with CF=CY on error. Error code set to -1
-    57                              <2> cret c
+   284                              <1> .noDriveSpecified:
+   285                              <1> ;Now we set the two FCB's in the command line
+   286 0000116F F60535EFFFFFFF      <1>     test byte [arg1Flg], -1
+   287 00001176 744D                <1>     jz .fcbArgsDone
+   288 00001178 0FB6052DEFFFFF      <1>     movzx eax, byte [arg1Off]   ;Get the first argument offset
+   289 0000117F 498DB081000000      <1>     lea rsi, qword [r8 + cmdLine]
+   290 00001186 4801C6              <1>     add rsi, rax    ;Point to first argument
+   291 00001189 498D785C            <1>     lea rdi, qword [r8 + fcb1]
+   292 0000118D B801290000          <1>     mov eax, 2901h
+   293 00001192 CD21                <1>     int 21h
+   294 00001194 880513EFFFFF        <1>     mov byte [arg1FCBret], al
+   295 0000119A F6050DEFFFFFFF      <1>     test byte [arg2Flg], -1
+   296 000011A1 7422                <1>     jz .fcbArgsDone
+   297 000011A3 0FB60505EFFFFF      <1>     movzx eax, byte [arg2Off]
+   298 000011AA 498DB081000000      <1>     lea rsi, qword [r8 + cmdLine]
+   299 000011B1 4801C6              <1>     add rsi, rax    ;Point to first argument
+   300 000011B4 498D786C            <1>     lea rdi, qword [r8 + fcb2]
+   301 000011B8 B801290000          <1>     mov eax, 2901h
+   302 000011BD CD21                <1>     int 21h
+   303 000011BF 8805EBEEFFFF        <1>     mov byte [arg2FCBret], al
+   304                              <1> .fcbArgsDone:
+   305 000011C5 488D1D44F0FFFF      <1>     lea rbx, aeBuffer       ;Take your buffer, ergh
+   306 000011CC 488D350EF1FFFF      <1>     lea rsi, cmdName        ;Point to command name with len prefix 
+   307 000011D3 B800AE0000          <1>     mov eax, 0AE00h ;Installable command check
+   308 000011D8 BAFFFF0000          <1>     mov edx, 0FFFFh
+   309 000011DD B5FF                <1>     mov ch, -1
+   310 000011DF CD2F                <1>     int 2Fh ;Give the TSR time to prepare if it needs to
+   311 000011E1 B800AE0000          <1>     mov eax, 0AE00h ;Installable command check
+   312 000011E6 BAFFFF0000          <1>     mov edx, 0FFFFh
+   313 000011EB 30ED                <1>     xor ch, ch  ;Second call uses ch = 0
+   314 000011ED CD2F                <1>     int 2Fh ;Return: al = -1 if this command a extension to COMMAND.COM
+   315                              <1>             ;        al = 0  if the command should be executed as usual
+   316 000011EF 84C0                <1>     test al, al
+   317 000011F1 743D                <1>     jz .executeInternal
+   318                              <1>     ;Here we execute externally and return to the prompt
+   319                              <1>     ; as if it was an internal execution
+   320 000011F3 488D1D16F0FFFF      <1>     lea rbx, aeBuffer       ;Take your buffer, ergh
+   321 000011FA 488D35E0F0FFFF      <1>     lea rsi, cmdName        
+   322 00001201 B801AE0000          <1>     mov eax, 0AE01h ;Execute command!
+   323 00001206 BAFFFF0000          <1>     mov edx, 0FFFFh
+   324 0000120B B5FF                <1>     mov ch, -1
+   325 0000120D CD2F                <1>     int 2Fh
+   326 0000120F 803DCBF0FFFF00      <1>     cmp byte [cmdName], 0 ;If this is non-zero, we restart the process
+   327                              <1>     retz    ;Return as normal if this is zero
+    41                              <2> cret z
     19                              <3> %%_base:
     20                              <3> %assign baseVar %%_base-$$
     21                              <3>  %ifdef retOff
@@ -1860,10 +1823,10 @@
     26                              <3>  j%+1 short retOff
     27                              <3>  %endif
     28                              <3>  %else
-    29 0000128C 7301                <3>  j%-1 short %%a
+    29 00001216 7501                <3>  j%-1 short %%a
     30                              <3>  return
     13                              <4> %%_ret:
-    14 0000128E C3                  <4>  ret
+    14 00001218 C3                  <4>  ret
     15                              <4> %assign retOff %%_ret-$$
     31                              <3> %%a:
     32                              <3>  %endif
@@ -1872,90 +1835,149 @@
     35                              <3>  return
     36                              <3> %%a:
     37                              <3>  %endif
-   365 0000128F C60577EDFFFF00      <1>     mov byte [returnCode], 0 ;Set the retcode to 0 if ok!
-   366                              <1>     return  ;... and return
+   328                              <1>     ;Else, we restart the command from scratch.
+   329 00001219 E894010000          <1>     call cleanUpRedir       ;Close all redirs to reset!
+   330 0000121E E85E200000          <1>     call clearCommandLineState  ;And reset the commandline
+   331 00001223 5E                  <1>     pop rsi                 ;Pop the return address off the stack
+   332 00001224 488D35E5EFFFFF      <1>     lea rsi, aeBuffer       ;Point rsi to the returned buffer
+   333 0000122B E9F2FCFFFF          <1>     jmp commandMain.copyPoint   ;And copy the cmd over to execute!
+   334                              <1> .executeInternal:
+   335                              <1> ;Now we check if the cmdName is equal to the length of the cmdPathSpec.
+   336                              <1> ;If not, then its immediately an external program!
+   337 00001230 488D3D5BF0FFFF      <1>     lea rdi, cmdPathSpec
+   338 00001237 E8D61F0000          <1>     call strlen ;Get the length of the input command
+   339 0000123C FFC9                <1>     dec ecx     ;Minus 1 for terminating null
+   340 0000123E 380D9DF0FFFF        <1>     cmp byte [cmdName], cl  ;Is it equal to the name of the command?
+   341 00001244 0F851B1A0000        <1>     jne launchChild     ;If not, a path was specified, exit!
+   342                              <1> ;Now we compare the name in the cmdName + 1 field to our commmand list
+   343 0000124A 488D1DD7F4FFFF      <1>     lea rbx, functionTable
+   344                              <1> .nextEntry:
+   345 00001251 0FB60B              <1>     movzx ecx, byte [rbx]   ;Get name entry length
+   346 00001254 80F9FF              <1>     cmp cl, -1  ;Are we at the end of the table?
+   347 00001257 0F84081A0000        <1>     je launchChild      ;If so, check externally now
+   348 0000125D 380D7EF0FFFF        <1>     cmp byte [cmdName], cl  ;Is command length the same as the tbl entry length?
+   349 00001263 7532                <1>     jnz .gotoNextEntry  ;If not, goto next entry
+   350                              <1>     ;Here they have the same length so lets see if the name is the same
+   351 00001265 56                  <1>     push rsi
+   352                              <1>     ;ecx has the length to compare
+   353 00001266 51                  <1>     push rcx
+   354 00001267 488D7301            <1>     lea rsi, qword [rbx + 1]
+   355 0000126B 488D3D70F0FFFF      <1>     lea rdi, qword [cmdName + 1]   ;Go to the name portion
+   356 00001272 F3A6                <1>     rep cmpsb   ;Check the strings are equal
+   357 00001274 59                  <1>     pop rcx
+   358 00001275 5E                  <1>     pop rsi
+   359 00001276 751F                <1>     jne .gotoNextEntry
+   360                              <1>     ;Here it was found both strings are equal
+   361 00001278 488D7C0B01          <1>     lea rdi, qword [rbx + rcx + 1]  ;make rdi point to offset from startLbl
+   362 0000127D 480FB71F            <1>     movzx rbx, word [rdi]
+   363 00001281 488D3D78EDFFFF      <1>     lea rdi, startLbl
+   364 00001288 4801FB              <1>     add rbx, rdi
+   365 0000128B FFD3                <1>     call rbx    ;Call this function...
+   366                              <1>     retc    ;Always return with CF=CY on error. Error code set to -1
+    57                              <2> cret c
+    19                              <3> %%_base:
+    20                              <3> %assign baseVar %%_base-$$
+    21                              <3>  %ifdef retOff
+    22                              <3>  %if (baseVar - retOff <= 126) && (baseVar > retOff)
+    23                              <3>  %ifdef currSegVBase
+    24                              <3>  j%+1 short (retOff+currSegVBase)
+    25                              <3>  %else
+    26 0000128D 72(18)              <3>  j%+1 short retOff
+    27                              <3>  %endif
+    28                              <3>  %else
+    29                              <3>  j%-1 short %%a
+    30                              <3>  return
+    31                              <3> %%a:
+    32                              <3>  %endif
+    33                              <3>  %else
+    34                              <3>  j%-1 short %%a
+    35                              <3>  return
+    36                              <3> %%a:
+    37                              <3>  %endif
+   367 0000128F C60577EDFFFF00      <1>     mov byte [returnCode], 0 ;Set the retcode to 0 if ok!
+   368                              <1>     return  ;... and return
     13                              <2> %%_ret:
     14 00001296 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-   367                              <1> .gotoNextEntry:
-   368 00001297 4881C303000000      <1>     add rbx, 3      ;Go past the first count byte and the address word
-   369 0000129E 4801CB              <1>     add rbx, rcx    ;Go past the length of the command name too
-   370 000012A1 EBAD                <1>     jmp short .nextEntry
-   371                              <1> .dfltErrExit:
-   372 000012A3 488D15C8F5FFFF      <1>     lea rdx, badCmd
-   373 000012AA B409                <1>     mov ah, 09h
-   374 000012AC CD21                <1>     int 21h
-   375                              <1>     return
+   369                              <1> .gotoNextEntry:
+   370 00001297 4881C303000000      <1>     add rbx, 3      ;Go past the first count byte and the address word
+   371 0000129E 4801CB              <1>     add rbx, rcx    ;Go past the length of the command name too
+   372 000012A1 EBAE                <1>     jmp short .nextEntry
+   373                              <1> .dfltErrExit:
+   374 000012A3 488D15C8F5FFFF      <1>     lea rdx, badCmd
+   375 000012AA B409                <1>     mov ah, 09h
+   376 000012AC CD21                <1>     int 21h
+   377                              <1>     return
     13                              <2> %%_ret:
     14 000012AE C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-   376                              <1> 
-   377                              <1> redirFailure:
-   378 000012AF 488D152BFBFFFF      <1>     lea rdx, redirErrMsg
-   379 000012B6 B913000000          <1>     mov ecx, redirErrMsgL
-   380 000012BB EB0C                <1>     jmp short redirPipeFailureCommon
-   381                              <1> pipeFailure:
-   382 000012BD 488D1506FBFFFF      <1>     lea rdx, pipeErrMsg
-   383 000012C4 B917000000          <1>     mov ecx, pipeErrMsgL
-   384                              <1> redirPipeFailureCommon:
-   385                              <1> ;This routine is called if any problems happen during 
-   386                              <1> ;This routine tries to close whatever handles are not -1 and delete
-   387                              <1> ; pipe files if the pipe count is not 0
-   388                              <1> ;It resets all variables and proceeds.
-   389 000012C9 B800400000          <1>     mov eax, 4000h  ;Write handle
-   390 000012CE BB02000000          <1>     mov ebx, 2  ;Write to STDERR
-   391 000012D3 CD21                <1>     int 21h
-   392 000012D5 31DB                <1>     xor ebx, ebx    ;Select STDIN
-   393 000012D7 E8C6000000          <1>     call .closeHandle
-   394 000012DC FFC3                <1>     inc ebx         ;Select STDOUT
-   395 000012DE E8BF000000          <1>     call .closeHandle
-   396 000012E3 B8023D0000          <1>     mov eax, 3D02h  ;Open read/write
-   397 000012E8 488D153EFBFFFF      <1>     lea rdx, conName
-   398 000012EF CD21                <1>     int 21h
-   399 000012F1 89C3                <1>     mov ebx, eax    ;Move file handle to ebx
-   400 000012F3 B800450000          <1>     mov eax, 4500h  ;DUP
-   401 000012F8 CD21                <1>     int 21h
-   402 000012FA 66C705A2EDFFFF0000  <1>     mov word [redirIn], 0  ;Clear both flags
-   403 00001303 0FB71D9DEDFFFF      <1>     movzx ebx, word [redirSTDIN]
-   404 0000130A E893000000          <1>     call .closeHandle
-   405                              <1>     ;Close and zero both STDIN and STDOUT handle vars
-   406 0000130F 66C7058FEDFFFFFFFF  <1>     mov word [redirSTDIN], -1
-   407 00001318 0FB71D8AEDFFFF      <1>     movzx ebx, word [redirSTDOUT]
-   408 0000131F E87E000000          <1>     call .closeHandle
-   409 00001324 66C7057CEDFFFFFFFF  <1>     mov word [redirSTDOUT], -1
-   410 0000132D 0FB71D6CEDFFFF      <1>     movzx ebx, word [pipeSTDIN]
-   411 00001334 E869000000          <1>     call .closeHandle
-   412 00001339 66C7055EEDFFFFFFFF  <1>     mov word [pipeSTDIN], -1
-   413 00001342 0FB71D59EDFFFF      <1>     movzx ebx, word [pipeSTDOUT]
-   414 00001349 E854000000          <1>     call .closeHandle
-   415 0000134E 66C7054BEDFFFFFFFF  <1>     mov word [pipeSTDOUT], -1
-   416 00001357 C60541EDFFFF00      <1>     mov byte [pipeFlag], 0  ;Cover the pipe number too
-   417 0000135E 488D1528F0FFFF      <1>     lea rdx, qword [pipe1Filespec]
-   418 00001365 803A00              <1>     cmp byte [rdx], 0
-   419 00001368 7407                <1>     jz .checkOld
-   420 0000136A B800410000          <1>     mov eax, 4100h  ;Del File pointed to by rdx
-   421 0000136F CD21                <1>     int 21h
-   422                              <1> .checkOld:
-   423 00001371 488D1564F0FFFF      <1>     lea rdx, qword [pipe2Filespec]
-   424 00001378 803A00              <1>     cmp byte [rdx],0
-   425 0000137B 7407                <1>     jz .pipeNamesComplete
-   426 0000137D B800410000          <1>     mov eax, 4100h  ;Del File pointed to by dl
-   427 00001382 CD21                <1>     int 21h
-   428                              <1> .pipeNamesComplete:
-   429 00001384 31C0                <1>     xor eax, eax
-   430                              <1>     ;Invalidate the pointers and the paths too
-   431 00001386 4889059EF0FFFF      <1>     mov qword [newPipe], rax
-   432 0000138D 4889059FF0FFFF      <1>     mov qword [oldPipe], rax
-   433 00001394 8905F3EFFFFF        <1>     mov dword [pipe1Filespec], eax
-   434 0000139A 89053CF0FFFF        <1>     mov dword [pipe2Filespec], eax
-   435 000013A0 F9                  <1>     stc
-   436                              <1>     return
+   378                              <1> 
+   379                              <1> redirFailure:
+   380 000012AF 488D152BFBFFFF      <1>     lea rdx, redirErrMsg
+   381 000012B6 B913000000          <1>     mov ecx, redirErrMsgL
+   382 000012BB EB0C                <1>     jmp short redirPipeFailureCommon
+   383                              <1> pipeFailure:
+   384 000012BD 488D1506FBFFFF      <1>     lea rdx, pipeErrMsg
+   385 000012C4 B917000000          <1>     mov ecx, pipeErrMsgL
+   386                              <1> redirPipeFailureCommon:
+   387                              <1> ;This routine is called if any problems happen during 
+   388                              <1> ;This routine tries to close whatever handles are not -1 and delete
+   389                              <1> ; pipe files if the pipe count is not 0
+   390                              <1> ;It resets all variables and proceeds.
+   391 000012C9 B800400000          <1>     mov eax, 4000h  ;Write handle
+   392 000012CE BB02000000          <1>     mov ebx, 2  ;Write to STDERR
+   393 000012D3 CD21                <1>     int 21h
+   394 000012D5 31DB                <1>     xor ebx, ebx    ;Select STDIN
+   395 000012D7 E8C6000000          <1>     call .closeHandle
+   396 000012DC FFC3                <1>     inc ebx         ;Select STDOUT
+   397 000012DE E8BF000000          <1>     call .closeHandle
+   398 000012E3 B8023D0000          <1>     mov eax, 3D02h  ;Open read/write
+   399 000012E8 488D153EFBFFFF      <1>     lea rdx, conName
+   400 000012EF CD21                <1>     int 21h
+   401 000012F1 89C3                <1>     mov ebx, eax    ;Move file handle to ebx
+   402 000012F3 B800450000          <1>     mov eax, 4500h  ;DUP
+   403 000012F8 CD21                <1>     int 21h
+   404 000012FA 66C705A2EDFFFF0000  <1>     mov word [redirIn], 0  ;Clear both flags
+   405 00001303 0FB71D9DEDFFFF      <1>     movzx ebx, word [redirSTDIN]
+   406 0000130A E893000000          <1>     call .closeHandle
+   407                              <1>     ;Close and zero both STDIN and STDOUT handle vars
+   408 0000130F 66C7058FEDFFFFFFFF  <1>     mov word [redirSTDIN], -1
+   409 00001318 0FB71D8AEDFFFF      <1>     movzx ebx, word [redirSTDOUT]
+   410 0000131F E87E000000          <1>     call .closeHandle
+   411 00001324 66C7057CEDFFFFFFFF  <1>     mov word [redirSTDOUT], -1
+   412 0000132D 0FB71D6CEDFFFF      <1>     movzx ebx, word [pipeSTDIN]
+   413 00001334 E869000000          <1>     call .closeHandle
+   414 00001339 66C7055EEDFFFFFFFF  <1>     mov word [pipeSTDIN], -1
+   415 00001342 0FB71D59EDFFFF      <1>     movzx ebx, word [pipeSTDOUT]
+   416 00001349 E854000000          <1>     call .closeHandle
+   417 0000134E 66C7054BEDFFFFFFFF  <1>     mov word [pipeSTDOUT], -1
+   418 00001357 C60541EDFFFF00      <1>     mov byte [pipeFlag], 0  ;Cover the pipe number too
+   419 0000135E 488D1528F0FFFF      <1>     lea rdx, qword [pipe1Filespec]
+   420 00001365 803A00              <1>     cmp byte [rdx], 0
+   421 00001368 7407                <1>     jz .checkOld
+   422 0000136A B800410000          <1>     mov eax, 4100h  ;Del File pointed to by rdx
+   423 0000136F CD21                <1>     int 21h
+   424                              <1> .checkOld:
+   425 00001371 488D1564F0FFFF      <1>     lea rdx, qword [pipe2Filespec]
+   426 00001378 803A00              <1>     cmp byte [rdx],0
+   427 0000137B 7407                <1>     jz .pipeNamesComplete
+   428 0000137D B800410000          <1>     mov eax, 4100h  ;Del File pointed to by dl
+   429 00001382 CD21                <1>     int 21h
+   430                              <1> .pipeNamesComplete:
+   431 00001384 31C0                <1>     xor eax, eax
+   432                              <1>     ;Invalidate the pointers and the paths too
+   433 00001386 4889059EF0FFFF      <1>     mov qword [newPipe], rax
+   434 0000138D 4889059FF0FFFF      <1>     mov qword [oldPipe], rax
+   435 00001394 8905F3EFFFFF        <1>     mov dword [pipe1Filespec], eax
+   436 0000139A 89053CF0FFFF        <1>     mov dword [pipe2Filespec], eax
+   437 000013A0 F9                  <1>     stc
+   438                              <1>     return
     13                              <2> %%_ret:
     14 000013A1 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-   437                              <1> .closeHandle:
-   438 000013A2 81FBFFFFFFFF        <1>     cmp ebx, -1
-   439                              <1>     rete
+   439                              <1> .closeHandle:
+   440 000013A2 81FBFFFFFFFF        <1>     cmp ebx, -1
+   441                              <1>     rete
     49                              <2> cret e
     19                              <3> %%_base:
     20                              <3> %assign baseVar %%_base-$$
@@ -1976,104 +1998,104 @@
     35                              <3>  return
     36                              <3> %%a:
     37                              <3>  %endif
-   440 000013AA B8003E0000          <1>     mov eax, 3E00h
-   441 000013AF CD21                <1>     int 21h
-   442                              <1>     return
+   442 000013AA B8003E0000          <1>     mov eax, 3E00h
+   443 000013AF CD21                <1>     int 21h
+   444                              <1>     return
     13                              <2> %%_ret:
     14 000013B1 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-   443                              <1> 
-   444                              <1> cleanUpRedir:
-   445                              <1> ;Cleans up the redir stuff after we are done.
-   446 000013B2 0FB705E7ECFFFF      <1>     movzx eax, word [pipeSTDIN]
-   447 000013B9 0FB71DE2ECFFFF      <1>     movzx ebx, word [pipeSTDOUT]
-   448 000013C0 C1E310              <1>     shl ebx, 10h
-   449 000013C3 09D8                <1>     or eax, ebx
-   450 000013C5 3DFFFFFFFF          <1>     cmp eax, -1
-   451 000013CA 750C                <1>     jne .pipe
-   452 000013CC C605CCECFFFF00      <1>     mov byte [pipeFlag], 0  ;Clear the flag
-   453 000013D3 E9CD000000          <1>     jmp .redirInClear   ;If no piping, skip
-   454                              <1> .pipe:
-   455                              <1> ;Pipe processing here
-   456                              <1> ;We handle stdin, closing the redir if it is and deleting
-   457                              <1> ; the redir file.
-   458                              <1> ;Then we handle stdout, moving the redir to stdin.
-   459 000013D8 66813DBFECFFFFFFFF  <1>     cmp word [pipeSTDIN], -1
-   460 000013E1 7443                <1>     je .pipeNostdin
-   461                              <1>     ;We close the handle first and delete the file.
-   462 000013E3 0FB71DB6ECFFFF      <1>     movzx ebx, word [pipeSTDIN] 
-   463 000013EA 31C9                <1>     xor ecx, ecx    ;DUP into STDIN closing the redir
-   464 000013EC B800460000          <1>     mov eax, 4600h
-   465 000013F1 CD21                <1>     int 21h
-   466 000013F3 0F82C4FEFFFF        <1>     jc pipeFailure
-   467 000013F9 B8003E0000          <1>     mov eax, 3E00h  ;Close the copy
-   468 000013FE CD21                <1>     int 21h
-   469 00001400 0F82B7FEFFFF        <1>     jc pipeFailure
-   470 00001406 488B1526F0FFFF      <1>     mov rdx, qword [oldPipe]    ;Get the ptr to the filename
-   471 0000140D B800410000          <1>     mov eax, 4100h  ;Delete the file!
-   472 00001412 CD21                <1>     int 21h
-   473 00001414 0F82A3FEFFFF        <1>     jc pipeFailure
-   474 0000141A C60200              <1>     mov byte [rdx], 0           ;Mark this buffer as free
-   475 0000141D 66C7057AECFFFFFFFF  <1>     mov word [pipeSTDIN], -1    ;This has been closed now
-   476                              <1> .pipeNostdin:
-   477 00001426 66813D73ECFFFFFFFF  <1>     cmp word [pipeSTDOUT], -1   ;If no stdout redir, exit now
-   478 0000142F 7474                <1>     je .redirInClear
-   479                              <1> ;Duplicate STDIN to save across pipe
-   480 00001431 B800450000          <1>     mov eax, 4500h
-   481 00001436 31DB                <1>     xor ebx, ebx    ;Set ebx to STDIN
-   482 00001438 CD21                <1>     int 21h
-   483 0000143A 0F827DFEFFFF        <1>     jc pipeFailure
-   484 00001440 66890559ECFFFF      <1>     mov word [pipeSTDIN], ax    ;Save duplicate here
-   485                              <1> 
-   486                              <1> ;Now move STDOUT to STDIN, closing original STDIN in the process
-   487 00001447 B800460000          <1>     mov eax, 4600h
-   488 0000144C 89D9                <1>     mov ecx, ebx    ;DUP STDOUT into STDIN
-   489 0000144E FFC3                <1>     inc ebx ;ebx = 1, ecx = 0
-   490 00001450 CD21                <1>     int 21h
-   491 00001452 0F8265FEFFFF        <1>     jc pipeFailure
-   492                              <1> 
-   493                              <1> ;Now return the original stdout to stdout
-   494 00001458 89D9                <1>     mov ecx, ebx
-   495 0000145A 0FB71D41ECFFFF      <1>     movzx ebx, word [pipeSTDOUT]
-   496 00001461 B800460000          <1>     mov eax, 4600h  ;ebx = pipeSTDOUT, ecx = 1
-   497 00001466 CD21                <1>     int 21h
-   498 00001468 0F824FFEFFFF        <1>     jc pipeFailure
-   499                              <1> 
-   500                              <1> ;Now close the DUP'ed STDOUT
-   501 0000146E B8003E0000          <1>     mov eax, 3E00h
-   502 00001473 CD21                <1>     int 21h
-   503 00001475 0F8242FEFFFF        <1>     jc pipeFailure
-   504                              <1> 
-   505                              <1> ;Finally unwind STDIN to the beginning of the file
-   506 0000147B B800420000          <1>     mov eax, 4200h  ;Seek from start of file
-   507 00001480 31DB                <1>     xor ebx, ebx    ;STDIN handle
-   508 00001482 89D9                <1>     mov ecx, ebx    ;Set high 32 bits
-   509 00001484 89DA                <1>     mov edx, ebx    ;Set low 32 bits
-   510 00001486 CD21                <1>     int 21h
-   511 00001488 0F822FFEFFFF        <1>     jc pipeFailure  ;This should never happen
-   512                              <1> 
-   513 0000148E 488B1596EFFFFF      <1>     mov rdx, qword [newPipe]    ;Move the pathname pointer
-   514 00001495 48891597EFFFFF      <1>     mov qword [oldPipe], rdx
-   515 0000149C 66C705FDEBFFFFFFFF  <1>     mov word [pipeSTDOUT], -1   ;Set this to free for next use
-   516                              <1> .redirInClear:
-   517                              <1> ;Check redir in
-   518 000014A5 F605F9EBFFFFFF      <1>     test byte [redirIn], -1
-   519 000014AC 7433                <1>     jz .redirOutClear
-   520                              <1> 
-   521 000014AE 0FB71DF2EBFFFF      <1>     movzx ebx, word [redirSTDIN]    ;Put this file back to STDIN
-   522 000014B5 31C9                <1>     xor ecx, ecx    ;Duplicate original STDIN into CX (into STDIN position)
-   523 000014B7 B800460000          <1>     mov eax, 4600h  ;This closes the redir file in the process
-   524 000014BC CD21                <1>     int 21h
-   525 000014BE 0F82EBFDFFFF        <1>     jc redirFailure
-   526 000014C4 B8003E0000          <1>     mov eax, 3E00h  ;Now close BX in the process too remove duplicates.
-   527 000014C9 CD21                <1>     int 21h
-   528 000014CB 0F82DEFDFFFF        <1>     jc redirFailure
-   529 000014D1 66C705CDEBFFFFFFFF  <1>     mov word [redirSTDIN], -1  ;Replace the file handle with -1
-   530 000014DA C605C4EBFFFF00      <1>     mov byte [redirIn], 0   ;Clear the flag
-   531                              <1> .redirOutClear:
-   532                              <1> ;Now check Redir Out
-   533 000014E1 F605BEEBFFFFFF      <1>     test byte [redirOut], -1
-   534                              <1>     retz    ;Return if not set
+   445                              <1> 
+   446                              <1> cleanUpRedir:
+   447                              <1> ;Cleans up the redir stuff after we are done.
+   448 000013B2 0FB705E7ECFFFF      <1>     movzx eax, word [pipeSTDIN]
+   449 000013B9 0FB71DE2ECFFFF      <1>     movzx ebx, word [pipeSTDOUT]
+   450 000013C0 C1E310              <1>     shl ebx, 10h
+   451 000013C3 09D8                <1>     or eax, ebx
+   452 000013C5 3DFFFFFFFF          <1>     cmp eax, -1
+   453 000013CA 750C                <1>     jne .pipe
+   454 000013CC C605CCECFFFF00      <1>     mov byte [pipeFlag], 0  ;Clear the flag
+   455 000013D3 E9CD000000          <1>     jmp .redirInClear   ;If no piping, skip
+   456                              <1> .pipe:
+   457                              <1> ;Pipe processing here
+   458                              <1> ;We handle stdin, closing the redir if it is and deleting
+   459                              <1> ; the redir file.
+   460                              <1> ;Then we handle stdout, moving the redir to stdin.
+   461 000013D8 66813DBFECFFFFFFFF  <1>     cmp word [pipeSTDIN], -1
+   462 000013E1 7443                <1>     je .pipeNostdin
+   463                              <1>     ;We close the handle first and delete the file.
+   464 000013E3 0FB71DB6ECFFFF      <1>     movzx ebx, word [pipeSTDIN] 
+   465 000013EA 31C9                <1>     xor ecx, ecx    ;DUP into STDIN closing the redir
+   466 000013EC B800460000          <1>     mov eax, 4600h
+   467 000013F1 CD21                <1>     int 21h
+   468 000013F3 0F82C4FEFFFF        <1>     jc pipeFailure
+   469 000013F9 B8003E0000          <1>     mov eax, 3E00h  ;Close the copy
+   470 000013FE CD21                <1>     int 21h
+   471 00001400 0F82B7FEFFFF        <1>     jc pipeFailure
+   472 00001406 488B1526F0FFFF      <1>     mov rdx, qword [oldPipe]    ;Get the ptr to the filename
+   473 0000140D B800410000          <1>     mov eax, 4100h  ;Delete the file!
+   474 00001412 CD21                <1>     int 21h
+   475 00001414 0F82A3FEFFFF        <1>     jc pipeFailure
+   476 0000141A C60200              <1>     mov byte [rdx], 0           ;Mark this buffer as free
+   477 0000141D 66C7057AECFFFFFFFF  <1>     mov word [pipeSTDIN], -1    ;This has been closed now
+   478                              <1> .pipeNostdin:
+   479 00001426 66813D73ECFFFFFFFF  <1>     cmp word [pipeSTDOUT], -1   ;If no stdout redir, exit now
+   480 0000142F 7474                <1>     je .redirInClear
+   481                              <1> ;Duplicate STDIN to save across pipe
+   482 00001431 B800450000          <1>     mov eax, 4500h
+   483 00001436 31DB                <1>     xor ebx, ebx    ;Set ebx to STDIN
+   484 00001438 CD21                <1>     int 21h
+   485 0000143A 0F827DFEFFFF        <1>     jc pipeFailure
+   486 00001440 66890559ECFFFF      <1>     mov word [pipeSTDIN], ax    ;Save duplicate here
+   487                              <1> 
+   488                              <1> ;Now move STDOUT to STDIN, closing original STDIN in the process
+   489 00001447 B800460000          <1>     mov eax, 4600h
+   490 0000144C 89D9                <1>     mov ecx, ebx    ;DUP STDOUT into STDIN
+   491 0000144E FFC3                <1>     inc ebx ;ebx = 1, ecx = 0
+   492 00001450 CD21                <1>     int 21h
+   493 00001452 0F8265FEFFFF        <1>     jc pipeFailure
+   494                              <1> 
+   495                              <1> ;Now return the original stdout to stdout
+   496 00001458 89D9                <1>     mov ecx, ebx
+   497 0000145A 0FB71D41ECFFFF      <1>     movzx ebx, word [pipeSTDOUT]
+   498 00001461 B800460000          <1>     mov eax, 4600h  ;ebx = pipeSTDOUT, ecx = 1
+   499 00001466 CD21                <1>     int 21h
+   500 00001468 0F824FFEFFFF        <1>     jc pipeFailure
+   501                              <1> 
+   502                              <1> ;Now close the DUP'ed STDOUT
+   503 0000146E B8003E0000          <1>     mov eax, 3E00h
+   504 00001473 CD21                <1>     int 21h
+   505 00001475 0F8242FEFFFF        <1>     jc pipeFailure
+   506                              <1> 
+   507                              <1> ;Finally unwind STDIN to the beginning of the file
+   508 0000147B B800420000          <1>     mov eax, 4200h  ;Seek from start of file
+   509 00001480 31DB                <1>     xor ebx, ebx    ;STDIN handle
+   510 00001482 89D9                <1>     mov ecx, ebx    ;Set high 32 bits
+   511 00001484 89DA                <1>     mov edx, ebx    ;Set low 32 bits
+   512 00001486 CD21                <1>     int 21h
+   513 00001488 0F822FFEFFFF        <1>     jc pipeFailure  ;This should never happen
+   514                              <1> 
+   515 0000148E 488B1596EFFFFF      <1>     mov rdx, qword [newPipe]    ;Move the pathname pointer
+   516 00001495 48891597EFFFFF      <1>     mov qword [oldPipe], rdx
+   517 0000149C 66C705FDEBFFFFFFFF  <1>     mov word [pipeSTDOUT], -1   ;Set this to free for next use
+   518                              <1> .redirInClear:
+   519                              <1> ;Check redir in
+   520 000014A5 F605F9EBFFFFFF      <1>     test byte [redirIn], -1
+   521 000014AC 7433                <1>     jz .redirOutClear
+   522                              <1> 
+   523 000014AE 0FB71DF2EBFFFF      <1>     movzx ebx, word [redirSTDIN]    ;Put this file back to STDIN
+   524 000014B5 31C9                <1>     xor ecx, ecx    ;Duplicate original STDIN into CX (into STDIN position)
+   525 000014B7 B800460000          <1>     mov eax, 4600h  ;This closes the redir file in the process
+   526 000014BC CD21                <1>     int 21h
+   527 000014BE 0F82EBFDFFFF        <1>     jc redirFailure
+   528 000014C4 B8003E0000          <1>     mov eax, 3E00h  ;Now close BX in the process too remove duplicates.
+   529 000014C9 CD21                <1>     int 21h
+   530 000014CB 0F82DEFDFFFF        <1>     jc redirFailure
+   531 000014D1 66C705CDEBFFFFFFFF  <1>     mov word [redirSTDIN], -1  ;Replace the file handle with -1
+   532 000014DA C605C4EBFFFF00      <1>     mov byte [redirIn], 0   ;Clear the flag
+   533                              <1> .redirOutClear:
+   534                              <1> ;Now check Redir Out
+   535 000014E1 F605BEEBFFFFFF      <1>     test byte [redirOut], -1
+   536                              <1>     retz    ;Return if not set
     41                              <2> cret z
     19                              <3> %%_base:
     20                              <3> %assign baseVar %%_base-$$
@@ -2097,192 +2119,192 @@
     35                              <3>  return
     36                              <3> %%a:
     37                              <3>  %endif
-   535                              <1> 
-   536 000014EB 0FB71DB7EBFFFF      <1>     movzx ebx, word [redirSTDOUT]    ;Put this file back to STDOUT
-   537 000014F2 B901000000          <1>     mov ecx, 1    ;Duplicate original STDOUT into CX (into STDOUT position)
-   538 000014F7 B800460000          <1>     mov eax, 4600h  ;This closes the redir file in the process
-   539 000014FC CD21                <1>     int 21h
-   540 000014FE 0F82ABFDFFFF        <1>     jc redirFailure
-   541 00001504 B8003E0000          <1>     mov eax, 3E00h  ;Now close BX in the process too remove duplicates.
-   542 00001509 CD21                <1>     int 21h
-   543 0000150B 0F829EFDFFFF        <1>     jc redirFailure
-   544 00001511 66C7058FEBFFFFFFFF  <1>     mov word [redirSTDOUT], -1  ;Replace the file handle with -1
-   545 0000151A C60585EBFFFF00      <1>     mov byte [redirOut], 0   ;Clear the flag
-   546                              <1>     return
+   537                              <1> 
+   538 000014EB 0FB71DB7EBFFFF      <1>     movzx ebx, word [redirSTDOUT]    ;Put this file back to STDOUT
+   539 000014F2 B901000000          <1>     mov ecx, 1    ;Duplicate original STDOUT into CX (into STDOUT position)
+   540 000014F7 B800460000          <1>     mov eax, 4600h  ;This closes the redir file in the process
+   541 000014FC CD21                <1>     int 21h
+   542 000014FE 0F82ABFDFFFF        <1>     jc redirFailure
+   543 00001504 B8003E0000          <1>     mov eax, 3E00h  ;Now close BX in the process too remove duplicates.
+   544 00001509 CD21                <1>     int 21h
+   545 0000150B 0F829EFDFFFF        <1>     jc redirFailure
+   546 00001511 66C7058FEBFFFFFFFF  <1>     mov word [redirSTDOUT], -1  ;Replace the file handle with -1
+   547 0000151A C60585EBFFFF00      <1>     mov byte [redirOut], 0   ;Clear the flag
+   548                              <1>     return
     13                              <2> %%_ret:
     14 00001521 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-   547                              <1> 
-   548                              <1> checkAndSetupRedir:
-   549                              <1> ;Checks and sets up redir as appropriate
-   550                              <1> ;Input: al = First char to check, if al < > >> or |, handled appropriately
-   551                              <1> ;       rsi points to the first char after the char in al in cmdBuffer
-   552                              <1> ;Output: ZF=NZ => No redir
-   553                              <1> ;        ZF=ZY => Redir
-   554                              <1> ;           rsi is moved to the first non-terminating char after redir filespec
-   555                              <1> ;CF=CY if pipe set or an embedded CR found. rsi points to first char past it!
-   556 00001522 57                  <1>     push rdi
-   557 00001523 3C3C                <1>     cmp al, "<"
-   558 00001525 7413                <1>     je .inputRedir
-   559 00001527 3C3E                <1>     cmp al, ">"
-   560 00001529 0F8495000000        <1>     je .outputRedir
-   561 0000152F 3C7C                <1>     cmp al, "|"
-   562 00001531 0F845D010000        <1>     je .pipeSetup
-   563 00001537 F8                  <1>     clc
-   564                              <1> .redirExit:
-   565 00001538 5F                  <1>     pop rdi
-   566                              <1>     return
+   549                              <1> 
+   550                              <1> checkAndSetupRedir:
+   551                              <1> ;Checks and sets up redir as appropriate
+   552                              <1> ;Input: al = First char to check, if al < > >> or |, handled appropriately
+   553                              <1> ;       rsi points to the first char after the char in al in cmdBuffer
+   554                              <1> ;Output: ZF=NZ => No redir
+   555                              <1> ;        ZF=ZY => Redir
+   556                              <1> ;           rsi is moved to the first non-terminating char after redir filespec
+   557                              <1> ;CF=CY if pipe set or an embedded CR found. rsi points to first char past it!
+   558 00001522 57                  <1>     push rdi
+   559 00001523 3C3C                <1>     cmp al, "<"
+   560 00001525 7413                <1>     je .inputRedir
+   561 00001527 3C3E                <1>     cmp al, ">"
+   562 00001529 0F8495000000        <1>     je .outputRedir
+   563 0000152F 3C7C                <1>     cmp al, "|"
+   564 00001531 0F845D010000        <1>     je .pipeSetup
+   565 00001537 F8                  <1>     clc
+   566                              <1> .redirExit:
+   567 00001538 5F                  <1>     pop rdi
+   568                              <1>     return
     13                              <2> %%_ret:
     14 00001539 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-   567                              <1> .inputRedir:
-   568 0000153A 488D3DAEEDFFFF      <1>     lea rdi, rdrInFilespec
-   569 00001541 E8EE010000          <1>     call .ensureRightBuffer
-   570 00001546 E8E31C0000          <1>     call skipDelimiters ;Skip spaces between < and the filespec
-   571 0000154B E81A1E0000          <1>     call cpDelimPathToBufz
-   572 00001550 48FFCE              <1>     dec rsi ;Point rsi back to the delimiter char as 
-   573 00001553 F6054AEBFFFFFF      <1>     test byte [redirNull], -1   ;If redirNull set then dont act!
-   574 0000155A 0F852D010000        <1>     jnz .redirNull
-   575                              <1>     ;Setup the redir here for STDIN
-   576 00001560 F6053EEBFFFFFF      <1>     test byte [redirIn], -1
-   577 00001567 0F85BC010000        <1>     jnz .redirError
-   578 0000156D C60531EBFFFFFF      <1>     mov byte [redirIn], -1  ;Set the redir in flag
-   579 00001574 31DB                <1>     xor ebx, ebx    ;DUP STDIN
-   580 00001576 B800450000          <1>     mov eax, 4500h
-   581 0000157B CD21                <1>     int 21h
-   582 0000157D 0F82A6010000        <1>     jc .redirError
-   583 00001583 6689051DEBFFFF      <1>     mov word [redirSTDIN], ax   ;Save the handle in variable
-   584 0000158A 488D155EEDFFFF      <1>     lea rdx, rdrInFilespec
-   585 00001591 B8023D0000          <1>     mov eax, 3D02h  ;Open file for read write access
-   586 00001596 CD21                <1>     int 21h
-   587 00001598 0F828B010000        <1>     jc .redirError
-   588 0000159E 31C9                <1>     xor ecx, ecx    ;Close STDIN and duplicate bx into it
-   589 000015A0 0FB7D8              <1>     movzx ebx, ax   ;Move the handle into bx to duplicate into cx (STDIN)
-   590 000015A3 B800460000          <1>     mov eax, 4600h
-   591 000015A8 CD21                <1>     int 21h
-   592 000015AA 0F8279010000        <1>     jc .redirError
-   593 000015B0 B8003E0000          <1>     mov eax, 3E00h  ;Now close the original copy of the handle
-   594 000015B5 CD21                <1>     int 21h
-   595 000015B7 0F826C010000        <1>     jc .redirError
-   596 000015BD 30C0                <1>     xor al, al
-   597 000015BF E974FFFFFF          <1>     jmp .redirExit
-   598                              <1> .outputRedir:
-   599 000015C4 BB01000000          <1>     mov ebx, 1  ;Set this as the flag
-   600 000015C9 803E3E              <1>     cmp byte [rsi], ">" ;Was this a > or a >>
-   601 000015CC 7505                <1>     jne .notDouble
-   602 000015CE FFC3                <1>     inc ebx ;Inc to make it 2
-   603 000015D0 48FFC6              <1>     inc rsi ;Go past it too
-   604                              <1> .notDouble:
-   605 000015D3 488D3D64EDFFFF      <1>     lea rdi, rdrOutFilespec
-   606 000015DA 53                  <1>     push rbx
-   607 000015DB E854010000          <1>     call .ensureRightBuffer
-   608 000015E0 E8491C0000          <1>     call skipDelimiters
-   609 000015E5 E8801D0000          <1>     call cpDelimPathToBufz
-   610 000015EA 5B                  <1>     pop rbx
-   611 000015EB 48FFCE              <1>     dec rsi ;Point rsi back to the delimiter char as 
-   612 000015EE F605AFEAFFFFFF      <1>     test byte [redirNull], -1   ;If redirNull set then dont act!
-   613 000015F5 0F8592000000        <1>     jnz .redirNull
-   614 000015FB 841DA5EAFFFF        <1>     test byte [redirOut], bl    ;If there is already an out, fail!
-   615 00001601 0F8522010000        <1>     jnz .redirError 
-   616 00001607 881D99EAFFFF        <1>     mov byte [redirOut], bl
-   617                              <1>     ;Setup the redir here for STDOUT
-   618 0000160D BB01000000          <1>     mov ebx, 1    ;DUP STDOUT
-   619 00001612 B800450000          <1>     mov eax, 4500h
-   620 00001617 CD21                <1>     int 21h
-   621 00001619 0F820A010000        <1>     jc .redirError
-   622 0000161F 66890583EAFFFF      <1>     mov word [redirSTDOUT], ax   ;Save the handle in variable
-   623 00001626 488D1511EDFFFF      <1>     lea rdx, rdrOutFilespec
-   624 0000162D B8023D0000          <1>     mov eax, 3D02h  ;Open file for read write access
-   625 00001632 CD21                <1>     int 21h
-   626 00001634 730F                <1>     jnc .fileExists
-   627 00001636 B8003C0000          <1>     mov eax, 3C00h
-   628 0000163B 31C9                <1>     xor ecx, ecx  ;Make the file with no attributes
-   629 0000163D CD21                <1>     int 21h
-   630 0000163F 0F82E4000000        <1>     jc .redirError
-   631                              <1> .fileExists:
-   632 00001645 B901000000          <1>     mov ecx, 1      ;Close STDOUT and duplicate bx into it
-   633 0000164A 0FB7D8              <1>     movzx ebx, ax   ;AX has the new handle for output
-   634 0000164D B800460000          <1>     mov eax, 4600h  ;DUP2
-   635 00001652 CD21                <1>     int 21h
-   636 00001654 0F82CF000000        <1>     jc .redirError
-   637 0000165A B8003E0000          <1>     mov eax, 3E00h  ;Now close the original copy of the handle (in bx)
-   638 0000165F CD21                <1>     int 21h
-   639 00001661 0F82C2000000        <1>     jc .redirError
-   640 00001667 803D38EAFFFF01      <1>     cmp byte [redirOut], 1
-   641 0000166E 7416                <1>     je .dontAppend
-   642                              <1>     ;Here we move the file pointer to the end of the file
-   643 00001670 31D2                <1>     xor edx, edx    ;Low order 32 bits
-   644 00001672 31C9                <1>     xor ecx, ecx    ;High order 32 bits
-   645 00001674 BB01000000          <1>     mov ebx, 1  ;We seek STDOUT to the end
-   646 00001679 B802420000          <1>     mov eax, 4202h  ;Seek from end of file
-   647 0000167E CD21                <1>     int 21h
-   648 00001680 0F82A3000000        <1>     jc .redirError
-   649                              <1> .dontAppend:
-   650 00001686 C60519EAFFFFFF      <1>     mov byte [redirOut], -1
-   651                              <1> .redirNull:
-   652 0000168D 30C0                <1>     xor al, al
-   653 0000168F E9A4FEFFFF          <1>     jmp .redirExit
-   654                              <1> .pipeSetup:
-   655                              <1> ;We only need to setup STDOUT redirection to the pipe file
-   656 00001694 56                  <1>     push rsi    ;Save rsi pointing to char past |
-   657 00001695 E8941B0000          <1>     call skipDelimiters ;Check if this is a double ||
-   658 0000169A 803E7C              <1>     cmp byte [rsi], "|" 
-   659 0000169D 5E                  <1>     pop rsi
-   660 0000169E 747E                <1>     je .pipeError
-   661 000016A0 F605FDE9FFFFFF      <1>     test byte [redirNull], -1   ;If redirNull set then dont act!
-   662 000016A7 7570                <1>     jnz .pipeNull
-   663 000016A9 488D15DDECFFFF      <1>     lea rdx, pipe1Filespec
-   664 000016B0 803A00              <1>     cmp byte [rdx], 0
-   665 000016B3 740C                <1>     jz .pathFound
-   666 000016B5 488D1520EDFFFF      <1>     lea rdx, pipe2Filespec
-   667 000016BC 803A00              <1>     cmp byte [rdx], 0
-   668 000016BF 755D                <1>     jnz .pipeError
-   669                              <1> .pathFound:
-   670 000016C1 48891563EDFFFF      <1>     mov qword [newPipe], rdx    ;Use this as the newPipe path
-   671 000016C8 B800450000          <1>     mov eax, 4500h  ;Now DUP STDOUT
-   672 000016CD BB01000000          <1>     mov ebx, 1
-   673 000016D2 CD21                <1>     int 21h
-   674 000016D4 7248                <1>     jc .pipeError
-   675 000016D6 668905C5E9FFFF      <1>     mov word [pipeSTDOUT], ax   ;Save the copy of the handle
-   676 000016DD E8121B0000          <1>     call getCurrentDrive    ;Get current drive in al (0 based number)
-   677 000016E2 0441                <1>     add al, "A"
-   678 000016E4 BB003A5C00          <1>     mov ebx, 005C3A00h  ;0,"\:",0
-   679 000016E9 88C3                <1>     mov bl, al  ;Move the drive letter into low byte of ebx
-   680 000016EB 891A                <1>     mov dword [rdx], ebx    ;Put the \ terminated path
-   681 000016ED 31C9                <1>     xor ecx, ecx      ;Hidden attributes
-   682 000016EF B8005A0000          <1>     mov eax, 5A00h  ;Create a temporary file
-   683 000016F4 CD21                <1>     int 21h
-   684 000016F6 7226                <1>     jc .pipeError
-   685                              <1>     ;AX has the handle for this file now, this will become STDOUT
-   686                              <1>     ;If this is the first pipe, we want to save a copy of this handle
-   687 000016F8 0FB7D8              <1>     movzx ebx, ax   ;Clone new handle into STDOUT
-   688 000016FB B901000000          <1>     mov ecx, 1
-   689 00001700 B800460000          <1>     mov eax, 4600h
-   690 00001705 CD21                <1>     int 21h
-   691 00001707 7215                <1>     jc .pipeError
-   692 00001709 B8003E0000          <1>     mov eax, 3E00h  ;Now close the original copy of the handle (in bx)
-   693 0000170E CD21                <1>     int 21h
-   694 00001710 720C                <1>     jc .pipeError
-   695 00001712 C60586E9FFFFFF      <1>     mov byte [pipeFlag], -1 ;Set the pipe flag up!
-   696                              <1> .pipeNull:
-   697 00001719 30C0                <1>     xor al, al  ;Set ZF
-   698 0000171B F9                  <1>     stc         ;But also CF to indicate pipe!
-   699 0000171C 5F                  <1>     pop rdi
-   700                              <1>     return
+   569                              <1> .inputRedir:
+   570 0000153A 488D3DAEEDFFFF      <1>     lea rdi, rdrInFilespec
+   571 00001541 E8EE010000          <1>     call .ensureRightBuffer
+   572 00001546 E8E31C0000          <1>     call skipDelimiters ;Skip spaces between < and the filespec
+   573 0000154B E81A1E0000          <1>     call cpDelimPathToBufz
+   574 00001550 48FFCE              <1>     dec rsi ;Point rsi back to the delimiter char as 
+   575 00001553 F6054AEBFFFFFF      <1>     test byte [redirNull], -1   ;If redirNull set then dont act!
+   576 0000155A 0F852D010000        <1>     jnz .redirNull
+   577                              <1>     ;Setup the redir here for STDIN
+   578 00001560 F6053EEBFFFFFF      <1>     test byte [redirIn], -1
+   579 00001567 0F85BC010000        <1>     jnz .redirError
+   580 0000156D C60531EBFFFFFF      <1>     mov byte [redirIn], -1  ;Set the redir in flag
+   581 00001574 31DB                <1>     xor ebx, ebx    ;DUP STDIN
+   582 00001576 B800450000          <1>     mov eax, 4500h
+   583 0000157B CD21                <1>     int 21h
+   584 0000157D 0F82A6010000        <1>     jc .redirError
+   585 00001583 6689051DEBFFFF      <1>     mov word [redirSTDIN], ax   ;Save the handle in variable
+   586 0000158A 488D155EEDFFFF      <1>     lea rdx, rdrInFilespec
+   587 00001591 B8023D0000          <1>     mov eax, 3D02h  ;Open file for read write access
+   588 00001596 CD21                <1>     int 21h
+   589 00001598 0F828B010000        <1>     jc .redirError
+   590 0000159E 31C9                <1>     xor ecx, ecx    ;Close STDIN and duplicate bx into it
+   591 000015A0 0FB7D8              <1>     movzx ebx, ax   ;Move the handle into bx to duplicate into cx (STDIN)
+   592 000015A3 B800460000          <1>     mov eax, 4600h
+   593 000015A8 CD21                <1>     int 21h
+   594 000015AA 0F8279010000        <1>     jc .redirError
+   595 000015B0 B8003E0000          <1>     mov eax, 3E00h  ;Now close the original copy of the handle
+   596 000015B5 CD21                <1>     int 21h
+   597 000015B7 0F826C010000        <1>     jc .redirError
+   598 000015BD 30C0                <1>     xor al, al
+   599 000015BF E974FFFFFF          <1>     jmp .redirExit
+   600                              <1> .outputRedir:
+   601 000015C4 BB01000000          <1>     mov ebx, 1  ;Set this as the flag
+   602 000015C9 803E3E              <1>     cmp byte [rsi], ">" ;Was this a > or a >>
+   603 000015CC 7505                <1>     jne .notDouble
+   604 000015CE FFC3                <1>     inc ebx ;Inc to make it 2
+   605 000015D0 48FFC6              <1>     inc rsi ;Go past it too
+   606                              <1> .notDouble:
+   607 000015D3 488D3D64EDFFFF      <1>     lea rdi, rdrOutFilespec
+   608 000015DA 53                  <1>     push rbx
+   609 000015DB E854010000          <1>     call .ensureRightBuffer
+   610 000015E0 E8491C0000          <1>     call skipDelimiters
+   611 000015E5 E8801D0000          <1>     call cpDelimPathToBufz
+   612 000015EA 5B                  <1>     pop rbx
+   613 000015EB 48FFCE              <1>     dec rsi ;Point rsi back to the delimiter char as 
+   614 000015EE F605AFEAFFFFFF      <1>     test byte [redirNull], -1   ;If redirNull set then dont act!
+   615 000015F5 0F8592000000        <1>     jnz .redirNull
+   616 000015FB 841DA5EAFFFF        <1>     test byte [redirOut], bl    ;If there is already an out, fail!
+   617 00001601 0F8522010000        <1>     jnz .redirError 
+   618 00001607 881D99EAFFFF        <1>     mov byte [redirOut], bl
+   619                              <1>     ;Setup the redir here for STDOUT
+   620 0000160D BB01000000          <1>     mov ebx, 1    ;DUP STDOUT
+   621 00001612 B800450000          <1>     mov eax, 4500h
+   622 00001617 CD21                <1>     int 21h
+   623 00001619 0F820A010000        <1>     jc .redirError
+   624 0000161F 66890583EAFFFF      <1>     mov word [redirSTDOUT], ax   ;Save the handle in variable
+   625 00001626 488D1511EDFFFF      <1>     lea rdx, rdrOutFilespec
+   626 0000162D B8023D0000          <1>     mov eax, 3D02h  ;Open file for read write access
+   627 00001632 CD21                <1>     int 21h
+   628 00001634 730F                <1>     jnc .fileExists
+   629 00001636 B8003C0000          <1>     mov eax, 3C00h
+   630 0000163B 31C9                <1>     xor ecx, ecx  ;Make the file with no attributes
+   631 0000163D CD21                <1>     int 21h
+   632 0000163F 0F82E4000000        <1>     jc .redirError
+   633                              <1> .fileExists:
+   634 00001645 B901000000          <1>     mov ecx, 1      ;Close STDOUT and duplicate bx into it
+   635 0000164A 0FB7D8              <1>     movzx ebx, ax   ;AX has the new handle for output
+   636 0000164D B800460000          <1>     mov eax, 4600h  ;DUP2
+   637 00001652 CD21                <1>     int 21h
+   638 00001654 0F82CF000000        <1>     jc .redirError
+   639 0000165A B8003E0000          <1>     mov eax, 3E00h  ;Now close the original copy of the handle (in bx)
+   640 0000165F CD21                <1>     int 21h
+   641 00001661 0F82C2000000        <1>     jc .redirError
+   642 00001667 803D38EAFFFF01      <1>     cmp byte [redirOut], 1
+   643 0000166E 7416                <1>     je .dontAppend
+   644                              <1>     ;Here we move the file pointer to the end of the file
+   645 00001670 31D2                <1>     xor edx, edx    ;Low order 32 bits
+   646 00001672 31C9                <1>     xor ecx, ecx    ;High order 32 bits
+   647 00001674 BB01000000          <1>     mov ebx, 1  ;We seek STDOUT to the end
+   648 00001679 B802420000          <1>     mov eax, 4202h  ;Seek from end of file
+   649 0000167E CD21                <1>     int 21h
+   650 00001680 0F82A3000000        <1>     jc .redirError
+   651                              <1> .dontAppend:
+   652 00001686 C60519EAFFFFFF      <1>     mov byte [redirOut], -1
+   653                              <1> .redirNull:
+   654 0000168D 30C0                <1>     xor al, al
+   655 0000168F E9A4FEFFFF          <1>     jmp .redirExit
+   656                              <1> .pipeSetup:
+   657                              <1> ;We only need to setup STDOUT redirection to the pipe file
+   658 00001694 56                  <1>     push rsi    ;Save rsi pointing to char past |
+   659 00001695 E8941B0000          <1>     call skipDelimiters ;Check if this is a double ||
+   660 0000169A 803E7C              <1>     cmp byte [rsi], "|" 
+   661 0000169D 5E                  <1>     pop rsi
+   662 0000169E 747E                <1>     je .pipeError
+   663 000016A0 F605FDE9FFFFFF      <1>     test byte [redirNull], -1   ;If redirNull set then dont act!
+   664 000016A7 7570                <1>     jnz .pipeNull
+   665 000016A9 488D15DDECFFFF      <1>     lea rdx, pipe1Filespec
+   666 000016B0 803A00              <1>     cmp byte [rdx], 0
+   667 000016B3 740C                <1>     jz .pathFound
+   668 000016B5 488D1520EDFFFF      <1>     lea rdx, pipe2Filespec
+   669 000016BC 803A00              <1>     cmp byte [rdx], 0
+   670 000016BF 755D                <1>     jnz .pipeError
+   671                              <1> .pathFound:
+   672 000016C1 48891563EDFFFF      <1>     mov qword [newPipe], rdx    ;Use this as the newPipe path
+   673 000016C8 B800450000          <1>     mov eax, 4500h  ;Now DUP STDOUT
+   674 000016CD BB01000000          <1>     mov ebx, 1
+   675 000016D2 CD21                <1>     int 21h
+   676 000016D4 7248                <1>     jc .pipeError
+   677 000016D6 668905C5E9FFFF      <1>     mov word [pipeSTDOUT], ax   ;Save the copy of the handle
+   678 000016DD E8121B0000          <1>     call getCurrentDrive    ;Get current drive in al (0 based number)
+   679 000016E2 0441                <1>     add al, "A"
+   680 000016E4 BB003A5C00          <1>     mov ebx, 005C3A00h  ;0,"\:",0
+   681 000016E9 88C3                <1>     mov bl, al  ;Move the drive letter into low byte of ebx
+   682 000016EB 891A                <1>     mov dword [rdx], ebx    ;Put the \ terminated path
+   683 000016ED 31C9                <1>     xor ecx, ecx      ;Hidden attributes
+   684 000016EF B8005A0000          <1>     mov eax, 5A00h  ;Create a temporary file
+   685 000016F4 CD21                <1>     int 21h
+   686 000016F6 7226                <1>     jc .pipeError
+   687                              <1>     ;AX has the handle for this file now, this will become STDOUT
+   688                              <1>     ;If this is the first pipe, we want to save a copy of this handle
+   689 000016F8 0FB7D8              <1>     movzx ebx, ax   ;Clone new handle into STDOUT
+   690 000016FB B901000000          <1>     mov ecx, 1
+   691 00001700 B800460000          <1>     mov eax, 4600h
+   692 00001705 CD21                <1>     int 21h
+   693 00001707 7215                <1>     jc .pipeError
+   694 00001709 B8003E0000          <1>     mov eax, 3E00h  ;Now close the original copy of the handle (in bx)
+   695 0000170E CD21                <1>     int 21h
+   696 00001710 720C                <1>     jc .pipeError
+   697 00001712 C60586E9FFFFFF      <1>     mov byte [pipeFlag], -1 ;Set the pipe flag up!
+   698                              <1> .pipeNull:
+   699 00001719 30C0                <1>     xor al, al  ;Set ZF
+   700 0000171B F9                  <1>     stc         ;But also CF to indicate pipe!
+   701 0000171C 5F                  <1>     pop rdi
+   702                              <1>     return
     13                              <2> %%_ret:
     14 0000171D C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-   701                              <1> .pipeError:
-   702 0000171E 5F                  <1>     pop rdi 
-   703 0000171F E899FBFFFF          <1>     call pipeFailure
-   704 00001724 E9A5F7FFFF          <1>     jmp commandMain ;Fully reset the state if a pipe failure occurs.
-   705                              <1> .redirError:
-   706 00001729 5F                  <1>     pop rdi 
-   707 0000172A E880FBFFFF          <1>     call redirFailure
-   708 0000172F E99AF7FFFF          <1>     jmp commandMain ;Fully reset the state if a redir failure occurs.
-   709                              <1> .ensureRightBuffer:
-   710 00001734 F60569E9FFFFFF      <1>     test byte [redirNull], -1   ;If redirNull not set then act!
-   711                              <1>     retz
+   703                              <1> .pipeError:
+   704 0000171E 5F                  <1>     pop rdi 
+   705 0000171F E899FBFFFF          <1>     call pipeFailure
+   706 00001724 E9A5F7FFFF          <1>     jmp commandMain ;Fully reset the state if a pipe failure occurs.
+   707                              <1> .redirError:
+   708 00001729 5F                  <1>     pop rdi 
+   709 0000172A E880FBFFFF          <1>     call redirFailure
+   710 0000172F E99AF7FFFF          <1>     jmp commandMain ;Fully reset the state if a redir failure occurs.
+   711                              <1> .ensureRightBuffer:
+   712 00001734 F60569E9FFFFFF      <1>     test byte [redirNull], -1   ;If redirNull not set then act!
+   713                              <1>     retz
     41                              <2> cret z
     19                              <3> %%_base:
     20                              <3> %assign baseVar %%_base-$$
@@ -2303,35 +2325,35 @@
     35                              <3>  return
     36                              <3> %%a:
     37                              <3>  %endif
-   712 0000173D 488D3DF7ECFFFF      <1>     lea rdi, searchSpec ;Use searchSpec as a nul instead
-   713                              <1>     return
+   714 0000173D 488D3DF7ECFFFF      <1>     lea rdi, searchSpec ;Use searchSpec as a nul instead
+   715                              <1>     return
     13                              <2> %%_ret:
     14 00001744 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-   714                              <1> 
-   715                              <1> 
-   716                              <1> int2Eh:   ;Interrupt interface for parsing and executing command lines
-   717                              <1> ;Input: rsi points to the count byte of a command line
-   718 00001745 4150                <1>     push r8
-   719 00001747 4151                <1>     push r9
-   720 00001749 B451                <1>     mov ah, 51h ;Get Current PSP in rdx
-   721 0000174B CD21                <1>     int 21h
-   722 0000174D 52                  <1>     push rdx    ;Save on the stack
-   723 0000174E 488D1DABE7FFFF      <1>     lea rbx, qword [startLbl - psp_size]    ;Get a psp ptr for this COMMAND.COM
-   724 00001755 B450                <1>     mov ah, 50h ;Set this version of COMMAND.COM as the current PSP
-   725 00001757 CD21                <1>     int 21h
-   726 00001759 4989D8              <1>     mov r8, rbx ;Set to point to the command.com psp
-   727 0000175C 4989D9              <1>     mov r9, rbx
-   728 0000175F 498DB881000000      <1>     lea rdi, qword [r8 + cmdLine]
-   729 00001766 B910000000          <1>     mov ecx, 10h    ;7Fh chars + 1 count byte / 8
-   730 0000176B F348A5              <1>     rep movsq   ;Copy command line over
-   731                              <1>     ;call doCommandLine
-   732 0000176E 5B                  <1>     pop rbx ;Get Old current PSP in rbx
-   733 0000176F B450                <1>     mov ah, 50h ;Set Current PSP
-   734 00001771 CD21                <1>     int 21h
-   735 00001773 4159                <1>     pop r9
-   736 00001775 4158                <1>     pop r8
-   737 00001777 48CF                <1>     iretq
+   716                              <1> 
+   717                              <1> 
+   718                              <1> int2Eh:   ;Interrupt interface for parsing and executing command lines
+   719                              <1> ;Input: rsi points to the count byte of a command line
+   720 00001745 4150                <1>     push r8
+   721 00001747 4151                <1>     push r9
+   722 00001749 B451                <1>     mov ah, 51h ;Get Current PSP in rdx
+   723 0000174B CD21                <1>     int 21h
+   724 0000174D 52                  <1>     push rdx    ;Save on the stack
+   725 0000174E 488D1DABE7FFFF      <1>     lea rbx, qword [startLbl - psp_size]    ;Get a psp ptr for this COMMAND.COM
+   726 00001755 B450                <1>     mov ah, 50h ;Set this version of COMMAND.COM as the current PSP
+   727 00001757 CD21                <1>     int 21h
+   728 00001759 4989D8              <1>     mov r8, rbx ;Set to point to the command.com psp
+   729 0000175C 4989D9              <1>     mov r9, rbx
+   730 0000175F 498DB881000000      <1>     lea rdi, qword [r8 + cmdLine]
+   731 00001766 B910000000          <1>     mov ecx, 10h    ;7Fh chars + 1 count byte / 8
+   732 0000176B F348A5              <1>     rep movsq   ;Copy command line over
+   733                              <1>     ;call doCommandLine
+   734 0000176E 5B                  <1>     pop rbx ;Get Old current PSP in rbx
+   735 0000176F B450                <1>     mov ah, 50h ;Set Current PSP
+   736 00001771 CD21                <1>     int 21h
+   737 00001773 4159                <1>     pop r9
+   738 00001775 4158                <1>     pop r8
+   739 00001777 48CF                <1>     iretq
     17                                  %include "./Source/cmdFunc.asm"
      1                              <1> ;Note! Each function must setup the DTA to use for itself.
      2                              <1> ;There is no requirement to preserve the DTA across a call.

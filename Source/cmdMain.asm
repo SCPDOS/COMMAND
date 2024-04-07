@@ -196,6 +196,7 @@ analyseCmdline:
 ;Flags first two arguments if they exist, copies the command into its buffer
 ; processes the command name into the FCB.  
     call preProcessBuffer   ;Now preprocess and setup pipes!
+.altEP:
     lea rsi, qword [r8 + cmdLine]   ;Go to the command line in the psp
     mov rbx, rsi            ;Save this ptr in rbx
     call skipDelimiters     ;Skip any preceeding separators
@@ -322,12 +323,13 @@ doCommandLine:
     mov edx, 0FFFFh
     mov ch, -1
     int 2Fh
-    cmp byte [cmdBuffer], 0 ;If this is non-zero, we execute internal
-    jnz .executeInternal
+    cmp byte [cmdName], 0 ;If this is non-zero, we restart the process
+    retz    ;Return as normal if this is zero
+    ;Else, we restart the command from scratch.
     call cleanUpRedir       ;Close all redirs to reset!
     call clearCommandLineState  ;And reset the commandline
     pop rsi                 ;Pop the return address off the stack
-    lea rsi, aeBuffer       ;Point rsi to the 
+    lea rsi, aeBuffer       ;Point rsi to the returned buffer
     jmp commandMain.copyPoint   ;And copy the cmd over to execute!
 .executeInternal:
 ;Now we check if the cmdName is equal to the length of the cmdPathSpec.
