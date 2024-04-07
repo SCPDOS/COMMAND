@@ -68,7 +68,7 @@ commandMain:
     rep movsb
 .pipeLoop:
     mov r8, qword [pspPtr]  ;Ensure we have our pspPtr pointing to the right place
-    ;call makeAEBuffer
+    call makeAEBuffer
     call analyseCmdline
     call doCommandLine
 .pipeProceed:
