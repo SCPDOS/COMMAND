@@ -54,6 +54,8 @@ dir:
     ;Start by scanning for the switches
     lea rsi, qword [r8 + cmdLine]  ;Goto command line
     mov rdi, rsi    ;Use rsi as start of buffer counter
+    call skipDelimiters ;Skip leading delimiters
+    add rsi, 3  ;Go past the DIR
 .scanNew:
     call skipDelimiters ;Set rsi pointing to a non delimiting char
     lodsb   ;Get this char
@@ -1733,7 +1735,9 @@ launchChild:
     ;We know the drive we are on is valid so no need to double check that!
     mov r8, qword [pspPtr]
     call setDTA         
-    ;Start by rebuilding the cmdFcb from the last path componant.
+    ;Start by pulling the cmdline removing the cmd from the tail
+    call .pullCommandline    
+    ;Now we rebuild the cmdFcb from the last path componant.
     lea rdi, cmdPathSpec
     call findLastPathComponant  ;Point rdi to last path componant
     mov rsi, rdi    ;Source here
@@ -1899,6 +1903,33 @@ launchChild:
     pop rsi
     pop rcx
     pop rax
+    return
+
+.pullCommandline:
+;This command pulls the command tail down, removing the whole launch command
+    lea rsi, qword [r8 + cmdLine]  ;rbx points to the de-redired command line 
+;Skip leading separators
+.pctSkipLeading:
+    lodsb   ;Get first char
+    call isALdelimiter
+    je .pctSkipLeading
+    dec rsi
+    ;rsi points to the start of the command
+    lea rdi, cmdPathSpec
+    call strlen ;Get the length of the command
+    dec ecx ;Minus the terminating null
+    add rsi, rcx    ;Now move rsi to the first char past the command name
+    xor ecx, ecx    ;Use as a char counter
+    lea rdi, qword [r8 + cmdLine]    ;First byte is reserved for count
+.pctPullChars:
+    lodsb
+    stosb
+    cmp al, CR  ;Was this a terminating CR?
+    je .pctExit
+    inc ecx     ;Increment count
+    jmp short .pctPullChars 
+.pctExit:
+    mov byte [r8 + cmdLineCnt], cl  ;Save the count
     return
 
 set:

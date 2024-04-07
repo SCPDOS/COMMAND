@@ -39,10 +39,6 @@ applicationReturn:  ;Return point from a task, all regs preserved
     cmp ebx, ecx
     jbe .handleClose    ;Keep looping whilst below or equal
 commandMain:
-;Setup Commandline. First check if batch mode is active, then fall.
-;=========================
-;   BATCH HANDLING HERE
-;=========================
     mov rsp, qword [stackTop]    ;Reset internal stack pointer pos
     cld ;Ensure stringops are done the right way
     mov byte [inBuffer], inBufferL    ;Reset the buffer length
@@ -71,17 +67,29 @@ commandMain:
     mov ecx, cmdBufferL   ;Straight up copy the buffer over
     rep movsb
 .pipeLoop:
-    call preProcessBuffer
+    mov r8, qword [pspPtr]  ;Ensure we have our pspPtr pointing to the right place
+    ;call makeAEBuffer
     call analyseCmdline
     call doCommandLine
 .pipeProceed:
     call cleanUpRedir
-    mov rax, qword [cmdEndPtr]
-    mov qword [cmdStartPtr], rax
     test byte [pipeFlag], -1  ;If we have any pipes active, we proceed here
     jz .inputMain
-    cmp byte [rax], CR  ;Are we done?
-    je .inputMain
+    ;Now we pull the commandline forwards. 
+    mov byte [redirNull], -1    ;Cleared by both cmdstate handlers
+    call preProcessBuffer       ;Now find the pipe again
+    cmp byte [rsi], CR  ;If this is so, exit!
+    je .inputMain  ;No more pipes found so we are done with piping!
+    ;rsi points to the start of the new string
+    ;ecx = number of chars left unscanned
+    ;rdi points to the command buffer
+    lea rdi, cmdBuffer + 2  ;Get the start of the data in buffer
+    mov rcx, rsi
+    sub rcx, rdi    ;Get the difference i.e. the number of chars to remove
+    sub byte [cmdBuffer + 1], cl    ;Minus from remaining chars
+    mov cl, byte [cmdBuffer + 1]    ;Get this value 
+    inc ecx         ;One more for the terminating char
+    rep movsb       ;Move the chars over
     call clearCommandState  ;Else, clear the command state and start again
     jmp short .pipeLoop
 .dfltErrExit:
@@ -90,19 +98,52 @@ commandMain:
     int 21h
     jmp .inputMain
 
+makeAEBuffer:
+;Make the AE buffer. Do this before everything to avoid messing 
+; up internal vars! Done on each command executed. Im not happy
+; with the way all this is implemented, I need to rewrite so that
+; the redirNull flag is unnecessary. This will be best done by 
+; unbinding the creating of the pipes and the registering of
+; the redirection as that is what this flag essentially does.
+; Possibly then make the cmdline preprocessor use the ae buffer 
+; as the flexibility currently afforded is not worth it.
+
+    mov byte [redirNull], -1
+    mov word [aeBuffer], inBufferL  ;Zero the number of chars in buffer
+    lea rdi, aeBuffer + 2
+    push rdi
+    call preProcessBuffer   ;Move rsi to the CR or the char past a pipe
+.lp:
+    pop rdi ;rdi points to where to copy the chars over to
+    push rsi    ;Preserve the terminator here!
+    lea rsi, qword [r8 + cmdLine]
+    movzx ecx, byte [r8 + cmdLineCnt]   ;Get num of chars in buf here
+    add byte [aeBuffer + 1], cl         ;Add num of chars copied here
+    rep movsb
+    pop rsi
+    cmp byte [rsi], CR
+    je .done
+    mov al, "|"
+    stosb   ;Store the pipe and advance the ptr
+    inc byte [aeBuffer + 1] ;Add one more char!
+    push rdi
+    call preProcessBuffer.altEP ;Dont reset to the head of the buffer
+    jmp short .lp
+.done:
+    lodsb
+    stosb   ;Store the CR 
+    mov byte [redirNull], 0
+    return
+
 preProcessBuffer:
 ;Start by preprocessing the path, escape quotes and handle redirections.
 ;Each normal char gets copied over to psp.dta + 1 except for those special chars.
 ;Places the count of chars save CR in byte 0 of psp.dta.
 ;Places the ptr to the first byte past pipe or CR in cmdEndPtr
 ;Throughout: CL has char count, CH has number of quotes.
-    xor ecx, ecx
-    mov r8, qword [pspPtr]  ;Ensure we have our pspPtr pointing to the right place
-    mov rsi, qword [cmdStartPtr]
-    test rsi, rsi
-    jnz .notNewCmd
     lea rsi, [cmdBuffer + 2]    ;Goto command buffer + 2
-.notNewCmd:
+.altEP:
+    xor ecx, ecx
     mov rdi, rsi    ;Save the pointer
 .countQuotes:
     lodsb
@@ -146,15 +187,14 @@ preProcessBuffer:
     inc cl      ;Increment char count
     jmp short .getChar    ;If not, get next char
 .exit:
-    dec rsi ;move rsi to point back to terminator or one past | 
-    mov qword [cmdEndPtr], rsi  ;Store rsi pointing to the first char past CR or |
-    lea rdi, qword [r8 + cmdLineCnt]
-    mov byte [rdi], cl  ;Store the count of chars in the psp buffer
-    return
+    dec rsi ;Move back to the CR or the first char past the pipe
+    mov byte [r8 + cmdLineCnt], cl  ;Store the count of chars in the psp buffer
+    return  ;Returns rsi -> New path componant
 
 analyseCmdline:
 ;Flags first two arguments if they exist, copies the command into its buffer
 ; processes the command name into the FCB.  
+    call preProcessBuffer   ;Now preprocess and setup pipes!
     lea rsi, qword [r8 + cmdLine]   ;Go to the command line in the psp
     mov rbx, rsi            ;Save this ptr in rbx
     call skipDelimiters     ;Skip any preceeding separators
@@ -180,14 +220,13 @@ analyseCmdline:
     sub rax, rbx            ;rbx points to the start of the buffer
     mov byte [arg2Off], al  ;Store the offset 
 .setupCmdVars:
-;Before returning, we copy the command name to cmdName and pull
-; the command line tail to NOT have the command in it  
+;Before returning, we copy the command name to cmdName 
     mov byte [cmdName], 0   ;Initialise this field to indicate no cmd
     lea rdi, cmdPathSpec
     call findLastPathComponant  ;Point rdi to last path componant
     call strlen ;Get the length of the final path componant
-    cmp ecx, 11
-    ja .exitBad ;Return error
+    cmp ecx, 11 + 1 ;Extra char for the ext separator (dot)
+    ja .exitBad     ;Return error
     mov rsi, rdi
     lea rdi, cmdName
     dec ecx ;Minus the terminating null
@@ -199,36 +238,6 @@ analyseCmdline:
     stosb
     dec ecx
     jnz .cpCmdName
-;Now we pull the command line removing the command name from the command tail
-    mov rsi, rbx  ;rbx points to the de-redired command line 
-;Skip leading separators
-.pctSkipLeading:
-    lodsb   ;Get first char
-    call isALdelimiter
-    je .pctSkipLeading
-    dec rsi
-    ;rsi points to the start of the command
-    lea rdi, cmdPathSpec
-    call strlen ;Get the length of the command
-    dec ecx ;Minus the terminating null
-    add rsi, rcx    ;Now move rsi to the first char past the command name
-    xor ecx, ecx    ;Use as a char counter
-    lea rdi, qword [r8 + cmdLine]    ;First byte is reserved for count
-.pctPullChars:
-    lodsb
-    stosb
-    cmp al, CR  ;Was this a terminating CR?
-    je .pctExit
-    inc ecx     ;Increment count
-    jmp short .pctPullChars 
-.pctExit:
-    xchg byte [r8 + cmdLineCnt], cl  ;Swap the counts
-    sub cl, byte [r8 + cmdLineCnt]  ;How many chars did we remove from buffer?
-    ;Since argXOff is computed as an offset FROM the start of the string itself
-    ; this works as we obtain how many chars we have removed from the string
-    sub byte [arg1Off], cl  ;Now subtract their offsets!
-    sub byte [arg2Off], cl  ;If there is no args, this is a null point
-    clc
     return
 .exitBad:
     mov byte [cmdName], -1 ;Store -1 to indicate error
@@ -291,7 +300,7 @@ doCommandLine:
     int 21h
     mov byte [arg2FCBret], al
 .fcbArgsDone:
-    lea rbx, [r8 + cmdTail] ;Point at processed command tail
+    lea rbx, aeBuffer       ;Take your buffer, ergh
     lea rsi, cmdName        ;Point to command name with len prefix 
     mov eax, 0AE00h ;Installable command check
     mov edx, 0FFFFh
@@ -306,22 +315,16 @@ doCommandLine:
     jz .executeInternal
     ;Here we execute externally and return to the prompt
     ; as if it was an internal execution
-    lea rbx, [r8 + cmdTail] ;Point at processed command tail
+    lea rbx, aeBuffer       ;Take your buffer, ergh
     lea rsi, cmdName        
     mov eax, 0AE01h ;Execute command!
     mov edx, 0FFFFh
     mov ch, -1
     int 2Fh
-    cmp byte [r8 + cmdTail], 0  ;If this is non-zero, we execute internal
-    retz    ;Else, we return silently
+    cmp byte [cmdBuffer], 0  ;If this is non-zero, we execute internal
+    jnz .executeInternal
+    return      ;Else, we return silently
 .executeInternal:
-;========================================================================
-; IF IT TRANSPIRES THAT 2Fh/AEh NEEDS THE UNPULLED COMMAND LINE (why?)
-; WE MOVE THE CODE BETWEEN .setupCmdVars AND .skipAndCheckCR HERE,
-; ADJUSTING FOR THE CHECK FOR COMMANDLINE ARGUMENT LENGTH AND ADJUST
-; THE START OF THIS FUNCTION TO USE THE COMMAND LINE PROPER AND CHECK 
-; FOR CR INSTEAD OF 0 LENGTH COMMAND NAME!
-;========================================================================
 ;Now we check if the cmdName is equal to the length of the cmdPathSpec.
 ;If not, then its immediately an external program!
     lea rdi, cmdPathSpec
@@ -557,12 +560,17 @@ checkAndSetupRedir:
     pop rdi
     return
 .inputRedir:
-    mov byte [redirIn], -1  ;Set the redir in flag
     lea rdi, rdrInFilespec
+    call .ensureRightBuffer
     call skipDelimiters ;Skip spaces between < and the filespec
     call cpDelimPathToBufz
     dec rsi ;Point rsi back to the delimiter char as 
+    test byte [redirNull], -1   ;If redirNull set then dont act!
+    jnz .redirNull
     ;Setup the redir here for STDIN
+    test byte [redirIn], -1
+    jnz .redirError
+    mov byte [redirIn], -1  ;Set the redir in flag
     xor ebx, ebx    ;DUP STDIN
     mov eax, 4500h
     int 21h
@@ -581,18 +589,26 @@ checkAndSetupRedir:
     int 21h
     jc .redirError
     xor al, al
-    jmp short .redirExit
+    jmp .redirExit
 .outputRedir:
-    mov byte [redirOut], 1
+    mov ebx, 1  ;Set this as the flag
     cmp byte [rsi], ">" ;Was this a > or a >>
     jne .notDouble
-    inc byte [redirOut] ;Inc to make it 2
+    inc ebx ;Inc to make it 2
     inc rsi ;Go past it too
 .notDouble:
     lea rdi, rdrOutFilespec
+    push rbx
+    call .ensureRightBuffer
     call skipDelimiters
     call cpDelimPathToBufz
+    pop rbx
     dec rsi ;Point rsi back to the delimiter char as 
+    test byte [redirNull], -1   ;If redirNull set then dont act!
+    jnz .redirNull
+    test byte [redirOut], bl    ;If there is already an out, fail!
+    jnz .redirError 
+    mov byte [redirOut], bl
     ;Setup the redir here for STDOUT
     mov ebx, 1    ;DUP STDOUT
     mov eax, 4500h
@@ -627,6 +643,7 @@ checkAndSetupRedir:
     jc .redirError
 .dontAppend:
     mov byte [redirOut], -1
+.redirNull:
     xor al, al
     jmp .redirExit
 .pipeSetup:
@@ -636,6 +653,8 @@ checkAndSetupRedir:
     cmp byte [rsi], "|" 
     pop rsi
     je .pipeError
+    test byte [redirNull], -1   ;If redirNull set then dont act!
+    jnz .pipeNull
     lea rdx, pipe1Filespec
     cmp byte [rdx], 0
     jz .pathFound
@@ -669,6 +688,7 @@ checkAndSetupRedir:
     int 21h
     jc .pipeError
     mov byte [pipeFlag], -1 ;Set the pipe flag up!
+.pipeNull:
     xor al, al  ;Set ZF
     stc         ;But also CF to indicate pipe!
     pop rdi
@@ -681,6 +701,12 @@ checkAndSetupRedir:
     pop rdi 
     call redirFailure
     jmp commandMain ;Fully reset the state if a redir failure occurs.
+.ensureRightBuffer:
+    test byte [redirNull], -1   ;If redirNull not set then act!
+    retz
+    lea rdi, searchSpec ;Use searchSpec as a nul instead
+    return
+
 
 int2Eh:   ;Interrupt interface for parsing and executing command lines
 ;Input: rsi points to the count byte of a command line

@@ -18,14 +18,12 @@ currDirStr  db fullDirPathZL dup (0) ;Current Directory String
 
 
 cmdLineStatePtr:
-cmdStartPtr dq 0    ;Ptr to the first char for this command (may be a space)
-cmdEndPtr   dq 0    ;Ptr to the terminating char for this command (0Dh or |)
 pipeFlag    db 0    ;If set, we fired up a pipe for this command line
 pipeSTDIN   dw -1   ;The handle to replace STDIN with once all piping complete
 pipeSTDOUT  dw -1   ;The handle to replace STDOUT with once all piping complete
-
 cmdStatePtr:   ;Symbol to use for clearing command state variables
 ;These variables are valid for a SINGLE command in a command line
+redirNull   db 0    ;Set if searching for a pipe post command!
 ;Next two bytes, if set to -1, flags error
 redirIn     db 0    ;If set, we are redirecting input from a file
 redirOut    db 0    ;If 1, we are redirecting output to a file, destructively
@@ -52,11 +50,11 @@ cmdFFBlock  db ffBlock_size dup (0) ;Internal Find First Block to use as default
 launchBlock db execProg_size dup (0)
 
 inBuffer    db cmdBufferL dup (0)  ;Add one to add space for terminating CR
-inBufferL   equ 126 ;126 chars so we can copy to PSP with terminating CR
-
-cmdBuffer   db cmdBufferL dup (0)  ;This is the to copy input to when processing
-cmdPathSpec db fileSpecZL dup (0)  ;Space for full path to a external command
-cmdName     db cmdNameL dup (0) ;Command name string prefixed by length of word
+inBufferL   equ 127 ;127 chars so we can copy to PSP with terminating CR
+cmdBuffer   db cmdBufferL dup (0)   ;Copied input for processing
+aeBuffer    db cmdBufferL dup (0)   ;Buffer for AE (w/o redir, just pipes)
+cmdPathSpec db fileSpecZL dup (0)   ;Space for full path to a ext cmd
+cmdName     db cmdNameL dup (0)     ;Cmd name prefixed by length 
 
 rdrInFilespec   db fileSpecZL dup (0)   ;Space for the redir in filespec
 rdrOutFilespec  db fileSpecZL dup (0)   ;Space for the redir out filespec
