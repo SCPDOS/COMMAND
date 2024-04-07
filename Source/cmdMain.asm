@@ -205,7 +205,6 @@ analyseCmdline:
     dec rsi ;Point it back to the delim char
     call .skipAndCheckCR
     je .setupCmdVars
-    ;breakpoint
     mov byte [arg1Flg], -1  ;Set that we are 
     mov rax, rsi
     sub rax, rbx            ;rbx points to the start of the buffer
@@ -699,7 +698,6 @@ pullCommandline:
     lea rdi, cmdPathSpec
     call strlen ;Get the length of the command
     dec ecx ;Minus the terminating null
-    ;breakpoint
     add rsi, rcx    ;Now move rsi to the first char past the command name
     sub byte [arg1Off], cl  ;Reduce these counts by the same amount!
     sub byte [arg2Off], cl
