@@ -63,6 +63,7 @@ commandMain:
     je .inputMain2
     ;Copy over the input text
     lea rsi, inBuffer   ;This buffer is used for all input so copy command line
+.copyPoint: ;Copy over commandline here
     lea rdi, cmdBuffer
     mov ecx, cmdBufferL   ;Straight up copy the buffer over
     rep movsb
@@ -321,9 +322,12 @@ doCommandLine:
     mov edx, 0FFFFh
     mov ch, -1
     int 2Fh
-    cmp byte [cmdBuffer], 0  ;If this is non-zero, we execute internal
+    cmp byte [cmdBuffer], 0 ;If this is non-zero, we execute internal
     jnz .executeInternal
-    return      ;Else, we return silently
+    call cleanUpRedir       ;Close all redirs to reset!
+    pop rsi                 ;Pop the return address off the stack
+    lea rsi, aeBuffer       ;Point rsi to the 
+    jmp commandMain.copyPoint   ;And copy the cmd over to execute!
 .executeInternal:
 ;Now we check if the cmdName is equal to the length of the cmdPathSpec.
 ;If not, then its immediately an external program!
