@@ -646,10 +646,10 @@ setupRedirandPipes:
     int 21h
     jc redirFailure
 .redirOut:
-    test byte [pipeFlag], -1    ;If pipe is active, pause setting redir out
-    retnz
     test byte [redirOut], -1    ;Is redir out on?
-    retz                        ;Exit if not
+    retz           
+    cmp byte [pipeSTDOUT], -1   ;If pipe out is active, pause redirOut
+    retne             ;Exit if it is
     ;Else setup the redir here for STDOUT
     mov ebx, 1    ;DUP STDOUT
     mov eax, 4500h

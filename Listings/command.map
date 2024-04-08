@@ -12,8 +12,8 @@ Output file:  ./Binaries/COMMAND.COM
 
 Vstart            Start             Stop              Length    Class     Name
                0                 0                 0  00000000  progbits  .text
-               0                 0              3853  00003853  progbits  .data
-            3853              3853              3A82  0000022F  progbits  transient
+               0                 0              3849  00003849  progbits  .data
+            3849              3849              3A78  0000022F  progbits  transient
 
 -- Sections (detailed) --------------------------------------------------------
 
@@ -31,7 +31,7 @@ vfollows:  not defined
 ---- Section .data ------------------------------------------------------------
 
 class:     progbits
-length:                3853
+length:                3849
 start:                    0
 align:                    1
 follows:   not defined
@@ -43,10 +43,10 @@ vfollows:  not defined
 
 class:     progbits
 length:                 22F
-start:                 3853
+start:                 3849
 align:                    1
 follows:   .data
-vstart:                3853
+vstart:                3849
 valign:    not defined
 vfollows:  not defined
 
@@ -515,7 +515,7 @@ Value     Name
 0000000F  dirLongName
 00000016  dirInclusive
 00000006  dirIncFiles
-0000000C  cmdStateL
+00000006  cmdStateL
 00000011  cmdLineStateL
 0000007F  inBufferL
 00000001  dirWideType
@@ -550,11 +550,11 @@ Real              Virtual           Name
               9F                9F  pipeFlag
               A0                A0  pipeSTDIN
               A2                A2  pipeSTDOUT
-              A4                A4  cmdStatePtr
               A4                A4  redirIn
               A5                A5  redirOut
               A6                A6  redirSTDIN
               A8                A8  redirSTDOUT
+              AA                AA  cmdStatePtr
               AA                AA  arg1Flg
               AB                AB  arg1Off
               AC                AC  arg1FCBret
@@ -1100,118 +1100,118 @@ Real              Virtual           Name
             32FC              32FC  printPrompt.validPrompt
             32FC              32FC  ..@247._ret
             32FD              32FD  clearCommandState
-            3317              3317  ..@248._ret
-            3318              3318  clearCommandLineState
-            333C              333C  ..@249._ret
-            333D              333D  asciiFilenameToFCB
-            335A              335A  asciiFilenameToFCB.processName
-            336A              336A  asciiFilenameToFCB.extSpace
-            3373              3373  asciiFilenameToFCB.ext
-            3377              3377  asciiFilenameToFCB.processExt
-            3383              3383  asciiFilenameToFCB.exitBadChar
-            3385              3385  asciiFilenameToFCB.exit
-            3386              3386  ..@250._ret
-            3387              3387  findLastPathComponant
-            33A5              33A5  findLastPathComponant.exit
-            33AA              33AA  ..@251._ret
-            33AB              33AB  FCBToAsciiz
-            33B2              33B2  FCBToAsciiz.scanNameSpace
-            33C5              33C5  FCBToAsciiz.ext
-            33D2              33D2  FCBToAsciiz.validExt
-            33DC              33DC  FCBToAsciiz.scanExtSpace
-            33E7              33E7  FCBToAsciiz.exit
-            33EA              33EA  ..@252._ret
-            33EB              33EB  cpDelimOrCtrlStringToBufz
-            33EE              33EE  cpDelimOrCtrlStringToBufz.lp
-            33FD              33FD  cpDelimOrCtrlStringToBufz.exit
-            3400              3400  ..@253._ret
-            3401              3401  cpDelimPathToBufz
-            3408              3408  cpDelimPathToBufz.lp
-            341F              341F  cpDelimPathToBufz.gotRedirPath
-            3440              3440  cpDelimPathToBufz.notColon
-            3443              3443  ..@254._ret
-            3444              3444  buildCommandPath
-            345C              345C  copyArgumentToSearchSpec
-            3468              3468  ..@255._ret
-            3469              3469  scanForWildcards
-            346B              346B  scanForWildcards.lp
-            347A              347A  scanForWildcards.exit
-            347C              347C  ..@256._ret
-            347D              347D  printDecimalWord
-            3491              3491  printDecimalWord.notZero
-            3498              3498  printDecimalWord.dpfb0
-            34A8              34A8  printDecimalWord.dpfb00
-            34AC              34AC  printDecimalWord.dpfb01
-            34BC              34BC  printDecimalWord.dpfb1
-            34C8              34C8  printDecimalWord.dpfb10
-            34CA              34CA  printDecimalWord.dpfb11
-            34CF              34CF  printDecimalWord.dpfb2
-            34DF              34DF  printDecimalWord.dpfb20
-            34E5              34E5  printDecimalWord.dpfb21
-            34ED              34ED  ..@257._ret
-            34EE              34EE  getDecimalWord
-            34F7              34F7  getDecimalWord.dpfb0
-            350D              350D  getDecimalWord.dpfb1
-            3514              3514  ..@258._ret
-            3515              3515  freezePC
-            3520              3520  freezePC.altEP
-            352B              352B  freezePC.lp
-            3530              3530  setDTA
-            3542              3542  ..@259._ret
-            3543              3543  getDTA
-            354A              354A  ..@260._ret
-            354B              354B  cmpEnvVar
-            3553              3553  ..@261._ret
-            3554              3554  checkEnvGoodAndGet
-            3571              3571  checkEnvGoodAndGet.pathNulScan
-            3583              3583  checkEnvGoodAndGet.badExit
-            3588              3588  ..@262._ret
-            3589              3589  allocEnv
-            3589              3589  freeEnv
-            358C              358C  freeEnv.lp
-            3593              3593  freeEnv.exit
-            3594              3594  ..@263._ret
-            3595              3595  findEnvSpace
-            3595              3595  critErrorHandler
-            3613              3613  critErrorHandler.userInput
-            3618              3618  critErrorHandler.userAbort
-            3624              3624  critErrorHandler.userRetry
-            3641              3641  critErrorHandler.userIgnore
-            365E              365E  critErrorHandler.userFail
-            367B              367B  critErrorHandler.userMsgEnd
-            369A              369A  critErrorHandler.uip1
-            36AC              36AC  critErrorHandler.validInput
-            36BF              36BF  critErrorHandler.viFail
-            36CA              36CA  critErrorHandler.viIgnore
-            36D5              36D5  critErrorHandler.viRetry
-            36DE              36DE  critErrorHandler.cehExit
-            36E5              36E5  critErrorHandler.charError
-            36F1              36F1  critErrorHandler.ce1
-            36FF              36FF  critErrorHandler.errorMsgTable
-            37E9              37E9  critErrorHandler.drive
-            37F0              37F0  critErrorHandler.readmsg
-            37FF              37FF  critErrorHandler.writemsg
-            380E              380E  critErrorHandler.abortmsg
-            3814              3814  critErrorHandler.ignoremsg
-            381B              381B  critErrorHandler.retrymsg
-            3821              3821  critErrorHandler.failmsg
-            3826              3826  critErrorHandler.betweenMsg
-            3829              3829  critErrorHandler.endMsg
-            382C              382C  critErrorHandler.responses
-            3830              3830  int23h
-            384F              384F  int23h.exit
-            3853              3853  endOfAlloc
+            330D              330D  ..@248._ret
+            330E              330E  clearCommandLineState
+            3332              3332  ..@249._ret
+            3333              3333  asciiFilenameToFCB
+            3350              3350  asciiFilenameToFCB.processName
+            3360              3360  asciiFilenameToFCB.extSpace
+            3369              3369  asciiFilenameToFCB.ext
+            336D              336D  asciiFilenameToFCB.processExt
+            3379              3379  asciiFilenameToFCB.exitBadChar
+            337B              337B  asciiFilenameToFCB.exit
+            337C              337C  ..@250._ret
+            337D              337D  findLastPathComponant
+            339B              339B  findLastPathComponant.exit
+            33A0              33A0  ..@251._ret
+            33A1              33A1  FCBToAsciiz
+            33A8              33A8  FCBToAsciiz.scanNameSpace
+            33BB              33BB  FCBToAsciiz.ext
+            33C8              33C8  FCBToAsciiz.validExt
+            33D2              33D2  FCBToAsciiz.scanExtSpace
+            33DD              33DD  FCBToAsciiz.exit
+            33E0              33E0  ..@252._ret
+            33E1              33E1  cpDelimOrCtrlStringToBufz
+            33E4              33E4  cpDelimOrCtrlStringToBufz.lp
+            33F3              33F3  cpDelimOrCtrlStringToBufz.exit
+            33F6              33F6  ..@253._ret
+            33F7              33F7  cpDelimPathToBufz
+            33FE              33FE  cpDelimPathToBufz.lp
+            3415              3415  cpDelimPathToBufz.gotRedirPath
+            3436              3436  cpDelimPathToBufz.notColon
+            3439              3439  ..@254._ret
+            343A              343A  buildCommandPath
+            3452              3452  copyArgumentToSearchSpec
+            345E              345E  ..@255._ret
+            345F              345F  scanForWildcards
+            3461              3461  scanForWildcards.lp
+            3470              3470  scanForWildcards.exit
+            3472              3472  ..@256._ret
+            3473              3473  printDecimalWord
+            3487              3487  printDecimalWord.notZero
+            348E              348E  printDecimalWord.dpfb0
+            349E              349E  printDecimalWord.dpfb00
+            34A2              34A2  printDecimalWord.dpfb01
+            34B2              34B2  printDecimalWord.dpfb1
+            34BE              34BE  printDecimalWord.dpfb10
+            34C0              34C0  printDecimalWord.dpfb11
+            34C5              34C5  printDecimalWord.dpfb2
+            34D5              34D5  printDecimalWord.dpfb20
+            34DB              34DB  printDecimalWord.dpfb21
+            34E3              34E3  ..@257._ret
+            34E4              34E4  getDecimalWord
+            34ED              34ED  getDecimalWord.dpfb0
+            3503              3503  getDecimalWord.dpfb1
+            350A              350A  ..@258._ret
+            350B              350B  freezePC
+            3516              3516  freezePC.altEP
+            3521              3521  freezePC.lp
+            3526              3526  setDTA
+            3538              3538  ..@259._ret
+            3539              3539  getDTA
+            3540              3540  ..@260._ret
+            3541              3541  cmpEnvVar
+            3549              3549  ..@261._ret
+            354A              354A  checkEnvGoodAndGet
+            3567              3567  checkEnvGoodAndGet.pathNulScan
+            3579              3579  checkEnvGoodAndGet.badExit
+            357E              357E  ..@262._ret
+            357F              357F  allocEnv
+            357F              357F  freeEnv
+            3582              3582  freeEnv.lp
+            3589              3589  freeEnv.exit
+            358A              358A  ..@263._ret
+            358B              358B  findEnvSpace
+            358B              358B  critErrorHandler
+            3609              3609  critErrorHandler.userInput
+            360E              360E  critErrorHandler.userAbort
+            361A              361A  critErrorHandler.userRetry
+            3637              3637  critErrorHandler.userIgnore
+            3654              3654  critErrorHandler.userFail
+            3671              3671  critErrorHandler.userMsgEnd
+            3690              3690  critErrorHandler.uip1
+            36A2              36A2  critErrorHandler.validInput
+            36B5              36B5  critErrorHandler.viFail
+            36C0              36C0  critErrorHandler.viIgnore
+            36CB              36CB  critErrorHandler.viRetry
+            36D4              36D4  critErrorHandler.cehExit
+            36DB              36DB  critErrorHandler.charError
+            36E7              36E7  critErrorHandler.ce1
+            36F5              36F5  critErrorHandler.errorMsgTable
+            37DF              37DF  critErrorHandler.drive
+            37E6              37E6  critErrorHandler.readmsg
+            37F5              37F5  critErrorHandler.writemsg
+            3804              3804  critErrorHandler.abortmsg
+            380A              380A  critErrorHandler.ignoremsg
+            3811              3811  critErrorHandler.retrymsg
+            3817              3817  critErrorHandler.failmsg
+            381C              381C  critErrorHandler.betweenMsg
+            381F              381F  critErrorHandler.endMsg
+            3822              3822  critErrorHandler.responses
+            3826              3826  int23h
+            3845              3845  int23h.exit
+            3849              3849  endOfAlloc
 
 ---- Section transient --------------------------------------------------------
 
 Real              Virtual           Name
-            3853              3853  cmdLdr
-            3866              3866  cmdLdr.exitBad
-            3868              3868  cmdLdr.okVersion
-            38E7              38E7  cmdLdr.skipSwitch
-            397F              397F  cmdLdr.skipMaster
-            39AD              39AD  cmdLdr.printInit
-            39F6              39F6  initString
-            3A2C              3A2C  initString2
-            3A6A              3A6A  badVerStr
+            3849              3849  cmdLdr
+            385C              385C  cmdLdr.exitBad
+            385E              385E  cmdLdr.okVersion
+            38DD              38DD  cmdLdr.skipSwitch
+            3975              3975  cmdLdr.skipMaster
+            39A3              39A3  cmdLdr.printInit
+            39EC              39EC  initString
+            3A22              3A22  initString2
+            3A60              3A60  badVerStr
 

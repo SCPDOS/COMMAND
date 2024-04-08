@@ -455,7 +455,6 @@ clearCommandState:
     mov ecx, cmdStateL
     xor eax, eax
     rep stosb
-    mov dword [redirSTDIN], -1
     return
 
 clearCommandLineState:

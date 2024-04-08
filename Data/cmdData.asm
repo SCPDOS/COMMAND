@@ -21,7 +21,6 @@ cmdLineStatePtr:
 pipeFlag    db 0    ;If set, we fired up a pipe for this command line
 pipeSTDIN   dw -1   ;The handle to replace STDIN with once all piping complete
 pipeSTDOUT  dw -1   ;The handle to replace STDOUT with once all piping complete
-cmdStatePtr:   ;Symbol to use for clearing command state variables
 ;These variables are valid for a SINGLE command in a command line
 ;Next two bytes, if set to -1, flags error
 redirIn     db 0    ;If set, we are redirecting input from a file
@@ -30,6 +29,7 @@ redirOut    db 0    ;If 1, we are redirecting output to a file, destructively
 redirSTDIN  dw -1   ;The handle to replace STDIN with once redir complete
 redirSTDOUT dw -1   ;The handle to replace STDOUT with once all redir complete
 
+cmdStatePtr:   ;Symbol to use for clearing command state variables
 arg1Flg     db 0    ;Set if there was a first argument
 arg1Off     db 0    ;Offset into cmdBuffer to the argument
 arg1FCBret  db 0    ;AL on return from parse filename for argument 1
