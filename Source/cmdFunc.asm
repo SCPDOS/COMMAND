@@ -1904,12 +1904,44 @@ launchChild:
 
 set:
     test byte [arg1Flg], -1
-    jz badArgError  ;Need to give an argument!
+    jnz .editEnv
+    ;Here we just print the environment.
+    call checkEnvGoodAndGet 
+    retz    ;If return with bad env, we simply return.
+    ;We know this is a good env so keep going! env ptr in rsi
+    mov rdi, rsi
+    mov rdx, rsi
+.findLp:
+    mov ecx, -1
+    xor eax, eax
+.scanLp:
+    repne scasb
+    jne .scanLp
+    not ecx ;Get count and subtract by 1 to drop end null
+    ;Else, we now print this environment variable and CRLF it
+    ;rdx points to the start of the string aleady
+    ;ecx has the bytes to print
+    mov ebx, 1      ;Print to STDOUT
+    mov eax, 4000h  ;Print to handle
+    int 21h
+    call printCRLF
+    cmp byte [rdi], 0   ;Is this a second null.
+    rete    ;Return if it is
+    mov rdx, rdi   
+    jmp short .findLp
+.editEnv:
+    test byte [arg2Flg], -1
+    jnz badArgError
     movzx eax, byte [arg1Off]
     mov r8, [pspPtr]
     lea rsi, qword [r8 + cmdLine]
     add rsi, rax    ;Go to the start of the argument
     ;rsi -> EnvvarName=string;string;string<CR>
+    movzx ecx, byte [rsi - 1]   ;Get the char count of the tail
+    ;Scan for an equals sign
+    mov al, "="
+    repne scasb
+    return
 
 pathEdit:
     lea rdx, .pMsg
