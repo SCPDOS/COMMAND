@@ -3,6 +3,12 @@
 ;Only the Int 2Eh entry point will preserve the callers DTA.
 
 ;Common Error Messages, jumped to to return from
+badSyntaxError:
+    lea rdx, syntaxErr
+    jmp short badCmn
+badEnvSpaceError:
+    lea rdx, noEnvSpace
+    jmp short badCmn
 badAccError:
     lea rdx, accDenMsg
     jmp short badCmn
@@ -1736,6 +1742,9 @@ launchChild:
     call setDTA         
     ;Now we rebuild the cmdFcb from the last path componant.
     lea rdi, cmdPathSpec
+    mov rsi, rdi
+    mov eax, 1211h  ;Normalise this path first
+    int 2fh
     call findLastPathComponant  ;Point rdi to last path componant
     mov rsi, rdi    ;Source here
     lea rdi, cmdFcb
@@ -1808,7 +1817,8 @@ launchChild:
     int 21h
     jmp badCmdError    ;If something goes wrong, error out
 .pathHandle:        
-;First check if rbp is null. If it is, its a first time entry
+;First check if rbp is null. If it is, its a first time entry. 
+;al has error code!
     test rbp, rbp
     jnz .pathReentry
 ;Now check if the command we recieved included an absolute path.
@@ -1832,27 +1842,20 @@ launchChild:
     jz badCmdError  ;If returned ZF=ZE, error out!
     ;If we are here, env is double null terminated. rsi has the env ptr
     ;Now we know we dont have to keep track of chars!!
-.pathLp:
     lea rdi, pathEVar   ;Get a ptr to the path env string
-    mov ecx, 5          ;5 Chars in PATH=
-    call cmpEnvVar      ;Checks if these two environment vars are equal
-    je .pathFound
-    xor eax, eax        ;Search for a null
-    mov rdi, rsi        ;Scan the environment
-    mov ecx, -1         ;Just keep searching
-    repne scasb         ;Now scan for the terminating null
-    cmp byte [rdi], al  ;Now check the second char
-    je badCmdError      ;If second null, no more env to search!
-    mov rsi, rdi        ;Now move to rsi the start of the next env var
-    jmp short .pathLp   ;And scan again!
-.pathFound:
-;Env var found!
-    repe cmpsb          ;Move rdi past the = sign!
+    call searchForEnvVar
+    jc badCmdError      ;If PATH not found, exit error!
+    mov rdi, rsi        ;Move the PATH= ptr to rdi
+    add rdi, 5          ;Go past the PATH= portion of the env string
 .pathRejoin:
     cmp byte [rdi], 0   ;Is the first char after equals a null?
-    mov rsi, rdi        ;This is a ; delimited ASCII string
+    je badCmdError      ;Empty or no more path? Error!
+    mov rsi, rdi        ;This is a ; or null delimited ASCII string
     lea rdi, searchSpec ;Build the path in searchSpec
-    call cpDelimOrCtrlStringToBufz   
+    ;WARNING!!! THIS COULD CAUSE A BUFFER OVERFLOW BUG!!
+    ; MUST CHECK THE LENGTH OF THE PATH COMPONANT THAT WE ARE 
+    ; SPLICING ON. IF IT IS LONGER THAN 64 CHARS WE IGNORE IT!!
+    call cpDelimOrCtrlStringToBufz      ;Copies upto ; or null 
     dec rsi ;Point rsi to the char which delimited the path
     mov rbp, rsi    ;Point rbp to this char
     dec rdi ;Point to the null terminator
@@ -1867,6 +1870,12 @@ launchChild:
 .pathReentry:
     cmp byte [rbp], 0   ;Each env string is finally null terminated.
     je badCmdError
+    cmp al, errBadDrv
+    jne .pathDrvOk
+    lea rdx, badDrvSrch ;Print the drive was invalid!
+    mov eax, 0900h
+    int 21h
+.pathDrvOk:
     inc rbp             ;Go to the start of the next componant
     mov rdi, rbp        ;So rdi points to the first char of next comp
     jmp short .pathRejoin   ;Check if null, and if not, proceed again!
@@ -1883,8 +1892,7 @@ launchChild:
 ;cmdPathSpec and null terminates. 
 ;Input: cmdFcb name + ext setup. 
 ;Output: rdx -> Filled in cmdPathSpec 
-;        CF=NC, file in rdx found. CF=CY, file in rdx not found!
-    push rax
+;        CF=NC, file in rdx found. CF=CY, file in rdx not found! al = errcde
     push rcx
     push rsi
     push rdi
@@ -1899,7 +1907,6 @@ launchChild:
     pop rdi
     pop rsi
     pop rcx
-    pop rax
     return
 
 set:
@@ -1907,7 +1914,7 @@ set:
     jnz .editEnv
     ;Here we just print the environment.
     call checkEnvGoodAndGet 
-    retz    ;If return with bad env, we simply return.
+    jz badEnvSpaceError
     ;We know this is a good env so keep going! env ptr in rsi
     mov rdi, rsi
     mov rdx, rsi
@@ -1930,22 +1937,125 @@ set:
     mov rdx, rdi   
     jmp short .findLp
 .editEnv:
-    test byte [arg2Flg], -1
-    jnz badArgError
+    call checkEnvGoodAndGet
+    jz badEnvSpaceError
     movzx eax, byte [arg1Off]
-    mov r8, [pspPtr]
     lea rsi, qword [r8 + cmdLine]
-    add rsi, rax    ;Go to the start of the argument
-    ;rsi -> EnvvarName=string;string;string<CR>
-    movzx ecx, byte [rsi - 1]   ;Get the char count of the tail
-    ;Scan for an equals sign
-    mov al, "="
+    add rsi, rax            ;rsi -> EnvvarName=[string]<CR>
+    mov rdi, rsi            ;Point rdi to the start of the string
+    mov al, CR              ;Search for the CR
+    movzx ecx, byte [r8 + cmdLineCnt]   ;Get the char count of the tail
+    mov ebx, ecx            ;Save this count 
+    push rbx                ;Save this count on the stack too!
+    repne scasb             ;Now get the length of this env string
+    sub ebx, ecx            ;Get the length of the string with <CR>
+    mov word [envVarSz], bx ;Store the count
+    pop rcx                 ;Get the char count back!
+    mov ebx, ecx            
+    mov rdi, rsi            ;Point rdi again to the cmdTail
+    mov al, "="             ;Scan for an equals sign
     repne scasb
+    jne badSyntaxError      ;There must be an equal sign here!
+    sub ebx, ecx            ;Get the count with space for a terminating 0
+    mov word [envVarNamSz], bx
+    cmp byte [rdi], CR      ;If the path is just PATH=<CR>, free var!
+    je .delEnvVar           ;Free the envvar and return
+    push rsi                ;Save the ptr to the start of the envvar
+    mov rdi, rsi            ;Input= rdi -> String to search for
+    call searchForEnvVar    ;Look for the environment variable
+    jc .editNewEnv          ;Create a new environment variable!
+    call envFree            ;Free the var in rsi
+.editNewEnv:
+    call getFreeSpace       ;Get the free space in env in ecx
+    call getPtrToEndOfEnv   ;Point to the free space in rdi
+    pop rsi                 ;Get back the ptr to the string
+    xor eax, eax            ;Prepare null length!
+    cmp ecx, 4              ;Minimal env string size is 4, i.e. "X=A<CR>"
+    cmovb ecx, eax          ;If below, essentially 0 bytes
+    jb .reallocTry          ;Try to reallocate!
+    dec ecx                 ;Save a byte for end magic null
+    cmp cx, word [envVarSz] ;Do we have enough space?
+    jae .nameCp             ;If above or equal, we good to go!
+.reallocTry:
+    ;Here we try to reallocate the environment. If we cannot reallocate
+    ; we proceed with the environment size.
+    call growEnvBlock   ;Attempt to grow the environment
+    jnc .reallocOk
+    jz badEnvSpaceError    ;Max environment space
+    ;Here we couldnt reallocate, but we check to see if we can fit
+    ; partially the variable into the env. If so we do that. If the name
+    ; cannot fit, we don't bother
+    ;Min size of envVarNamSz is 2 i.e. "X="
+    cmp cx, word [envVarNamSz]  ;cx has the free space in environment
+    retb    ;Fail silently if we cant, catches the cx=0,1 case!
+    call badEnvSpaceError   ;Print the env space error!
+    dec ecx  ;Make space for the end null of the environment! Wont overflow!
+    jmp short .nameCp   ;Else, just copy what we can
+.reallocOk:
+    ;Here we have all the space to just copy the full path
+    movzx ecx, word [envVarSz]
+.nameCp:
+;Now copy over the env var, ecx = #ofchars to copy
+;Always enough memory for name= here
+    lodsb
+    call ucChar
+    stosb
+    dec cx      ;Always decrement this count
+    cmp al, "="
+    jne .nameCp
+.exitNameCp:
+    lodsb
+    cmp al, CR
+    je .exitCp
+    stosb
+    dec ecx
+    jnz .exitNameCp
+.exitCp:
+    xor eax, eax
+    stosw   ;Store the final null word
+    return
+.delEnvVar:
+    ;rsi -> Start of the envvar name in user buffer
+    mov rdi, rsi            ;Input= rdi -> String to search for
+    call searchForEnvVar    ;Look for the environment variable
+    jc .delEnvVarSkip
+    call envFree    ;Free the env var at rsi
+.delEnvVarSkip:
+    clc             ;Clear CF if the var doesnt exist
     return
 
 pathEdit:
-    lea rdx, .pMsg
+;Each path componant !!must!! be terminated by a semicolon. 
+;No separators allowed either side of the semicolon. Spaces allowed ONLY 
+; after the equals sign. If what follows a semicolon is a terminator, we 
+; end there. Error with too many arguments error!
+;If after the equals sign there is nothing, we just print the path!
+    call checkEnvGoodAndGet
+    jz badEnvSpaceError ;rsi has the ptr to the environment
+    lea rdi, pathEVar   ;This is what we want to get
+    call searchForEnvVar
+    jc .noPathPrnt      ;If the var doesnt exit, print no path!
+    breakpoint
+    mov rdx, rsi        ;Save the ptr to the start of the PATH= string
+    mov rdi, rsi
+    call strlen         ;Get the path length in cx with PATH= 
+    test byte [arg1Flg], -1
+    jz .printPath
+    lea rdx, .l1
     mov eax, 0900h
+    jmp short .pathExit
+.l1 db "DIRECT PATH EDIT NOT IMPLEMENTED YET",CR,LF,"$"
+.printPath:
+    cmp ecx, 6          ;Is our path just PATH=<NUL>?
+    je .noPathPrnt      ;Print no path!
+    dec ecx             ;Drop the terminating null from the count
+    mov ebx, 1          ;STDOUT
+    mov eax, 4000h      ;ecx = char count, rdx points to PATH= string
+    jmp short .pathExit
+.noPathPrnt:
+    lea rdx, noPath
+    mov eax, 0900h
+.pathExit:
     int 21h
+    call printCRLF      ;Print a crlf at the end
     return
-.pMsg db "PATH editing not yet implemented",CR,LF,"$"

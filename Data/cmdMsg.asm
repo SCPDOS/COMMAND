@@ -7,7 +7,7 @@ needBat db  CR,LF,"Insert disk with batch file"     ;Used in BAT
 badCmd  db  "Bad command or file name",CR,LF,"$"
 dupName db  "Duplicate file name or "
 fnfMsg  db  "File not found",CR,LF,"$"
-noSpace db  "Insufficient disk space",CR,LF,"$"
+noSpace db  "Insufficient disk space",CR,LF,"$"     ;Disk full. On copy only!
 noEnvSpace  db  "Out of environment space",CR,LF,"$"
 fulRootDir  db  "File creation error",CR,LF,"$"
 noSelfCopy  db  "File cannot be copied onto itself",CR,LF,"$"

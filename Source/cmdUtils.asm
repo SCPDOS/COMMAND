@@ -781,13 +781,20 @@ cmpEnvVar:
 ;Checks that we have found the environment variable we are looking for.
 ;Input: rsi -> Environment var to verify the name of
 ;       rdi -> Environment var name to compare against
-;       ecx = Length of the environment variable
 ;Output: ZF=ZE: Equal. ZF=NZ: Not equal.
     push rsi
     push rdi
-    push rcx
-    rep cmpsb
-    pop rcx
+    xchg rsi, rdi       ;Swap Env and user ptrs
+.lp:
+    lodsb               ;Pick up from user string
+    call ucChar         ;Upper case it!
+    cmp byte [rdi], al  
+    jne .exit
+    cmp al, "="         ;Are we at the end?
+    je .exit
+    inc rdi
+    jmp short .lp
+.exit:
     pop rdi
     pop rsi
     return
@@ -826,26 +833,183 @@ checkEnvGoodAndGet:
     pop rax
     return
 
-allocEnv:
-;Allocates space in the environment. Assumes environment is good.
-;Input: ecx = Number of bytes to allocate
-;Output: CF=NC: rsi -> Start of alloc region
-;        CF=CY: Not enough space to alloc
 
-freeEnv:
-;Frees space in the environment by zeroing all allocated chars.
-;Input: rdi -> Byte to start zeroing from.
-;Output: All bytes from rdi to first null zero. rdi trashed.
-    push rax
+findEnvSpace:
+;Searches the environment for space, returns a pointer to the start of the 
+; free space in the pointer and a count of free space in the environment.
+;If count is zero, pointer is not to be used.
+;Output: ecx = Count. rsi -> First free byte in Environment alloc region.
+    xor ecx, ecx
+    xor eax, eax    ;Clear eax too
+    push rcx
+    call checkEnvGoodAndGet ;Get environment in rsi
+    pop rcx
+    retz    ;If ZF=ZE, env bad. Count zero.
+    lea rbx, qword [rsi - mcb_size] ;Point rbx to the memory arena header
+    dec ecx ;Make into a large counter
+    mov rdi, rsi    
+.endsearch:
+    repne scasb ;Scan
+    cmp byte [rdi], 0
+    jne .endsearch  ;If not double zero, keep searching
+    ;Here we are at the end of the environment
+    neg ecx
+    inc ecx ;Include the terminating null in the count of the env size.
+    mov rsi, rdi    ;Save the pointer to the start of free space in rsi
+    mov eax, dword [rbx + mcb.blockSize]    ;Get the size of environment
+    sub eax, ecx
+    mov ecx, eax    ;Get the final count in ecx
+    return
+
+searchForEnvVar:
+;Gets the environment, and scans it for a string with the var specified.
+;Input: rdi -> Var name to look for.
+;Returns: CF=NC: rsi -> Env var in env.
+    push rdi
+    push rcx
+    push rdx
+    mov rsi, qword [r8 + psp.envPtr]
+    mov rdx, rdi        ;Save the search pointer!
+.varLp:
+    mov rdi, rdx        ;Reset the pointer for searching
+    call cmpEnvVar      ;Checks if these two environment vars are equal
+    je .varFound
+    xor eax, eax        ;Search for a null
+    mov rdi, rsi        ;Scan the environment
+    mov ecx, -1         ;Just keep searching
+    repne scasb         ;Now scan for the terminating null
+    cmp byte [rdi], al  ;Now check the second char
+    je .varNotFound     ;If second null, no more env to search!
+    mov rsi, rdi        ;Now move to rsi the start of the next env var
+    jmp short .varLp    ;And scan again!
+.varNotFound:
+    stc
+.varFound:
+    pop rcx
+    pop rdx
+    pop rdi
+    return
+
+envFree:
+;Frees a variable from the environment, pulls the strings behind it up
+; zeros the rest of the environment, and returns a pointer to the first
+; free byte of the environment!
+;Input: rsi -> Variable to free.
+;Output: rdi -> First byte to write new env var in (old second null)
+;        ecx = Number of free bytes in env
+    mov rdi, rsi
     xor eax, eax
-.lp:
-    cmp byte [rdi], al
-    je .exit
+.freeLp:
+    cmp byte [rdi], 0
+    je .exitLp
     stosb
-    jmp short .lp
-.exit:
+    jmp short .freeLp
+.exitLp:
+;rdi points to the terminating null of the var we just deleted
+;rsi points to the start of the free space
+    xchg rsi, rdi   ;Swap em!
+    cmp word [rsi], 0   ;If we are already at the terminating null, dont advance!
+    jne .prepPullup
+    xor eax, eax
+    jmp short .cleanEnv
+.prepPullup:
+    inc rsi         ;Go past the terminating null!
+.pullUp:
+    lodsb
+    stosb
+    test al, al ;Did we pick up a zero
+    jne .pullUp ;If not, keep copying
+    cmp byte [rsi], 0   ;Is this the famous second byte?
+    jne .pullUp
+;We are at the end of the copy!
+.cleanEnv:
+    stosb   ;Store the famous second null
+    dec rdi ;without incrementing it!!
+    call getFreeSpace
+    xor eax, eax
+    push rcx
+    rep stosb       ;Now zero the remaining space of the env!
+    pop rcx
+    return
+
+getFreeSpace:
+;Output: ecx = Number of free bytes in the environment block
+    push rsi
+    push rdi
+    call getPtrToEndOfEnv   ;Get ptr in rdi to end of alloc 
+    mov rsi, qword [r8 + psp.envPtr]
+    sub rdi, rsi    ;This gets number of bytes allocated
+    call getEnvSize ;Get total block size
+    sub ecx, edi    ;Get difference!
+    pop rdi
+    pop rsi
+    return
+
+getEnvSize:
+;Gets the number of bytes in the environment allocation
+;Output: ecx = Number of bytes in the environment!
+    push rbx
+    mov rbx, qword [r8 + psp.envPtr]
+    mov ecx, dword [rbx - mcb_size + mcb.blockSize]
+    shl ecx, 4  ;Get number of bytes in the environment
+    pop rbx
+    return
+
+getPtrToEndOfEnv:
+;Gets ptr to end of the environment
+;Output: rdi -> Second null byte of the terminator of the environment.
+    push rax
+    push rcx
+    mov rdi, qword [r8 + psp.envPtr]
+    xor eax, eax
+    xor ecx, ecx
+    dec ecx
+.lp:
+    repne scasb
+    cmp byte [rdi], al
+    jne .lp
+    pop rcx
     pop rax
     return
 
-findEnvSpace:
-;Searches the environment for space
+growEnvBlock:
+;Attempts to grow the environment to store the new string. Will clean the
+; newly allocated 160 byte block of the environment.
+;Returns:   CF=NC - Environment grown ok!
+;           CF=CY & ZF=ZE - Environment at max size
+;           CF=CY & ZF=NZ - Realloc failed.
+    push rax
+    push rbx
+    push rcx
+    push rsi
+    push rdi
+    call getFreeSpace       ;Get free space in environment in ecx
+    call getPtrToEndOfEnv   ;Get ptr to free space in rdi
+    mov rsi, qword [r8 + psp.envPtr]
+    mov ebx, dword [rsi - mcb_size + mcb.blockSize]  ;Get current alloc size
+    add ebx, 0Ah    ;Add 160 bytes!
+    cmp ebx, 800h   ;Cannot be bigger than 8000h bytes
+    jae .tooLarge
+    ;Here ZF must be NZ.
+    push r8
+    mov r8, qword [r8 + psp.envPtr] ;Get the block ptr
+    mov eax, 4A00h
+    int 21h
+    pop r8
+    jc .exit
+    ;Here now we must clean the new allocated region. We added 160 bytes
+    ; so we add 160 zeros to the count of bytes
+    add ecx, 0A0h
+    xor eax, eax
+    rep stosb
+.exit:
+    pop rdi
+    pop rsi
+    pop rcx
+    pop rbx
+    pop rax
+    return
+.tooLarge:
+    xor rdi, rdi    ;Set ZF
+    stc             ;Set CF
+    jmp short .exit

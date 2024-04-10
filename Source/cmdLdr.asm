@@ -70,7 +70,7 @@ cmdLdr:
     lea rdx, int2Eh
     mov eax, 252Eh ;Set this as Int 2Eh
     int 21h
-;Now, open and parse AUTOEXEC.BAT. Build Master Environment here
+;Now, open and parse AUTOEXEC.BAT. Build new Master Environment here.
 ;If no AUTOEXEC.BAT, request time and date from user
     mov ebx, 10 ;Allocate 160 bytes
     mov eax, 4800h
@@ -92,7 +92,12 @@ cmdLdr:
     mov ah, 09h
     int 21h
     jmp short .printInit
-.skipMaster:
+.skipMaster:    
+;We now search for the master environment!!
+    ;Walk the parentPSP chain until we find a PSP which is its own
+    ; parent. This is the previous master command interpreter! This means
+    ; that non-master COMMAND.COM instances are not their own parents! We 
+    ; then set our environment ptr in the PSP to the master environment.
     lea rdi, qword [r8 + psp.progTail]
     movzx ecx, byte [r8 + psp.parmList]
     movzx eax, byte [switchChar]

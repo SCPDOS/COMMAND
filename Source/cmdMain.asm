@@ -381,16 +381,14 @@ redirPipeFailureCommon:
     mov eax, 4000h  ;Write handle
     mov ebx, 2  ;Write to STDERR
     int 21h
-    xor ebx, ebx    ;Select STDIN
-    call .closeHandle
-    inc ebx         ;Select STDOUT
-    call .closeHandle
-    mov eax, 3D02h  ;Open read/write
-    lea rdx, conName
-    int 21h
-    mov ebx, eax    ;Move file handle to ebx
-    mov eax, 4500h  ;DUP
-    int 21h
+    movzx eax, word [redirSTDIN]
+    movzx edx, word [pipeSTDIN]
+    xor ebx, ebx    ;Select STDIN for closing
+    call .closeAndReplace
+    movzx eax, word [redirSTDOUT]
+    movzx edx, word [pipeSTDOUT]
+    inc ebx         ;Select STDOUT for closing
+    call .closeAndReplace
     mov word [redirIn], 0  ;Clear both flags
     movzx ebx, word [redirSTDIN]
     call .closeHandle
@@ -430,6 +428,29 @@ redirPipeFailureCommon:
     cmp ebx, -1
     rete
     mov eax, 3E00h
+    int 21h
+    return
+.closeAndReplace:
+;Input: ax = one possible handle, dx = second possible handle
+;       bx = handle to close and copy ax/dx into
+;Output: Handle intervened on. bx preserved
+    shl eax, 10h    ;Shift low word into upper word
+    or eax, edx     ;Form packed
+    cmp eax, -1     ;If both -1, skip close!
+    rete            ;Needed to ensure we dont fail silently
+    call .closeHandle
+    cmp ax, -1      
+    cmove ax, dx    ;If ax is -1, move dx into ax
+    push rbx
+    movzx ebx, ax   ;Zero upper word of eax
+    mov eax, 4500h  ;DUP this into the space formed by the close
+    int 21h
+    pop rbx
+    retnc   ;If this succeeds, return
+    ;Else we now try to force con to open!
+    call .closeHandle   ;Try close bx again!
+    mov eax, 3D02h  ;Open read/write
+    lea rdx, conName
     int 21h
     return
 

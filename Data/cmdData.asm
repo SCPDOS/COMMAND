@@ -117,5 +117,8 @@ renName     db 11 dup (" ") ;Build a name pattern here in FCB format
 sourceHdl   dw -1
 destHdl     dw -1
 srcHdlInfo  dw 0 ;Used to save the handle device info (bit 7 Set -> Char dev)
-
 copyBuffer  db 128 dup (0)  ;Copy up to 128 bytes at a time
+
+;Environment manipulation vars
+envVarSz        dw 0    ;Env var size
+envVarNamSz     dw 0    ;Env var "name="" length
