@@ -72,9 +72,9 @@ pipe2Filespec   db fileSpecZL dup (0)   ;Space for the pipe file filespec
 newPipe dq 0    ;Pointer to the new pathspec (STDOUT)
 oldPipe dq 0    ;Pointer to the old pathspec (STDIN)
 
-searchSpec  db cmdBufferL dup (0)   ;Main scratch buffer for forming paths!
-;The above is slightly larger than is needed/supported by DOS to allow for 
-; users overtyping
+;Main scratch buffer for forming paths! Needs to be large enough to splice
+; a really long invalid DOS path for PATH to work properly.
+searchSpec  db 2*cmdBufferL dup (0)   
 
 ;Internal Function vars
 ;Dir Vars

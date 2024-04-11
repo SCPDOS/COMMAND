@@ -591,7 +591,7 @@ cpDelimOrCtrlStringToBufz:
     mov byte [rdi], 0   ;Init by null terminating
 .lp:
     lodsb
-    cmp al, 20h ;Chars up to 20h are delimiters here
+    cmp al, 20h ;Chars up to 20h are delimiters here. CR included!
     jbe .exit
     call isALdelimiter
     je .exit

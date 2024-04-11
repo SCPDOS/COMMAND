@@ -60,8 +60,6 @@ dir:
     ;Start by scanning for the switches
     lea rsi, qword [r8 + cmdLine]  ;Goto command line
     mov rdi, rsi    ;Use rsi as start of buffer counter
-    ;call skipDelimiters ;Skip leading delimiters
-    ;add rsi, 3  ;Go past the DIR
 .scanNew:
     call skipDelimiters ;Set rsi pointing to a non delimiting char
     lodsb   ;Get this char
@@ -1942,6 +1940,7 @@ set:
     movzx eax, byte [arg1Off]
     lea rsi, qword [r8 + cmdLine]
     add rsi, rax            ;rsi -> EnvvarName=[string]<CR>
+.altEp:
     mov rdi, rsi            ;Point rdi to the start of the string
     mov al, CR              ;Search for the CR
     movzx ecx, byte [r8 + cmdLineCnt]   ;Get the char count of the tail
@@ -2030,25 +2029,61 @@ pathEdit:
 ; after the equals sign. If what follows a semicolon is a terminator, we 
 ; end there. Error with too many arguments error!
 ;If after the equals sign there is nothing, we just print the path!
-    call checkEnvGoodAndGet
-    jz badEnvSpaceError ;rsi has the ptr to the environment
-    lea rdi, pathEVar   ;This is what we want to get
-    call searchForEnvVar
-    jc .noPathPrnt      ;If the var doesnt exit, print no path!
-    breakpoint
-    mov rdx, rsi        ;Save the ptr to the start of the PATH= string
-    mov rdi, rsi
-    call strlen         ;Get the path length in cx with PATH= 
-    test byte [arg1Flg], -1
-    jz .printPath
-    lea rdx, .l1
-    mov eax, 0900h
-    jmp short .pathExit
-.l1 db "DIRECT PATH EDIT NOT IMPLEMENTED YET",CR,LF,"$"
+;Gotta process the command line ourselves first
+    call checkEnvGoodAndGet         ;Use as a good environment check!
+    jz badEnvSpaceError
+    ;Now we know we can use r8 to get the envptr when needed
+    lea rsi, qword [r8 + cmdLine]   ;Get the ptr to scan for ; or <CR>
+    call .skipPathDelimiters
+    cmp al, CR
+    je .printPath
+;Else use the set command to setup the path in the searchSpec.
+    push rsi    ;Save the first char of the command line string
+    lea rsi, pathEVar
+    lea rdi, searchSpec
+    call strcpy
+    dec rdi     ;Point to the terminating null
+    pop rsi     ;Get back the first char of the pathstring
+    xor ecx, ecx    ;Make a count of chars
+.cpLp:
+    lodsb
+    cmp al, CR
+    je .cpLpExit
+    call .isALPathDelimiter ;Any path delims now are exit conditions!
+    je .cpLpExit
+    call ucChar ;Uppercase the char
+    stosb       ;Store it
+    inc ecx     ;Inc the count, CR not inclusive!
+    jmp short .cpLp
+.cpLpExit:
+    ;Remove trailing semicolons
+    cmp byte [rdi - 1], ";" ;Check back a char
+    jne .cpLpNoIntervene
+    dec ecx     ;Reduce the count by one
+    dec rdi     ;Go back a char
+    jmp short .cpLpExit ;Keep removing
+.cpLpNoIntervene:
+    mov al, CR  ;Now we store the terminator!
+    stosb       ;Store it!
+    add ecx, 5  ;PATH= is 5 chars
+    mov byte [r8 + cmdLineCnt], cl  ;Store the count
+    inc ecx     ;Add the CR for copying over
+    lea rsi, searchSpec
+    lea rdi, qword [r8 + cmdLine]
+    push rdi
+    rep movsb
+    pop rsi         ;Get the ptr to the cmdline in rsi
+    jmp set.altEp   ;We've now set the string up, lets go!
 .printPath:
+    lea rdi, pathEVar   ;This is what we want to get
+    call searchForEnvVar    ;Returns ptr to env var in rsi
+    jc .noPathPrnt      ;If the var doesnt exit, print no path!
+    mov rdi, rsi        
+    call strlen         ;Get the length of the path in rdi
     cmp ecx, 6          ;Is our path just PATH=<NUL>?
     je .noPathPrnt      ;Print no path!
     dec ecx             ;Drop the terminating null from the count
+    mov rdx, rdi        ;Set path ptr for printing
     mov ebx, 1          ;STDOUT
     mov eax, 4000h      ;ecx = char count, rdx points to PATH= string
     jmp short .pathExit
@@ -2058,4 +2093,24 @@ pathEdit:
 .pathExit:
     int 21h
     call printCRLF      ;Print a crlf at the end
+    return
+
+.skipPathDelimiters:
+;Input: rsi -> Start of string to parse
+;Output: rsi -> First non-delimiter char of string
+;        al = First non delim char
+    lodsb
+    call .isALPathDelimiter
+    je .skipPathDelimiters
+    dec rsi
+    return
+.isALPathDelimiter:
+;Same as before without semicolon
+    cmp al, SPC
+    rete
+    cmp al, TAB
+    rete
+    cmp al, ","
+    rete
+    cmp al, "="
     return
