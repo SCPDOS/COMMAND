@@ -774,40 +774,7 @@ date:
     lea rdx, curDate
     mov ah, 09h
     int 21h
-    mov ah, 2Ah ;DOS get date
-    int 21h
-	;AL = day of the week (0=Sunday)
-	;CX = year (1980-2099)
-	;DH = month (1-12)
-	;DL = day (1-31)
-    mov word [td1], cx
-    mov byte [td3], dl
-    mov byte [td4], dh
-    movzx eax, al
-    mov ebx, eax
-    shl ebx, 1   ;Multiply by 2
-    add eax, ebx ;Make it 3 times 
-    lea rdx, dayName
-    lea rdx, qword [rdx + rax]  ;Go to the right day name
-    mov ecx, 3  ;Print three chars
-    mov ebx, 1  ;STDOUT
-    mov ah, 40h ;Write to handle
-    int 21h
-    mov dl, " "
-    mov ah, 02h
-    int 21h
-;       eax[0:4] = Day of the month, a value in [0,...,31]
-;       eax[5:8] = Month of the year, a value in [0,...,12]
-;       eax[9:15] = Number of years since 1980, a value in [0,...,127]
-    movzx eax, word [td1]   ;Get this word
-    shl eax, 9 ;Move it high to pack it properly
-    movzx ebx, byte [td4]
-    shl ebx, 5  ;Shift the date to the right position
-    or eax, ebx ;Add this date to eax
-    movzx ebx, byte [td3]
-    or eax, ebx
-    mov ebx, 1  ;Four digit year pls
-    call printDate
+    call printFmtDate
 
     lea rdx, newDate
     mov ah, 09h
@@ -838,39 +805,8 @@ time:
     lea rdx, curTime
     mov ah, 09h
     int 21h
-    mov ah, 2Ch ;DOS get time
-    int 21h
-    ;CH = hour (0-23)
-	;CL = minutes (0-59)
-	;DH = seconds (0-59)
-	;DL = hundredths (0-99)
-    mov byte [td1], cl
-    mov byte [td2], ch
-    mov byte [td3], dl
-    mov byte [td4], dh
-    movzx eax, ch
-    call printTime.printHours
 
-    mov dl, byte [ctryData + countryStruc.timeSep]
-    mov ah, 02h
-    int 21h
-
-    movzx eax, byte [td1]   ;Minutes
-    call printTime.printMinutesAlt
-
-    mov dl, byte [ctryData + countryStruc.timeSep]
-    mov ah, 02h
-    int 21h
-
-    movzx eax, byte [td4]   ;Seconds
-    call printTime.printMinutesAlt
-
-    mov dl, "."
-    mov ah, 02h
-    int 21h
-
-    movzx eax, byte [td3]   ;Hundreths
-    call printTime.printMinutesAlt
+    call printFmtTime
 
     lea rdx, newTime
     mov ah, 09h
@@ -1851,14 +1787,18 @@ launchChild:
     mov rsi, rdi        ;This is a ; or null delimited ASCII string
     lea rdi, searchSpec ;Build the path in searchSpec
     ;WARNING!!! THIS COULD CAUSE A BUFFER OVERFLOW BUG!!
-    ; MUST CHECK THE LENGTH OF THE PATH COMPONANT THAT WE ARE 
+    ;SHOULD CHECK THE LENGTH OF THE PATH COMPONANT THAT WE ARE 
     ; SPLICING ON. IF IT IS LONGER THAN 64 CHARS WE IGNORE IT!!
+    ;This is impossible to do if env edited by COMMAND.COM
     call cpDelimOrCtrlStringToBufz      ;Copies upto ; or null 
     dec rsi ;Point rsi to the char which delimited the path
     mov rbp, rsi    ;Point rbp to this char
     dec rdi ;Point to the null terminator
     mov al, byte [pathSep]
+    cmp byte [rdi - 1], al
+    je .skipPathsep ;Need for rootdir as a double slash start is a netpath
     stosb   ;Store a pathsep onto the null terminator
+.skipPathsep: ;Affects double slashes in path (but thats ok)
     lea rsi, qword [cmdFcb + fcb.filename]
     call FCBToAsciiz    ;Store the name here and null terminate
     lea rsi, searchSpec 
@@ -2114,3 +2054,42 @@ pathEdit:
     rete
     cmp al, "="
     return
+
+prompt:
+    call checkEnvGoodAndGet         ;Use as a good environment check!
+    jz badEnvSpaceError
+    ;Now we know we can use r8 to get the envptr when needed
+    lea rsi, qword [r8 + cmdLine]   ;Get the ptr to scan for ; or <CR>
+    call skipDelimiters ;Points rsi to the first non-delimiter char
+    cmp byte [rsi], CR  ;Is the first non-delim a CR?
+    je .reset   ;Reset if so
+    push rsi    ;Save ptr to the start of the user typed line
+    lea rsi, promptEVar ;Copy the PROMPT= prefix to searchspec
+    lea rdi, searchSpec
+    mov ecx, 7  ;Copy without <CR>
+    rep movsb
+    pop rsi ;Get back ptr to the user typed line
+    xor ecx, ecx    ;Get char count
+.cp:    ;Now copy the user string over
+    lodsb
+    stosb 
+    cmp al, CR
+    je .cpOk
+    inc ecx ;Increment count if non CR char copied over
+    jmp short .cp
+.cpOk:
+    lea rsi, searchSpec ;Source the string from here
+    jmp short .goSet    ;Got the CR-less count
+.reset:
+;Delete the environment variable!
+    lea rsi, promptEVar 
+    xor ecx, ecx    ;No chars to write to the envstring
+.goSet:
+    add ecx, 7  ;Add the chars for the prompt= string too
+    mov byte [r8 + cmdLineCnt], cl 
+    inc ecx     ;Include CR in copy
+    lea rdi, qword [r8 + cmdLine]
+    push rdi
+    rep movsb
+    pop rsi
+    jmp set.altEp

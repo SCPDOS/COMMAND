@@ -7,7 +7,6 @@ pspPtr      dq 0    ;Internal pointer to the task PSP
 realParent  dq -1   ;Only the first Copy of COMMAND.COM sets itself here
 sysVars     dq 0    ;Ptr to DOS sysvars
 numHdls     dw 20   ;Get number of handles permitted
-promptPtr   dw -1   ;Offset From Environemnt Start to prompt String. -1 => dflt 
 pathSep     db "\"  ;Default path sep
 switchChar  db "/"  ;Default switch char
 permaSwitch db 0    ;If -1, EXIT should just return. If 0, EXIT returns

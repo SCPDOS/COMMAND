@@ -84,14 +84,14 @@ pipeErrMsgL equ $ - pipeErrMsg
 redirErrMsg db "Redirection error",CR,LF
 redirErrMsgL   equ $ - redirErrMsg
 
-ansiCls  db 01BH,"[2J" ;ANSI CLS sequence, 4 chars long
+ansiCls  db ESC,"[2J" ;ANSI CLS sequence, 4 chars long
 fourSpc  db "    $"
 threeSpc db "   $"
 twoSpc   db "  $"
 
 badOnOff db "Must specify ON or OFF",CR,LF,"$"
 
-promptEVar  db "PROMPT="
+promptEVar  db "PROMPT=",CR     ;Must be CR terminated!
 extStr  db "COMEXEBAT"  ;Used for extension searches
 ;If anything goes wrong with piping or redirecting just close first two 
 ; handles and reopen CON

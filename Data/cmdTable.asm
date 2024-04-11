@@ -84,6 +84,9 @@ functionTable:
 
     db 3, "SET"
     dw set - startLbl
+
+    db 6, "PROMPT"
+    dw prompt - startLbl
 ;TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP
     db 5, "MKLBL"
     dw mklbl - startLbl

@@ -1,11 +1,5 @@
 ;Misc functions and subroutines for command.com
 
-printCRLF:
-    lea rdx, crlf
-printString:
-    mov eax, 0900h  ;Print string
-    int 21h
-    return
 printDate:
 ;Input: eax = Packed Date
 ;       eax[0:4] = Day of the month, a value in [0,...,31]
@@ -204,6 +198,83 @@ printTime:
     pop rcx
     return
 
+printPrompt:
+    lea rdi, promptEVar   ;Find the prompt var
+    call searchForEnvVar
+    jnc .validPrompt
+    ;Here we print the default prompt
+    call putCWDInPrompt
+    call putGTinPrompt
+    return
+.validPrompt:
+;rsi points to the prompt
+    add rsi, 7  ;Go past the prompt= string
+.promptLp:
+    lodsb   ;Get the char
+    test al, al
+    retz    ;Return when al is 0
+    cmp al, "$"
+    je .escapeChar
+    mov dl, al
+    call outChar    ;Prints the char in dl
+    jmp short .promptLp
+.escapeChar:
+    lodsb       ;Get the next char now that we are escaping
+    call ucChar ;Uppercase this char in al
+    lea rbx, .pTbl
+    mov ecx, pTblL / 3  ;3 bytes per entry
+.escapeLp:
+    cmp byte [rbx], al  ;Are we at the right entry?
+    je .escapeFnd
+    add rbx, 3  ;Go to next entry
+    dec ecx
+    jnz .escapeLp
+    jmp short .promptLp  ;Output nothing if invalid
+.escapeFnd:
+    lea rax, .pTbl              ;Get the table addr
+    movzx ebx, word [rbx + 1]   ;Get the word offset from the table
+    add rax, rbx                ;Add these
+    push rsi    ;Ensure rsi remains unchanged
+    call rax    ;Call indirectly the function to output the chars
+    pop rsi
+    jmp short .promptLp
+
+;Easy table to use, 13 entries, 3 bytes per entry
+.pTbl:
+    db "B", 
+    dw putPipeInPrompt - .pTbl     ;Pipe char
+    db "D", 
+    dw printFmtDate - .pTbl        ;Current date
+    db "E", 
+    dw putEscInPrompt - .pTbl      ;ANSI Escape char
+    db "G", 
+    dw putGTinPrompt - .pTbl       ;Greater than char
+    db "H", 
+    dw putBSPinPrompt - .pTbl      ;Backspace
+    db "L", 
+    dw putLTinPrompt - .pTbl       ;Less than char
+    db "N", 
+    dw putDriveInPrompt - .pTbl    ;Current drive letter
+    db "P", 
+    dw putCWDInPrompt - .pTbl      ;Current drive and path
+    db "Q", 
+    dw putEquInPrompt - .pTbl      ;Equals char
+    db "T", 
+    dw printFmtTime - .pTbl        ;Current time in hh:mm:ss.hh fmt
+    db "V", 
+    dw putVersionInPrompt - .pTbl  ;DOS version number
+    db "_", 
+    dw printCRLF - .pTbl           ;CRLF pair
+    db "$", 
+    dw putMoneyInPrompt - .pTbl    ;Dollar sign
+pTblL equ $ - .pTbl
+
+printCRLF:
+    lea rdx, crlf
+printString:
+    mov eax, 0900h  ;Print string
+    int 21h
+    return
 
 putVersionInPrompt:
     lea rdx, dosVer
@@ -246,6 +317,14 @@ putLTinPrompt:
     mov dl, "<"
     jmp short outChar
 
+putBSPinPrompt:
+    lea rdx, backSpace
+    mov ecx, 3
+    mov ebx, 1
+    mov eax, 4000h  ;Output the backspace!
+    int 21h
+    return
+
 putDriveInPrompt:
     call getCurrentDrive
     add al, "A" ;Convert to letter
@@ -280,6 +359,74 @@ putCWDInPrompt:
 ;If the drive is bad, we print this string instead of drive:\cwd
     lea rdx, badDrvMsg
     call printString
+    return
+printFmtTime:
+;Outputs the formatted time
+    mov ah, 2Ch ;DOS get time
+    int 21h
+    ;CH = hour (0-23)
+	;CL = minutes (0-59)
+	;DH = seconds (0-59)
+	;DL = hundredths (0-99)
+    mov byte [td1], cl
+    mov byte [td2], ch
+    mov byte [td3], dl
+    mov byte [td4], dh
+    movzx eax, ch
+    call printTime.printHours
+    mov dl, byte [ctryData + countryStruc.timeSep]
+    mov ah, 02h
+    int 21h
+    movzx eax, byte [td1]   ;Minutes
+    call printTime.printMinutesAlt
+    mov dl, byte [ctryData + countryStruc.timeSep]
+    mov ah, 02h
+    int 21h
+    movzx eax, byte [td4]   ;Seconds
+    call printTime.printMinutesAlt
+    mov dl, "."
+    mov ah, 02h
+    int 21h
+    movzx eax, byte [td3]   ;Hundreths
+    call printTime.printMinutesAlt
+    return
+
+printFmtDate:
+;Outputs the formatted date
+    mov eax, 2A00h ;DOS get date
+    int 21h
+	;AL = day of the week (0=Sunday)
+	;CX = year (1980-2099)
+	;DH = month (1-12)
+	;DL = day (1-31)
+    mov word [td1], cx
+    mov byte [td3], dl
+    mov byte [td4], dh
+    movzx eax, al
+    mov ebx, eax
+    shl ebx, 1   ;Multiply by 2
+    add eax, ebx ;Make it 3 times 
+    lea rdx, dayName
+    lea rdx, qword [rdx + rax]  ;Go to the right day name
+    mov ecx, 3  ;Print three chars
+    mov ebx, 1  ;STDOUT
+    mov ah, 40h ;Write to handle
+    int 21h
+    mov dl, " "
+    call outChar
+    call outChar
+;       eax[0:4] = Day of the month, a value in [0,...,31]
+;       eax[5:8] = Month of the year, a value in [0,...,12]
+;       eax[9:15] = Number of years since 1980, a value in [0,...,127]
+    movzx eax, word [td1]   ;Get this word
+    shl eax, 9 ;Move it high to pack it properly
+    movzx ebx, byte [td4]
+    shl ebx, 5  ;Shift the date to the right position
+    or eax, ebx ;Add this date to eax
+    movzx ebx, byte [td3]
+    or eax, ebx
+    mov ebx, 1  ;Four digit year pls
+    call printDate
     return
 
 BCDtoHex:
@@ -437,16 +584,6 @@ isALdelimiter:
     cmp al, ","
     rete
     cmp al, TAB
-    return
-
-printPrompt:
-    cmp word [promptPtr], -1
-    jne .validPrompt
-    ;Here we print the default prompt
-    call putCWDInPrompt
-    call putGTinPrompt
-    return
-.validPrompt:
     return
 
 clearCommandState:
