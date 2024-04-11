@@ -1808,12 +1808,14 @@ launchChild:
 .pathReentry:
     cmp byte [rbp], 0   ;Each env string is finally null terminated.
     je badCmdError
-    cmp al, errBadDrv
-    jne .pathDrvOk
-    lea rdx, badDrvSrch ;Print the drive was invalid!
-    mov eax, 0900h
-    int 21h
-.pathDrvOk:
+;Currently, because we dont swap drives, we wont print this message.
+;Not really a big deal...
+    ;cmp al, errBadDrv
+    ;jne .pathDrvOk
+    ;lea rdx, badDrvSrch ;Print the drive was invalid!
+    ;mov eax, 0900h
+    ;int 21h
+;.pathDrvOk:
     inc rbp             ;Go to the start of the next componant
     mov rdi, rbp        ;So rdi points to the first char of next comp
     jmp short .pathRejoin   ;Check if null, and if not, proceed again!
