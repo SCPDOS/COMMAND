@@ -14,6 +14,8 @@ parentInt22 dq 0    ;Stores the parent values to restore upon exiting if it can
 ;Static strings, not used in command line parsing
 ctryData    db countryStruc_size dup (0)  ;Length of the country table
 currDirStr  db fullDirPathZL dup (0) ;Current Directory String
+inCritical  db 0    ;Up if processing a command.
+echoFlg     db -1   ;Global Echo flag, starts up!
 
 
 cmdLineStatePtr:

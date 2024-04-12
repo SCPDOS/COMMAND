@@ -199,6 +199,8 @@ printTime:
     return
 
 printPrompt:
+    test byte [echoFlg], -1 ;If echo off, no prompt!
+    retz
     lea rdi, promptEVar   ;Find the prompt var
     call searchForEnvVar
     jnc .validPrompt
@@ -358,8 +360,7 @@ putCWDInPrompt:
 .badDrive:
 ;If the drive is bad, we print this string instead of drive:\cwd
     lea rdx, badDrvMsg
-    call printString
-    return
+    jmp printString
 printFmtTime:
 ;Outputs the formatted time
     mov ah, 2Ch ;DOS get time

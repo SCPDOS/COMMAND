@@ -48,9 +48,7 @@ badDirError:
     lea rdx, badDir
 badCmn:
     mov byte [returnCode], -1    ;Return code defaults to -1 if error (for now!)
-    mov eax, 0900h
-    int 21h
-    return  ;This will be made nuanced later, to agree with DOS behaviour
+    jmp printString     ;This will be made nuanced later, to agree with DOS
 badCmdError:
     lea rdx, badCmd
     jmp short badCmn
@@ -536,9 +534,7 @@ mkdir:
     retnc
 .badMake:   ;Else, bad make
     lea rdx, badMD
-    mov eax, 0900h
-    int 21h
-    return
+    jmp printString
 
 rmdir:
     test byte [arg1Flg], -1
@@ -556,9 +552,7 @@ rmdir:
     retnc   ;Return if not carry
 .badRemove:   ;Else, bad make
     lea rdx, badRD
-    mov eax, 0900h
-    int 21h
-    return
+    jmp printString
 
 copy:
     test byte [arg1Flg], -1
@@ -1747,7 +1741,7 @@ launchChild:
 ;Pathspec in rdx exists, so now we prepare to launch it! First check it is not
 ; a BAT. If it is, separate handling!
     cmp byte [cmdFcb + fcb.fileext], "B"    ;If it is B, its a batch!
-    je .batLaunch
+    je batLaunch
     lea rbx, launchBlock
     mov rax, qword [r8 + psp.envPtr]    ;Get the env pointer
     mov qword [rbx + execProg.pEnv], rax 
@@ -1857,13 +1851,6 @@ launchChild:
     inc rbp             ;Go to the start of the next componant
     mov rdi, rbp        ;So rdi points to the first char of next comp
     jmp short .pathRejoin   ;Check if null, and if not, proceed again!
-
-.batLaunch:
-    lea rdx, .batMsg
-    mov eax, 0900h
-    int 21h
-    return
-.batMsg db "BATCH preprocessor not implemented",CR,LF,"$"
 
 .prepAndSearch:
 ;Copies over the name and extension in UC to the last componant of the 
@@ -2074,7 +2061,6 @@ pathEdit:
     int 21h
     call printCRLF      ;Print a crlf at the end
     return
-
 .skipPathDelimiters:
 ;Input: rsi -> Start of string to parse
 ;Output: rsi -> First non-delimiter char of string
@@ -2133,3 +2119,65 @@ prompt:
     rep movsb
     pop rsi
     jmp set.altEp
+
+batLaunch:
+;Preps and launches a batch file!
+    lea rdx, .batMsg
+    jmp printString
+.batMsg db "BATCH preprocessor not implemented",CR,LF,"$"
+
+echo:
+    test byte [arg1Flg], -1 ;If no argument, display if on or off
+    jnz .argGiven
+    lea rdx, echoIs
+    call printString
+    lea rdx, onMes
+    lea rcx, offMes
+    test byte [echoFlg], -1
+    cmovz rdx, rcx
+    jmp printString
+.argGiven:
+    lea rsi, qword [r8 + cmdLine]
+    movzx eax, byte [arg1Off]   ;Get the offset
+    add rsi, rax
+    lodsb   ;Get this char
+    dec rsi ;And go back to the start of the string
+    call ucChar
+    cmp al, "O" ;Was it an O? If not, direct copy
+    jne .directEcho
+    mov al, byte [rsi + 1]  ;Get the next char
+    call ucChar
+    cmp al, "N" ;If its N, check its the last char on the string
+    jne .checkOff
+    push rsi
+    add rsi, 2  ;Go past on string
+    call skipDelimiters
+    cmp byte [rsi], CR
+    pop rsi
+    jne .directEcho ;If its not, just echo the string
+    mov byte [echoFlg], -1
+    return
+.checkOff:
+    mov al, byte [rsi + 1]  ;Get first char past O
+    call ucChar
+    cmp al, "F" ;Is it an F?
+    jne .directEcho ;No, just direct echo
+    mov al, byte [rsi + 2]
+    call ucChar
+    cmp al, "F"
+    jne .directEcho
+    push rsi
+    add rsi, 3
+    call skipDelimiters
+    cmp byte [rsi], CR
+    pop rsi
+    jne .directEcho
+    mov byte [echoFlg], 0
+    return
+.directEcho: 
+    lodsb
+    cmp al, CR
+    je printCRLF    ;Prints a crlf and returns
+    mov dl, al
+    call outChar
+    jmp short .directEcho

@@ -106,4 +106,7 @@ functionTable:
     db 5, "SUBST"
     dw subst - startLbl
 ;TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP
+
+    db 4, "ECHO"
+    dw echo - startLbl
     db -1   ;End of table
