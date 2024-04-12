@@ -21,6 +21,7 @@ commandMain:
     mov eax, 5D08h  ;Set net printer state
     mov edx, 1      ;Start new print job
     int 21h
+.inputGetAgain:
     call clearCommandLineState  ;Cleans all handles 5->MAX
     test byte [batFlag], -1 ;If batch on, get the next line to execute
     jnz batNextLine
@@ -40,6 +41,12 @@ commandMain:
     mov ecx, cmdBufferL     ;Copy the buffer over to manipulate
     rep movsb
     call makeCmdBuffer      ;Preprocess the redir, make cmd buffer
+    lea rsi, cmdBuffer + 2
+    call skipDelimiters
+    cmp byte [rsi], CR      ;If the first non-delim is a CR, reject input!
+    je .inputGetAgain       ;Wipe redir flags!
+    cmp byte [rsi], "|"     ;If the first non-delim is a pipe, syntax error!
+    je .synErr
 .pipeLoop:
     mov r8, qword [pspPtr]  ;Point back to home segment
     call makeCmdString      ;Makes the CR delimited command in psp
@@ -61,6 +68,9 @@ commandMain:
     rep movsb   ;Move the chars over    
     call clearCommandState  ;Else, clear the command state and start again
     jmp short .pipeLoop     ;Doesn't close handles above 5 until end of pipe!
+.synErr:
+    call badSyntaxError         ;Output bad syntax if empty command found
+    jmp redirPipeFailureCommon.noPrint  ;This closes pipes and resets stack
 makeCmdBuffer:
 ;Makes the command buffer, escapes quotes and peels off any redirs from the
 ; copy buffer. Called only once in a cycle.
@@ -224,7 +234,7 @@ doCommandLine:
     lea rsi, cmdPathSpec
     ;The following check accounts for the end of a piped command
     cmp byte [cmdName], 0  ;If the cmd name length is 0, do nothing!
-    rete
+    je .badCmdName
     cmp byte [cmdName], -1  ;Error condition, command name too long!
     je badCmdError
     lea rdi, cmdFcb
@@ -250,6 +260,10 @@ doCommandLine:
     int 21h
     stc
     return
+.badCmdName:
+    call badSyntaxError         ;Output bad syntax if empty command found
+    jmp redirPipeFailureCommon.noPrint  ;This closes pipes and resets stack
+    
 .noDriveSpecified:
 ;Now we set the two FCB's in the command line
     test byte [arg1Flg], -1
@@ -640,14 +654,6 @@ setupRedirandPipes:
     retz           
     cmp byte [pipeSTDOUT], -1   ;If pipe out is active, pause redirOut
     retne             ;Exit if it is
-    ;Check if we have anything to get output from
-    lea rsi, qword [r8 + cmdLine]
-    call skipDelimiters
-    cmp byte [rsi], CR
-    jne .makeRout
-    mov byte [redirOut], 0
-    return
-.makeRout:
     ;Else setup the redir here for STDOUT
     mov ebx, 1    ;DUP STDOUT
     mov eax, 4500h
