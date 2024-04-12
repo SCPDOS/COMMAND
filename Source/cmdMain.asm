@@ -25,7 +25,7 @@ commandMain:
     call clearCommandLineState  ;Cleans all handles 5->MAX
     test byte [batFlag], -1 ;If batch on, get the next line to execute
     jnz batNextLine
-.inputMain2:
+.inputGetCmdlineAgain:
     call printPrompt    ;Ok we are gonna get more input, output prompt
     lea rdx, inBuffer
     mov eax, 0A00h      ;Do Buffered input
@@ -33,7 +33,7 @@ commandMain:
     call printCRLF  ;Note we have accepted input
 ;First check we had something typed in of length greater than 0
     cmp byte [inBuffer + 1], 0  ;Check input length valid
-    je .inputMain2  ;If not, keep looping input
+    je .inputGetCmdlineAgain  ;If not, keep looping input
     ;Copy over the input text
     lea rsi, inBuffer   ;This buffer is used for all input so copy command line
 .batCopy:               ;Jump here to copy the batch input line 
@@ -41,12 +41,13 @@ commandMain:
     mov ecx, cmdBufferL     ;Copy the buffer over to manipulate
     rep movsb
     call makeCmdBuffer      ;Preprocess the redir, make cmd buffer
+    ;Now check we aren't starting with a pipe or <CR> and treat differently
     lea rsi, cmdBuffer + 2
     call skipDelimiters
     cmp byte [rsi], CR      ;If the first non-delim is a CR, reject input!
-    je .inputGetAgain       ;Wipe redir flags!
+    je .inputGetAgain       ;Wipe redir flags and reobtain input!
     cmp byte [rsi], "|"     ;If the first non-delim is a pipe, syntax error!
-    je .synErr
+    je hardSynErr
 .pipeLoop:
     mov r8, qword [pspPtr]  ;Point back to home segment
     call makeCmdString      ;Makes the CR delimited command in psp
@@ -68,9 +69,7 @@ commandMain:
     rep movsb   ;Move the chars over    
     call clearCommandState  ;Else, clear the command state and start again
     jmp short .pipeLoop     ;Doesn't close handles above 5 until end of pipe!
-.synErr:
-    call badSyntaxError         ;Output bad syntax if empty command found
-    jmp redirPipeFailureCommon.noPrint  ;This closes pipes and resets stack
+
 makeCmdBuffer:
 ;Makes the command buffer, escapes quotes and peels off any redirs from the
 ; copy buffer. Called only once in a cycle.
@@ -110,7 +109,7 @@ makeCmdBuffer:
     jmp short .getChar  ;Get the next char if a < or > redir
 .pipeHandle:
     ;Store the pipe char, al has the char. IF ZF=ZE, we error
-    jz pipeFailure ;We had double pipe symbol, reset!
+    jz hardSynErr ;We had double pipe symbol, syntax error and reset!
 .notRedir:
     stosb       ;Store char and advance rdi
     cmp al, CR  ;Was this char a CR?
@@ -233,8 +232,8 @@ analyseCmdline:
 doCommandLine:
     lea rsi, cmdPathSpec
     ;The following check accounts for the end of a piped command
-    cmp byte [cmdName], 0  ;If the cmd name length is 0, do nothing!
-    je .badCmdName
+    cmp byte [cmdName], 0  ;If the cmd name length is 0, syntax error!
+    je hardSynErr   ;This now should never be hit, earmark for removal!
     cmp byte [cmdName], -1  ;Error condition, command name too long!
     je badCmdError
     lea rdi, cmdFcb
@@ -260,9 +259,6 @@ doCommandLine:
     int 21h
     stc
     return
-.badCmdName:
-    call badSyntaxError         ;Output bad syntax if empty command found
-    jmp redirPipeFailureCommon.noPrint  ;This closes pipes and resets stack
     
 .noDriveSpecified:
 ;Now we set the two FCB's in the command line
@@ -348,6 +344,10 @@ doCommandLine:
     add rbx, rcx    ;Go past the length of the command name too
     jmp short .nextEntry
 
+hardSynErr:
+;Hard syntax error in cmd line. Delete pipe files and reset completely!
+    call badSyntaxError         ;Output bad syntax if empty command found
+    jmp redirPipeFailureCommon.noPrint  ;This closes pipes and resets stack
 redirFailure:
     lea rdx, redirErrMsg
     mov ecx, redirErrMsgL
@@ -583,8 +583,11 @@ peelRedir:
     jmp short .redirCommon
 .pipeSetup:
     push rsi    ;Save rsi pointing to char past |
-    call skipDelimiters ;Check if this is a double ||
+    call skipDelimiters ;Check if this is effectively a double || or |<CR>
     cmp byte [rsi], "|" 
+    je .badFnd
+    cmp byte [rsi], CR
+.badFnd:
     pop rsi
     stc
     jmp short .redirExit
