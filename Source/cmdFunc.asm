@@ -1769,14 +1769,11 @@ launchChild:
     je badAccError
     cmp al, errMCBbad   ;If MCB bad error, freeze PC
     je freezePC
-    cmp al, errFI24     ;If Int 24h error, display specific error
-    jne badCmdError     ;If something goes wrong, error out
-    lea rdx, fI24Msg
-    jmp badCmn
+    jmp badCmdError     ;If something goes wrong, error out
 .appRet:  ;Return point from a task
     mov eax, 4D00h ;Get Return Code
     int 21h
-    mov word [returnCode], ax   ;ah=2 means process aborted
+    mov word [returnCode], ax
 ;Reset our PSP vectors (and IVT copies) in the event they got mangled
     lea rdx, critErrorHandler
     mov qword [r8 + psp.oldInt24h], rdx

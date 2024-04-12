@@ -51,7 +51,6 @@ dirMain db " Directory of  $"
 noPath  db "No Path $"
 accDenMsg  db "Access denied",CR,LF,"$"
 badDrvMsg db "Current drive is no longer valid$"
-fI24Msg db "Fail on INT 24",CR,LF,"$" 
 ;badDrvSrch  db "Invalid drive in search path",CR,LF,"$"        ;MAY REMOVE
 badDev  db "Invalid device",CR,LF,"$"
 badLbl  db "Label not found",CR,LF,"$"  ;Used in BAT
