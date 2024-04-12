@@ -8,82 +8,50 @@ commandStart:
     mov ah, 4Ah ;Realloc
     neg r8  ;Convert -r8 to r8
     int 21h
-    jmp short commandMain
-applicationReturn:  ;Return point from a task, all regs preserved
-    mov eax, 4D00h ;Get Return Code
-    int 21h
-    mov word [returnCode], ax
-;Reset our PSP vectors (and IVT copies) in the event they got mangled
-    lea rdx, critErrorHandler
-    mov qword [r8 + psp.oldInt24h], rdx
-    mov eax, 2524h
-    int 21h
-    lea rdx, int23h
-    mov qword [r8 + psp.oldInt23h], rdx
-    mov eax, 2523h
-    int 21h
-    lea rdx, applicationReturn
-    mov qword [r8 + psp.oldInt22h], rdx
-    mov eax, 2522h
-    int 21h
-    test byte [pipeFlag], -1
-    jnz commandMain.pipeProceed ;Skip the handle closing when pipe active
-    call advanceRedir   ;Clean up redirection once we are done
-;Close all handles from 5->MAX
-    movzx ecx, word [numHdls]
-    mov ebx, 5
-.handleClose:
-    mov ah, 3Eh ;File close
-    int 21h
-    inc ebx ;Goto next file
-    cmp ebx, ecx
-    jbe .handleClose    ;Keep looping whilst below or equal
 commandMain:
     mov rsp, qword [stackTop]    ;Reset internal stack pointer pos
     cld ;Ensure stringops are done the right way
     mov byte [inBuffer], inBufferL      ;Reset the buffer length
     mov byte [cpyBuffer], inBufferL     ;Reset the buffer length
     mov byte [cmdBuffer], inBufferL     ;Reset the buffer length
-.inputMain:
-    call printCRLF
-.inputMain2:
-    test byte [batFlag], -1 ;If batch on, go here
-    jnz batNextLine
-    call clearCommandLineState
-    call printPrompt
-
+.inputMain:         ;Only reset once per line!
+    call printCRLF  ;Command complete, indicate with new line!
     mov eax, 5D09h  ;Flush network printers
     int 21h
     mov eax, 5D08h  ;Set net printer state
     mov edx, 1      ;Start new print job
     int 21h
+    call clearCommandLineState  ;Cleans all handles 5->MAX
+    test byte [batFlag], -1 ;If batch on, get the next line to execute
+    jnz batNextLine
+.inputMain2:
+    call printPrompt    ;Ok we are gonna get more input, output prompt
     lea rdx, inBuffer
-    mov eax, 0A00h  ;Do Buffered input
+    mov eax, 0A00h      ;Do Buffered input
     int 21h
     call printCRLF  ;Note we have accepted input
 ;First check we had something typed in of length greater than 0
     cmp byte [inBuffer + 1], 0  ;Check input length valid
-    je .inputMain2
+    je .inputMain2  ;If not, keep looping input
     ;Copy over the input text
     lea rsi, inBuffer   ;This buffer is used for all input so copy command line
-.copyPoint: ;Copy over commandline here
+.batCopy:               ;Jump here to copy the batch input line 
     lea rdi, cpyBuffer
-    mov ecx, cmdBufferL   ;Straight up copy the buffer over
+    mov ecx, cmdBufferL     ;Copy the buffer over to manipulate
     rep movsb
-    call makeCmdBuffer   ;Preprocess the redir, make cmd buffer
+    call makeCmdBuffer      ;Preprocess the redir, make cmd buffer
 .pipeLoop:
     mov r8, qword [pspPtr]  ;Point back to home segment
-    call makeCmdString      ;Now make the command string in the psp
-    call setupRedirandPipes ;Setup pipes and redir if appropriate
-    call analyseCmdline
-    call doCommandLine  ;This analyses and does the command line!
-.pipeProceed:
-    call advanceRedir
-    test byte [pipeFlag], -1  ;If we have any pipes active, we proceed here
+    call makeCmdString      ;Makes the CR delimited command in psp
+    ;ZF here indicates if we are at the end of the command or nots
+    call setupRedirandPipes ;Setup/advance pipes and redir as appropriate
+    call analyseCmdline     ;Setup cmdName and fcb for cmdBuffer portion
+    call doCommandLine      ;This preps and executes the command portion.
+    call advanceRedir       ;Now advance and end redir if needed
+    test byte [pipeFlag], -1    ;If no pipes, reset state, accept new input
     jz .inputMain
     ;Now we pull the commandline forwards. 
     call makeCmdString  ;Get offset into cmdBuffer + 2 of pipe in rsi
-    jz .inputMain       ;We are pointing to a CR, no pipe!
     lea rdi, cmdBuffer + 2
     mov rcx, rsi
     sub rcx, rdi    ;Get the number of chars to erase from cmd line 
@@ -92,8 +60,7 @@ commandMain:
     inc ecx     ;One more for the terminating char
     rep movsb   ;Move the chars over    
     call clearCommandState  ;Else, clear the command state and start again
-    jmp short .pipeLoop
-
+    jmp short .pipeLoop     ;Doesn't close handles above 5 until end of pipe!
 makeCmdBuffer:
 ;Makes the command buffer, escapes quotes and peels off any redirs from the
 ; copy buffer. Called only once in a cycle.
@@ -197,9 +164,12 @@ makeCmdString:
 analyseCmdline:
 ;Flags first two arguments if they exist, copies the command into its buffer
 ; processes the command name into the FCB.  
+    mov byte [cmdName], 0   ;Init this field to indicate no cmd
     lea rsi, qword [r8 + cmdLine]   ;Go to the command line in the psp
     mov rbx, rsi            ;Save this ptr in rbx
     call skipDelimiters     ;Skip any preceeding separators
+    cmp byte [rsi], CR      ;We have no command? Return!
+    rete
     lea rdi, cmdPathSpec    ;We copy the command name/path here
     call cpDelimPathToBufz  ;Moves rsi to the first char past the delim char
     dec rsi ;Point it back to the delim char
@@ -253,7 +223,7 @@ analyseCmdline:
 doCommandLine:
     lea rsi, cmdPathSpec
     ;The following check accounts for the end of a piped command
-    cmp byte [cmdName], 0  ;If the cmd name length is 0, fail!
+    cmp byte [cmdName], 0  ;If the cmd name length is 0, do nothing!
     rete
     cmp byte [cmdName], -1  ;Error condition, command name too long!
     je badCmdError
@@ -357,10 +327,8 @@ doCommandLine:
     movzx rbx, word [rdi]
     lea rdi, startLbl
     add rbx, rdi
-    call rbx    ;Call this function...
-    retc    ;Always return with CF=CY on error. Error code set to -1
-    mov byte [returnCode], 0 ;Set the retcode to 0 if ok!
-    return  ;... and return
+    mov byte [returnCode], 0 ;Reset the retcode before executing function!
+    jmp rbx    ;Jump to this function and return a level up!
 .gotoNextEntry:
     add rbx, 3      ;Go past the first count byte and the address word
     add rbx, rcx    ;Go past the length of the command name too
@@ -381,6 +349,7 @@ redirPipeFailureCommon:
     mov eax, 4000h  ;Write handle
     mov ebx, 2  ;Write to STDERR
     int 21h
+.noPrint:
     movzx eax, word [redirSTDIN]
     movzx edx, word [pipeSTDIN]
     xor ebx, ebx    ;Select STDIN for closing
@@ -671,6 +640,14 @@ setupRedirandPipes:
     retz           
     cmp byte [pipeSTDOUT], -1   ;If pipe out is active, pause redirOut
     retne             ;Exit if it is
+    ;Check if we have anything to get output from
+    lea rsi, qword [r8 + cmdLine]
+    call skipDelimiters
+    cmp byte [rsi], CR
+    jne .makeRout
+    mov byte [redirOut], 0
+    return
+.makeRout:
     ;Else setup the redir here for STDOUT
     mov ebx, 1    ;DUP STDOUT
     mov eax, 4500h

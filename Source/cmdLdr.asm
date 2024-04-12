@@ -27,7 +27,7 @@ cmdLdr:
     mov qword [r8 + psp.oldInt23h], rdx
     mov eax, 2523h
     int 21h
-    lea rdx, applicationReturn
+    lea rdx, launchChild.appRet
     mov qword [r8 + psp.oldInt22h], rdx
     mov eax, 2522h
     int 21h

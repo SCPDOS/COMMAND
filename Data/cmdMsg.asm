@@ -7,7 +7,7 @@ needBat db  CR,LF,"Insert disk with batch file"     ;Used in BAT
 badCmd  db  "Bad command or file name",CR,LF,"$"
 dupName db  "Duplicate file name or "
 fnfMsg  db  "File not found",CR,LF,"$"
-noSpace db  "Insufficient disk space",CR,LF,"$"     ;Disk full. On copy only!
+noSpace db  "Insufficient disk space",CR,LF,"$"     ;Disk full.
 noEnvSpace  db  "Out of environment space",CR,LF,"$"
 fulRootDir  db  "File creation error",CR,LF,"$"
 noSelfCopy  db  "File cannot be copied onto itself",CR,LF,"$"
@@ -51,6 +51,7 @@ dirMain db " Directory of  $"
 noPath  db "No Path $"
 accDenMsg  db "Access denied",CR,LF,"$"
 badDrvMsg db "Current drive is no longer valid$"
+fI24Msg db "Fail on INT 24",CR,LF,"$" 
 ;badDrvSrch  db "Invalid drive in search path",CR,LF,"$"        ;MAY REMOVE
 badDev  db "Invalid device",CR,LF,"$"
 badLbl  db "Label not found",CR,LF,"$"  ;Used in BAT

@@ -602,6 +602,15 @@ clearCommandLineState:
     rep stosb
     mov dword [pipeSTDIN], -1
     mov dword [redirSTDIN], -1
+;Close all handles from 5->MAX
+    movzx ecx, word [numHdls]
+    mov ebx, 5
+.lp:
+    mov ah, 3Eh ;File close
+    int 21h
+    inc ebx ;Goto next file
+    cmp ebx, ecx
+    jbe .lp    ;Keep looping whilst below or equal
     return
 
 asciiFilenameToFCB:
@@ -946,7 +955,6 @@ checkEnvGoodAndGet:
     push rcx
     push rdi
     push r8
-    mov r8, qword [pspPtr]
     mov rdi, qword [r8 + psp.envPtr]    ;Get the env ptr!
     test rdi, rdi   ;Null envs are possible. If it happens, just fail!
     jz .badExit

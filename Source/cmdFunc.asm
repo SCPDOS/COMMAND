@@ -3,6 +3,16 @@
 ;Only the Int 2Eh entry point will preserve the callers DTA.
 
 ;Common Error Messages, jumped to to return from
+badDiskFull:
+;This is a different error return, as this closes handles and prints
+; disk full error and resets the command line!
+    lea rdx, noSpace
+    lea rcx, pipeErr
+    test byte [pipeFlag], -1    ;Is the flag set
+    jz short badCmn ;If its just disk full, dont go through pipe clean
+    cmovnz rdx, rcx ;Swap error messages if pipe flag is on
+    call badCmn     ;Print the string
+    jmp redirPipeFailureCommon.noPrint  ;Now close pipes and fully reset!
 badSyntaxError:
     lea rdx, syntaxErr
     jmp short badCmn
@@ -40,7 +50,6 @@ badCmn:
     mov byte [returnCode], -1    ;Return code defaults to -1 if error (for now!)
     mov eax, 0900h
     int 21h
-    stc ;Return with CY => Error occured
     return  ;This will be made nuanced later, to agree with DOS behaviour
 badCmdError:
     lea rdx, badCmd
@@ -1039,7 +1048,6 @@ rename:
     mov qword [destPtr], rsi
     ;Check the second path is just a filename!
     movzx eax, byte [arg2Off]
-    mov r8, qword [pspPtr]
     lea rsi, qword [r8 + cmdLine]
     add rsi, rax    ;Point to the path componant
     lea rdi, searchSpec
@@ -1644,10 +1652,13 @@ type:
     int 21h
     return
 .exitBad:
-    ;Print a disk error message... use a table to build the message but for
-    ; now, just exit
-    ;If it is a char device, don't print a error
-    jmp short .exit
+    ;If it is a char device, don't print an error
+    mov eax, 4400h  ;Get IOCTL mode 
+    mov ebx, 1
+    int 21h
+    test dl, devCharDev
+    retnz
+    jmp badDiskFull
 
 exit:
     test byte [permaSwitch], -1
@@ -1727,7 +1738,7 @@ launchChild:
     mov ecx, 3
     mov al, SPC
     rep stosb   ;Store back the empty extension!
-    jmp short .pathHandle
+    jmp .pathHandle
 .extFnd:
 ;Here if the file had the right extension.
     call .prepAndSearch    ;Prep and search path in rdx.
@@ -1749,7 +1760,37 @@ launchChild:
     lea rdx, cmdPathSpec
     mov eax, 4B00h  ;Load and execute!
     int 21h
-    jmp badCmdError    ;If something goes wrong, error out
+;If the program failed to start, verify why!
+    mov eax, 5900h      ;Get extended error
+    xor ebx, ebx
+    int 21h
+    mov word [returnCode], ax   ;Error code from EXEC
+    cmp al, errAccDen   ;Access denied?
+    je badAccError
+    cmp al, errMCBbad   ;If MCB bad error, freeze PC
+    je freezePC
+    cmp al, errFI24     ;If Int 24h error, display specific error
+    jne badCmdError     ;If something goes wrong, error out
+    lea rdx, fI24Msg
+    jmp badCmn
+.appRet:  ;Return point from a task
+    mov eax, 4D00h ;Get Return Code
+    int 21h
+    mov word [returnCode], ax   ;ah=2 means process aborted
+;Reset our PSP vectors (and IVT copies) in the event they got mangled
+    lea rdx, critErrorHandler
+    mov qword [r8 + psp.oldInt24h], rdx
+    mov eax, 2524h
+    int 21h
+    lea rdx, int23h
+    mov qword [r8 + psp.oldInt23h], rdx
+    mov eax, 2523h
+    int 21h
+    lea rdx, .appRet
+    mov qword [r8 + psp.oldInt22h], rdx
+    mov eax, 2522h
+    int 21h
+    return  ;Now return to main loop
 .pathHandle:        
 ;First check if rbp is null. If it is, its a first time entry. 
 ;al has error code!
