@@ -39,6 +39,7 @@ arg2Flg     db 0    ;Set if there was a second argument
 arg2Off     db 0    ;Offset into cmdBuffer to the argument
 arg2FCBret  db 0    ;AL on return from parse filename for argument 2
 
+switchFnd   db 0    ;Set if a switch char is found
 cmdStateL equ $ - cmdStatePtr
 cmdLineStateL equ $ - cmdLineStatePtr
 

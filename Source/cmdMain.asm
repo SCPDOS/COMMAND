@@ -174,8 +174,16 @@ analyseCmdline:
 ;Flags first two arguments if they exist, copies the command into its buffer
 ; processes the command name into the FCB.  
     mov byte [cmdName], 0   ;Init this field to indicate no cmd
-    lea rsi, qword [r8 + cmdLine]   ;Go to the command line in the psp
-    call skipDelimiters     ;Skip any preceeding separators
+;Start by searching for any switch chars! Set byte if switch chars fnd!!
+    lea rdi, qword [r8 + cmdLine]   ;Go to the command line in the psp
+    mov rsi, rdi                    ;Prep rsi here too
+    movzx ecx, byte [rdi - 1]       ;Get the count byte
+    mov al, byte [switchChar]
+    repne scasb                     ;Scan for the switch char
+    jne .noSwitchFnd
+    not byte [switchFnd]            ;Set switch char fnd on!
+.noSwitchFnd:
+    call skipDelimiters     ;Skip any preceeding separators from rsi
     cmp byte [rsi], CR      ;We have no command? Return!
     rete
     mov rbx, rsi            ;Save the start of the text in rbx
