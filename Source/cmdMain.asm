@@ -175,22 +175,38 @@ analyseCmdline:
 ; processes the command name into the FCB.  
     mov byte [cmdName], 0   ;Init this field to indicate no cmd
     lea rsi, qword [r8 + cmdLine]   ;Go to the command line in the psp
-    mov rbx, rsi            ;Save this ptr in rbx
     call skipDelimiters     ;Skip any preceeding separators
     cmp byte [rsi], CR      ;We have no command? Return!
     rete
-    mov rbp, rsi            ;Save the start of the text in rbp
+    mov rbx, rsi            ;Save the start of the text in rbx
 .plp:
     lea rdi, cmdFcb         ;Loop on the commandFCB
     mov eax, 2901h
     int 21h
+    cmp al, -1  ;If DOS returns -1, we have a bad drive specified, fail!
+    je .exitBadDrv
+.trailingDotLp:
+;Reverse along trailing dots!
+    cmp byte [rsi - 1], "." ;Is this a dot?
+    jne .noTrailingDots
+    dec rsi
+    jmp short .trailingDotLp
+.noTrailingDots:
     mov al, byte [pathSep]  
     cmp byte [rsi], al      ;Is the terminator a pathsep?
     jne .notPs
     inc rsi ;Go to the char after the pathsep
     lodsb   ;Get this char
     dec rsi ;And move rsi back to where we were
-    cmp al, CR  ;Is this char a CR, exit!
+    cmp al, 20h     ;Is this char below 32?
+    jb .delimfnd    ;Also a delimiter
+    cmp al, "\"     ;If this is a second pathsep, we are done
+    je .delimfnd
+    cmp al, "/"     ;Or an alt pathsep?
+    je .delimfnd
+    cmp al, byte "."
+    je .delimfnd
+    cmp al, byte '"'
     je .delimfnd
     call isALdelimiter  ;Is this a delim char?
     jne .plp            ;If not, we loop again
@@ -200,19 +216,25 @@ analyseCmdline:
 ;Now we have reached the end of the command, rsi points to the first char
 ; after the command, whether a delimiter or not.
     mov rcx, rsi
-    sub rcx, rbp    ;Get the number of chars in the command ONLY
-    xchg rbp, rsi   ;Swap the start and end of the commands!!!
+    sub rcx, rbx    ;Get the number of chars in the command ONLY
+    xchg rbx, rsi   ;Swap the start and end of the commands!!!
     lea rdi, cmdPathSpec
     rep movsb
     xor al, al
     stosb   ;Store a terminating null
-    xchg rbp, rsi
+    xchg rbx, rsi
+;Now we build FCBs for the arguments!
+    lea rbx, qword [r8 + cmdLine]   ;Now we measure from the start of the buf!
     call .skipAndCheckCR
     je .setupCmdVars
     mov byte [arg1Flg], -1  ;Set that we are 
     mov rax, rsi
     sub rax, rbx            ;rbx points to the start of the buffer
     mov byte [arg1Off], al  ;Store the offset 
+    lea rdi, qword [r8 + fcb1]
+    mov eax, 2901h
+    int 21h
+    mov byte [arg1FCBret], al
 .skipArg:
     lodsb   ;Now we advance the pointer to the second argument or CR
     cmp al, CR
@@ -225,6 +247,10 @@ analyseCmdline:
     mov rax, rsi            
     sub rax, rbx            ;rbx points to the start of the buffer
     mov byte [arg2Off], al  ;Store the offset 
+    lea rdi, qword [r8 + fcb2]
+    mov eax, 2901h
+    int 21h
+    mov byte [arg2FCBret], al
 .setupCmdVars:
 ;Before returning, we copy the command name to cmdName 
     lea rdi, cmdPathSpec
@@ -244,13 +270,17 @@ analyseCmdline:
     dec ecx
     jnz .cpCmdName
     return
-.exitBad:
-    mov byte [cmdName], -1 ;Store -1 to indicate error
-    return
 .skipAndCheckCR:
 ;Skips all chars, rsi points to the separator. If it is a CR, set ZF=ZE
     call skipDelimiters ;Go to the next char in the input line
     cmp byte [rsi], CR  ;If it is not a CR, it is an argument
+    return
+.exitBad:
+    mov byte [cmdName], -1  ;Store -1 to indicate error
+    return
+.exitBadDrv:
+    mov byte [cmdName], -2  ;Indicate a bad drive specified
+    call badDriveError
     return
 
 doCommandLine:
@@ -259,51 +289,23 @@ doCommandLine:
     je hardSynErr   ;This now should never be hit, earmark for removal!
     cmp byte [cmdName], -1  ;Error condition, command name too long!
     je badCmdError
+    cmp byte [cmdName], -2  ;Bad drive specified, nop
+    rete
     lea rsi, cmdPathSpec
-    lea rdi, cmdFcb
-    mov eax, 2901h  ;Skip leading blanks, clean the FCB name
-    int 21h
     movzx ebx, word [cmdPathSpec]    ;Get the drive specifier
     cmp bh, ":"
     jne .noDriveSpecified
     xchg bl, al     ;Store drive status in bl, get letter in al
     call ucChar     ;Uppercase al
     sub al, "A"     ;And make it a 0 based drive letter
-    cmp bl, -1      ;Int 21h returns AL = -1 if bad drive specified
-    je .badDrive
     ;If drive specified and cmdName length = 2 => X: type command
     cmp byte [cmdName], 2
     jne .noDriveSpecified   ;Drive specified but proceed as normal
     mov dl, al  ;Setdrive wants the number in dl
     call setDrive
     rete
-.badDrive:
-    lea rdx, badDrv
-    mov ah, 09h
-    int 21h
-    stc
-    return
+    jmp badDriveError
 .noDriveSpecified:
-;Now we set the two FCB's in the command line
-    test byte [arg1Flg], -1
-    jz .fcbArgsDone
-    movzx eax, byte [arg1Off]   ;Get the first argument offset
-    lea rsi, qword [r8 + cmdLine]
-    add rsi, rax    ;Point to first argument
-    lea rdi, qword [r8 + fcb1]
-    mov eax, 2901h
-    int 21h
-    mov byte [arg1FCBret], al
-    test byte [arg2Flg], -1
-    jz .fcbArgsDone
-    movzx eax, byte [arg2Off]
-    lea rsi, qword [r8 + cmdLine]
-    add rsi, rax    ;Point to first argument
-    lea rdi, qword [r8 + fcb2]
-    mov eax, 2901h
-    int 21h
-    mov byte [arg2FCBret], al
-.fcbArgsDone:
 ;rbx is writable UP TO THE FIRST PIPE OR CR (non-inclusive)
     lea rbx, cmdBuffer       ;Take your buffer
     lea rsi, cmdName        ;Point to command name with len prefix 

@@ -47,7 +47,6 @@ badFnf:
 badDirError:
     lea rdx, badDir
 badCmn:
-    mov byte [returnCode], -1    ;Return code defaults to -1 if error (for now!)
     jmp printString     ;This will be made nuanced later, to agree with DOS
 badCmdError:
     lea rdx, badCmd
