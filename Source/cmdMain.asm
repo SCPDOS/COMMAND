@@ -63,7 +63,7 @@ commandMain:
     lea rdi, cmdBuffer + 2
     mov rcx, rsi
     sub rcx, rdi    ;Get the number of chars to erase from cmd line 
-    sub byte [cmdBuffer + 1], cl    ;And rease from the count
+    sub byte [cmdBuffer + 1], cl    ;And erase from the count
     mov cl, byte [cmdBuffer + 1]
     inc ecx     ;One more for the terminating char
     rep movsb   ;Move the chars over    
@@ -202,7 +202,6 @@ analyseCmdline:
     mov byte [arg2Off], al  ;Store the offset 
 .setupCmdVars:
 ;Before returning, we copy the command name to cmdName 
-    mov byte [cmdName], 0   ;Initialise this field to indicate no cmd
     lea rdi, cmdPathSpec
     call findLastPathComponant  ;Point rdi to last path componant
     call strlen ;Get the length of the final path componant
@@ -230,12 +229,12 @@ analyseCmdline:
     return
 
 doCommandLine:
-    lea rsi, cmdPathSpec
     ;The following check accounts for the end of a piped command
     cmp byte [cmdName], 0  ;If the cmd name length is 0, syntax error!
     je hardSynErr   ;This now should never be hit, earmark for removal!
     cmp byte [cmdName], -1  ;Error condition, command name too long!
     je badCmdError
+    lea rsi, cmdPathSpec
     lea rdi, cmdFcb
     mov eax, 2901h  ;Skip leading blanks, clean the FCB name
     int 21h
@@ -259,7 +258,6 @@ doCommandLine:
     int 21h
     stc
     return
-    
 .noDriveSpecified:
 ;Now we set the two FCB's in the command line
     test byte [arg1Flg], -1
@@ -281,7 +279,8 @@ doCommandLine:
     int 21h
     mov byte [arg2FCBret], al
 .fcbArgsDone:
-    lea rbx, cmdBuffer       ;Take your buffer, ergh
+;rbx is writable UP TO THE FIRST PIPE OR CR (non-inclusive)
+    lea rbx, cmdBuffer       ;Take your buffer
     lea rsi, cmdName        ;Point to command name with len prefix 
     mov eax, 0AE00h ;Installable command check
     mov edx, 0FFFFh
@@ -295,8 +294,8 @@ doCommandLine:
     test al, al
     jz .executeInternal
     ;Here we execute externally and return to the prompt
-    ; as if it was an internal execution
-    lea rbx, cmdBuffer       ;Take your buffer, ergh
+    ; as if it was an internal execution. rbx is not to be relied on here!
+    lea rbx, qword [r8 + cmdTail]
     lea rsi, cmdName        
     mov eax, 0AE01h ;Execute command!
     mov edx, 0FFFFh
@@ -304,16 +303,26 @@ doCommandLine:
     int 2Fh
     cmp byte [cmdName], 0 ;If this is non-zero, we restart the process
     retz    ;Return as normal if this is zero
-    ;Else, we restart the command from scratch.
+    ;We need to copy over to cmdPathSpec in the event this command
+    ; is an external command that is in the CD or in the PATH.
+    ;Should not be used for this purpose but it is here...
+    call pullCommandline    ;Pull the tail down with the original name
+    lea rsi, cmdName        ;Now make the new cmd the new cmdspec!
+    lodsb                   ;Get the name length
+    movzx ecx, al
+    lea rdi, cmdPathSpec    ;Overwrite the original specified command
+    rep movsb   
+    xor eax, eax
+    stosb   ;Store null terminator
+    jmp short .executeInternal2 ;Skip the equivalent for non-ae cases
 .executeInternal:
-;Now we check if the cmdName is equal to the length of the cmdPathSpec.
-;If not, then its immediately an external program!
     call pullCommandline    ;Now pull the tail down
     lea rdi, cmdPathSpec
     call strlen ;Get the length of the input command
     dec ecx     ;Minus 1 for terminating null
     cmp byte [cmdName], cl  ;Is it equal to the name of the command?
     jne launchChild     ;If not, a path was specified, exit!
+.executeInternal2:
 ;Now we compare the name in the cmdName + 1 field to our commmand list
     lea rbx, functionTable
 .nextEntry:
@@ -694,7 +703,7 @@ setupRedirandPipes:
 
 pullCommandline:
 ;This command pulls the command tail down, removing the whole launch command
-    lea rsi, qword [r8 + cmdLine]  ;rbx points to the de-redired command line 
+    lea rsi, qword [r8 + cmdLine]
 ;Skip leading separators
 .pctSkipLeading:
     lodsb   ;Get first char
