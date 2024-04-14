@@ -179,9 +179,34 @@ analyseCmdline:
     call skipDelimiters     ;Skip any preceeding separators
     cmp byte [rsi], CR      ;We have no command? Return!
     rete
-    lea rdi, cmdPathSpec    ;We copy the command name/path here
-    call cpDelimPathToBufz  ;Moves rsi to the first char past the delim char
-    dec rsi ;Point it back to the delim char
+    mov rbp, rsi            ;Save the start of the text in rbp
+.plp:
+    lea rdi, cmdFcb         ;Loop on the commandFCB
+    mov eax, 2901h
+    int 21h
+    mov al, byte [pathSep]  
+    cmp byte [rsi], al      ;Is the terminator a pathsep?
+    jne .notPs
+    inc rsi ;Go to the char after the pathsep
+    lodsb   ;Get this char
+    dec rsi ;And move rsi back to where we were
+    cmp al, CR  ;Is this char a CR, exit!
+    je .delimfnd
+    call isALdelimiter  ;Is this a delim char?
+    jne .plp            ;If not, we loop again
+.delimfnd:
+    dec rsi             ;Point rsi to end of the command
+.notPs:
+;Now we have reached the end of the command, rsi points to the first char
+; after the command, whether a delimiter or not.
+    mov rcx, rsi
+    sub rcx, rbp    ;Get the number of chars in the command ONLY
+    xchg rbp, rsi   ;Swap the start and end of the commands!!!
+    lea rdi, cmdPathSpec
+    rep movsb
+    xor al, al
+    stosb   ;Store a terminating null
+    xchg rbp, rsi
     call .skipAndCheckCR
     je .setupCmdVars
     mov byte [arg1Flg], -1  ;Set that we are 
