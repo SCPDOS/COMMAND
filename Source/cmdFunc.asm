@@ -1172,6 +1172,7 @@ touch:
     lea rdx, searchSpec
     mov eax, 5B00h  ;Create unique file 
     xor ecx, ecx
+    breakpoint
     int 21h
     jc .touch1
 .touchClose:
@@ -1764,10 +1765,8 @@ launchChild:
     je freezePC
     jmp badCmdError     ;If something goes wrong, error out
 .appRet:  ;Return point from a task
-    mov eax, 4D00h ;Get Return Code
-    int 21h
-    mov word [returnCode], ax
 ;Reset our PSP vectors (and IVT copies) in the event they got mangled
+    breakpoint
     lea rdx, critErrorHandler
     mov qword [r8 + psp.oldInt24h], rdx
     mov eax, 2524h
@@ -1780,7 +1779,16 @@ launchChild:
     mov qword [r8 + psp.oldInt22h], rdx
     mov eax, 2522h
     int 21h
-    return  ;Now return to main loop
+    mov eax, 4D00h ;Get Return Code
+    int 21h
+    mov word [returnCode], ax
+    test ah, ah
+    retz
+    cmp ah, 3       ;TSR exit
+    rete
+    cmp ah, 1       ;Was this Ctrl^C?
+    je commandMain
+    jmp commandMain  ;If we aborted, fully reset!
 .pathHandle:        
 ;First check if rbp is null. If it is, its a first time entry. 
 ;al has error code!

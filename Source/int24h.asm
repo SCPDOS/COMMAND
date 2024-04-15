@@ -27,7 +27,6 @@ critErrorHandler:   ;Int 24h
     push rdi
     push rsi
     cld         ;Make String ops go forward
-
     mov bx, ax  ;Save ah in bh and al in bl (if needed)
     lea rdx, crlf
     call printString
