@@ -1731,7 +1731,7 @@ launchChild:
     mov ecx, 3
     mov al, SPC
     rep stosb   ;Store back the empty extension!
-    jmp .pathHandle
+    jmp short .pathHandle
 .extFnd:
 ;Here if the file had the right extension.
     call .prepAndSearch    ;Prep and search path in rdx.
