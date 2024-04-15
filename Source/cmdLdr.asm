@@ -18,19 +18,7 @@ cmdLdr:
 ;Setup Int 22h, Int 23h and Int 24h
     mov rax, qword [r8 + psp.oldInt22h] ;Preserve the original addresses
     mov qword [parentInt22], rax
-
-    lea rdx, critErrorHandler
-    mov qword [r8 + psp.oldInt24h], rdx
-    mov eax, 2524h
-    int 21h
-    lea rdx, int23h
-    mov qword [r8 + psp.oldInt23h], rdx
-    mov eax, 2523h
-    int 21h
-    lea rdx, launchChild.appRet
-    mov qword [r8 + psp.oldInt22h], rdx
-    mov eax, 2522h
-    int 21h
+    call resetIDTentries
 ;Get a pointer to DOS Sysvars
     mov ah, 52h ;Get sysvars
     int 21h

@@ -920,6 +920,22 @@ getDTA:
     lea rdx, cmdFFBlock
     return
 
+resetIDTentries:
+;Resets the IDT entries
+    lea rdx, critErrorHandler
+    mov qword [r8 + psp.oldInt24h], rdx
+    mov eax, 2524h
+    int 21h
+    lea rdx, int23h
+    mov qword [r8 + psp.oldInt23h], rdx
+    mov eax, 2523h
+    int 21h
+    lea rdx, appRet
+    mov qword [r8 + psp.oldInt22h], rdx
+    mov eax, 2522h
+    int 21h
+    return
+
 ;-------------------------------
 ; Environment utility functions
 ;-------------------------------

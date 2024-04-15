@@ -1763,34 +1763,6 @@ launchChild:
     cmp al, errMCBbad   ;If MCB bad error, freeze PC
     je freezePC
     jmp badCmdError     ;If something goes wrong, error out
-.appRet:  ;Return point from a task
-;Reset our PSP vectors (and IVT copies) in the event they got mangled.
-;Can depend on RSP here if the rsp ptr in the psp was not mangled (i.e. in an
-; abort or CTRL+C call).
-    lea rdx, critErrorHandler
-    mov qword [r8 + psp.oldInt24h], rdx
-    mov eax, 2524h
-    int 21h
-    lea rdx, int23h
-    mov qword [r8 + psp.oldInt23h], rdx
-    mov eax, 2523h
-    int 21h
-    lea rdx, .appRet
-    mov qword [r8 + psp.oldInt22h], rdx
-    mov eax, 2522h
-    int 21h
-    mov eax, 4D00h ;Get Return Code
-    int 21h
-    mov word [returnCode], ax
-    test ah, ah     ;Regular exit, can depend on stack
-    retz            ;Will need to be handled properly later
-    cmp ah, 3       ;TSR exit
-    rete
-    ;Here we ask if we want to stop any batch processing, ret to 2Eh etc.
-    ;For now, do nothing
-    cmp ah, 1       ;Was this Ctrl^C?
-    je commandMain
-    jmp commandMain  ;If we aborted, fully reset!
 .pathHandle:        
 ;First check if rbp is null. If it is, its a first time entry. 
 ;al has error code!

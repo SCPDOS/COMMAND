@@ -55,6 +55,7 @@ commandMain:
     call setupRedirandPipes ;Setup/advance pipes and redir as appropriate
     call analyseCmdline     ;Setup cmdName and fcb for cmdBuffer portion
     call doCommandLine      ;This preps and executes the command portion.
+.okRet:                     ;Normal return point for processing
     call advanceRedir       ;Now advance and end redir if needed
     test byte [pipeFlag], -1    ;If no pipes, reset state, accept new input
     jz .inputMain
@@ -382,11 +383,31 @@ doCommandLine:
     lea rdi, startLbl
     add rbx, rdi
     mov byte [returnCode], 0 ;Reset the retcode before executing function!
-    jmp rbx    ;Jump to this function and return a level up!
+    call rbx        ;Call the internal function!
+    jmp short appRet    ;Now once we are done, goto appRet!
 .gotoNextEntry:
     add rbx, 3      ;Go past the first count byte and the address word
     add rbx, rcx    ;Go past the length of the command name too
     jmp short .nextEntry
+
+appRet:  ;Return point from a task, jumped to from internal functions
+;Reset our PSP vectors (and IVT copies) in the event they got mangled.
+;Can depend on RSP here if the rsp ptr in the psp was not mangled (i.e. in an
+; abort or CTRL+C call).
+    mov rsp, qword [stackTop]   ;Reset stack ptr
+    call resetIDTentries
+    mov eax, 4D00h              ;Get retcode, will be 0 for internal commands
+    int 21h
+    mov word [returnCode], ax
+    test ah, ah     ;Regular exit
+    jz commandMain.okRet
+    cmp ah, 3       ;TSR exit
+    je commandMain.okRet
+    ;Here we ask if we want to stop any batch processing, ret to 2Eh etc.
+    ;For now, do nothing
+    cmp ah, 1       ;Was this Ctrl^C?
+    je commandMain
+    jmp commandMain  ;If we aborted, fully reset!
 
 hardSynErr:
 ;Hard syntax error in cmd line. Delete pipe files and reset completely!
