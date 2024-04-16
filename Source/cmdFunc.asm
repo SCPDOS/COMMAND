@@ -55,7 +55,7 @@ dir:
 ;Don't allow for searching unmounted network drives... is this a limitation?
     mov byte [dirFlags], 0    ;Clear DIR flags
     mov byte [dirLineCtr], 0
-    mov byte [dirFileCtr], 0
+    mov dword [dirFileCtr], 0
     mov byte [dirSrchDir], 0
     mov word [searchSpec], 0
     lea rdi, dirSrchFCB ;Start also by initialising the search pattern
@@ -341,12 +341,19 @@ dir:
     int 21h
 .dirNoEndNewLine:
     ;Now we print the number of files and the number of bytes on the disk
+    test dword [dirFileCtr], -1
+    jnz .filesFound
+    ;Else print File not found and exit!
+    lea rdx, fnfMsg
+    call printString
+    return
+.filesFound:
     lea rdx, fourSpc
     mov ah, 09h
     int 21h
     mov ah, 09h ;Print four Spaces twice
     int 21h
-    movzx eax, byte [dirFileCtr]   ;Get number of files
+    mov eax, dword [dirFileCtr]   ;Get number of files
     call printDecimalWord
     lea rdx, dirOk
     mov ah, 09h
@@ -374,7 +381,7 @@ dir:
 ;Use cmdFcb to build the file name with space
 ;Start by print the name (same for both cases)
 ;We first check if the file has attributes hidden/system and hide them if so
-    test byte [cmdFFBlock + ffBlock.attribFnd], dirIncFiles
+    test byte [cmdFFBlock + ffBlock.attribFnd], dirIncFiles | dirCharDev
     retnz   ;Simply return if either bit is set
     lea rsi, qword [cmdFFBlock + ffBlock.asciizName]
     lea rdi, cmdFcb
@@ -462,7 +469,7 @@ dir:
     mov ah, 09h ;Print string
     int 21h
 .dirPrintNameExit:
-    inc byte [dirFileCtr]   ;Increment file counter
+    inc dword [dirFileCtr]   ;Increment file counter
     inc byte [dirLineCtr]
     cmp byte [dirLineCtr], 23
     retne

@@ -84,7 +84,7 @@ dirFlags    db 0    ;Dir Flags.     Bit[0] set => /W or /w specified
 ;                                   Bit[1] set => /P or /p specified
 ;                                   Bit[2] set => A file/path specified
 dirLineCtr  db 0    ;Counter to keep track of which line we printed (0-23)
-dirFileCtr  db 0    ;Used in /W mode, rollover after 5
+dirFileCtr  dd 0    ;Used in /W mode, rollover after 5
 dirDrv      db 0    ;0 based drive number to use
 dirSrchDir  db cmdBufferL dup (0)   ;Search directory 
 dirSrchFCB  db 10h dup ("?")    ;We copy the search pattern here
