@@ -713,7 +713,8 @@ erase:
     je .endCount1
     cmp al, "N"
     rete    ;Simply return to command line if they don't want it!
-    jmp short .ynmsg    ;Else, tell me what you want!!!
+    call printCRLF      ;Else, tell me what you want!!!
+    jmp short .ynmsg    
 .endCount1:
     call printCRLF
 .endCount:
