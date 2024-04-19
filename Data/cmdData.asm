@@ -120,7 +120,10 @@ sourceHdl   dw -1
 destHdl     dw -1
 srcHdlInfo  dw 0 ;Used to save the handle device info (bit 7 Set -> Char dev)
 copyBuffer  db 128 dup (0)  ;Copy up to 128 bytes at a time, if we cant alloc
-cpyFlg      db 0 
+cpBufPtr    dq 0    ;Ptr to the xfr arena
+cpBufSz     dw 0    ;Copy Buffer size
+cpyFlg      db 0    ;Copy state flag
+
 ascDef      equ 1   ;Set if ascii copy default
 binDef      equ 2   ;Set if binary copy default
 ascLoc      equ 4   ;Set if ascii copy for this source file

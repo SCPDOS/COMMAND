@@ -561,9 +561,52 @@ rmdir:
     jmp printString
 
 xcopy:  ;tmp command name until we get this ok
+    mov word [sourceHdl], -1
+    mov word [destHdl], -1
+    mov word [srcHdlInfo], -1
+    mov byte [cpyFlg], 0
+    mov qword [cpBufPtr], 0         ;If this is ever null, error!
+    mov qword [cpBufSz], 0          
+    lea rsi, qword [r8 + cmdLine]
+    lea rdi, rsi                    ;Start scanning chars here
+    movzx ecx, byte [rdi - 1]       ;Get the count byte
+    mov al, "+"                     ;Are we concatenating?
+    repne scasb
+    jne .noCat
+    or byte [cpyFlg], catCpy        ;We are concatenating 
+.noCat:
+;Now we get a disk buffer, of the size of the internal disk buffers. 
+;If we cant get a disk buffer, use searchspec as an input buffer! 
+;   (Can copy 256 chars at once)
+    mov eax, 5200h
+    int 21h ;Get in rbx ptr to sysvars
+    movzx ecx, word [rbx + 20h] ;Get the internal buffer size in ecx!
+    mov ebx, ecx
+    shr ebx, 4  ;Convert to paragraphs, save bytes in ecx
+    mov eax, 4800h
+    int 21h
+    jnc .bufOk
+    lea rax, searchspec
+    mov ecx, 256
+.bufOk:
+    mov qword [cpBufPtr], rax   ;Save ptr to xfr area
+    mov word [cpBufSz], cx      ;Save buffer size
+.copyLoop:
+    call skipDelimiters         ;Strip leading delimiters
+    lea rdi, srcSpec
+    call cpDelimPathToBufz
+    ;Hereon below, preserve rsi as rbp, avoid using a variable
+    mov rbp, rsi    ;rbp points to the delimiter.
 
-    lea rsi, qword [r8 + cmdLine]   ;Start sourcing chars here
-
+.cpErr:
+    push r8
+    mov r8, qword [cpBufPtr]
+    mov eax, 4900h
+    int 21h
+    pop r8
+    jc freezePC ;Bad ptr or bad mcb. Bad ptr shouldnt happen, badMCB big error
+    ;Other cleanup here
+    return
 copy:
     test byte [arg1Flg], -1
     jz badArgError
