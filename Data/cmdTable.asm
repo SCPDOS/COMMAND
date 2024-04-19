@@ -106,6 +106,8 @@ functionTable:
     db 5, "SUBST"
     dw subst - startLbl
 ;TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP
+    db 5, "XCOPY"
+    dw xcopy - startLbl
 
     db 4, "ECHO"
     dw echo - startLbl

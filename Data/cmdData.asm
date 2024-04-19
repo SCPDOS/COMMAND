@@ -115,11 +115,17 @@ destSpec    db cmdBufferL dup (0)
 srcPtr      dq 0    ;Where to copy the pattern to
 destPtr     dq 0    ;Where to copy the pattern to
 renName     db 11 dup (" ") ;Build a name pattern here in FCB format
-;Copy Handles
+;Copy vars
 sourceHdl   dw -1
 destHdl     dw -1
 srcHdlInfo  dw 0 ;Used to save the handle device info (bit 7 Set -> Char dev)
-copyBuffer  db 128 dup (0)  ;Copy up to 128 bytes at a time
+copyBuffer  db 128 dup (0)  ;Copy up to 128 bytes at a time, if we cant alloc
+cpyFlg      db 0 
+ascDef      equ 1   ;Set if ascii copy default
+binDef      equ 2   ;Set if binary copy default
+ascLoc      equ 4   ;Set if ascii copy for this source file
+binLoc      equ 8   ;Set if binary copy for this source file
+catCpy      equ 10  ;Set if we are concatinating files
 
 ;Environment manipulation vars
 envVarSz        dw 0    ;Env var size

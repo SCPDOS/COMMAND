@@ -560,6 +560,10 @@ rmdir:
     lea rdx, badRD
     jmp printString
 
+xcopy:  ;tmp command name until we get this ok
+
+    lea rsi, qword [r8 + cmdLine]   ;Start sourcing chars here
+
 copy:
     test byte [arg1Flg], -1
     jz badArgError
