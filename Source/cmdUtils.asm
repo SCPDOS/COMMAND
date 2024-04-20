@@ -880,7 +880,12 @@ getDecimalWord:
     test rax, rax
     jnz .dpfb0
     return
-
+getByte:
+;Indicates if the number obtained is larger than a byte by setting CF
+    call getNum
+    cmp eax, 100h
+    cmc
+    return
 getNum:
 ;Gets a number from a command line.
 ;Input: rsi -> String to get number from

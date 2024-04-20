@@ -864,16 +864,20 @@ date:
     jb .us
     ja .jpn
     ;Here for UK style dates
-    call getNum
+    call getByte
+    jc .badDate
     mov byte [td3], al  ;Store the day
     call .validSep
     jne .badDate
-    call getNum
+    call getByte
+    jc .badDate
     mov byte [td4], al  ;Store month
     call .validSep
     jne .badDate
     call getNum
     call .doYear    ;Adjusts the year if necessary
+    cmp eax, 10000h           ;If it is too large, fail!
+    jae .badDate
     mov word [td1], ax  ;Store the word directly
 .writeDate:
     call skipDelimiters
@@ -890,30 +894,38 @@ date:
     call printString
     jmp date.noCur
 .us:
-    call getNum
+    call getByte
+    jc .badDate
     mov byte [td4], al  ;Store the month
     call .validSep
     jne .badDate
-    call getNum
+    call getByte
+    jc .badDate
     mov byte [td3], al  ;Store day
     call .validSep
     jne .badDate
     call getNum
     call .doYear    ;Adjusts the year if necessary
+    cmp eax, 10000h           ;If it is too large, fail!
+    jae .badDate
     mov word [td1], ax  ;Store the word directly
 .writeHop:
     jmp short .writeDate
 .jpn:
     call getNum
     call .doYear    ;Adjusts the year if necessary
+    cmp eax, 10000h           ;If it is too large, fail!
+    jae .badDate
     mov word [td1], ax  ;Store the word directly
     call .validSep
     jne .badDate
-    call getNum
+    call getByte
+    jc .badDate
     mov byte [td3], al  ;Store the day
     call .validSep
     jne .badDate
-    call getNum
+    call getByte
+    jc .badDate
     mov byte [td4], al  ;Store month
     jmp short .writeHop
 .doYear:
@@ -965,11 +977,13 @@ time:
 .goTime:
     mov dword [td1], 0          ;Set all fields to 0
     xor eax, eax   
-    call getNum         ;Get the number in eax
+    call getByte
+    jc .badTime         ;Get the number in eax
     mov byte [td2], al  ;Save hours
     call .validsep
     jne .badTime
-    call getNum
+    call getByte
+    jc .badTime
     mov byte [td1], al  ;Save minutes
     call .validsep
     je .goSec
@@ -981,7 +995,8 @@ time:
 .goSec:
     call .checkNum
     jc .badTime
-    call getNum
+    call getByte
+    jc .badTime
     mov byte [td4], al  ;Save seconds
     lodsb       ;Move rsi forwards
     call .vsep2 ;Now we dont allow for colon now
@@ -994,7 +1009,8 @@ time:
 .goMsec:
     call .checkNum
     jc .badTime
-    call getNum
+    call getByte
+    jc .badTime
     mov byte [td3], al  ;Save miliseconds
 .setTime:
     call skipDelimiters
