@@ -876,6 +876,9 @@ date:
     call .doYear    ;Adjusts the year if necessary
     mov word [td1], ax  ;Store the word directly
 .writeDate:
+    call skipDelimiters
+    cmp byte [rsi], CR  ;Must be terminated by a CR!!
+    jne .badDate
     movzx ecx, word [td1]   ;Get the year
     mov dx, word [td3]      ;Read time and date together!
     mov eax, 2B00h
@@ -934,12 +937,15 @@ date:
     return
 
 time:
+    lea rsi, qword [r8 + cmdLine]
+    call skipDelimiters
+    cmp byte [rsi], CR  ;If nothing, get input
+    jne .goTime  ;Else rsi is pointing to something possibly a time. Try it!
     lea rdx, curTime
     mov ah, 09h
     int 21h
-
     call printFmtTime
-
+.noCur:
     lea rdx, newTime
     mov ah, 09h
     int 21h
@@ -956,10 +962,76 @@ time:
     cmp byte [rdx + 1], 0   ;If the user typed nothing...
     rete    ;Exit!
     lea rsi, qword [rdx + 2]    ;Go to the text portion
+.goTime:
+    mov dword [td1], 0          ;Set all fields to 0
     xor eax, eax   
-
+    call getNum         ;Get the number in eax
+    mov byte [td2], al  ;Save hours
+    call .validsep
+    jne .badTime
+    call getNum
+    mov byte [td1], al  ;Save minutes
+    call .validsep
+    je .goSec
+    dec rsi ;Go back a char
+    call skipDelimiters ;Skip any delimiters
+    cmp byte [rsi], CR
+    je .setTime
+    jmp short .badTime
+.goSec:
+    call .checkNum
+    jc .badTime
+    call getNum
+    mov byte [td4], al  ;Save seconds
+    lodsb       ;Move rsi forwards
+    call .vsep2 ;Now we dont allow for colon now
+    je .goMsec
+    dec rsi ;Go back a char
+    call skipDelimiters ;Skip any delimiters
+    cmp byte [rsi], CR
+    je .setTime
+    jmp short .badTime
+.goMsec:
+    call .checkNum
+    jc .badTime
+    breakpoint
+    call getNum
+    mov byte [td3], al  ;Save miliseconds
+.setTime:
+    call skipDelimiters
+    cmp byte [rsi], CR  ;Must be terminated by a CR!!
+    jne .badTime
+    movzx ecx, word [td1]   ;Get hour/minutes
+    movzx edx, word [td3]   ;Get seconds/miliseconds
+    mov eax, 2D00h      ;Set time
+    int 21h
+    test al, -1
+    retz
+.badTime:
+    lea rdx, badTime
+    call printString
+    jmp time.noCur
+.validsep:
+    lodsb
+    cmp al, ":"
+    rete
+.vsep2:
+    cmp al, "."
+    rete
+    cmp al, byte [ctryData + countryStruc.timeSep]
     return
-
+.checkNum:
+    lodsb   ;Now ensure the first char past the delim is a number
+    dec rsi
+    cmp al, "0"
+    jb .cnbad
+    cmp al, "9"
+    ja .cnbad
+    clc
+    return
+.cnbad:
+    stc
+    return
 ctty:
     test byte [arg1Flg], -1
     jz badArgError

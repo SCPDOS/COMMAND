@@ -363,16 +363,7 @@ putCWDInPrompt:
     jmp printString
 printFmtTime:
 ;Outputs the formatted time
-    mov ah, 2Ch ;DOS get time
-    int 21h
-    ;CH = hour (0-23)
-	;CL = minutes (0-59)
-	;DH = seconds (0-59)
-	;DL = hundredths (0-99)
-    mov byte [td1], cl
-    mov byte [td2], ch
-    mov byte [td3], dl
-    mov byte [td4], dh
+    call getTime
     movzx eax, ch
     call printTime.printHours
     mov dl, byte [ctryData + countryStruc.timeSep]
@@ -390,6 +381,18 @@ printFmtTime:
     int 21h
     movzx eax, byte [td3]   ;Hundreths
     call printTime.printMinutesAlt
+    return
+getTime:
+    mov ah, 2Ch ;DOS get time
+    int 21h
+    ;CH = hour (0-23)
+	;CL = minutes (0-59)
+	;DH = seconds (0-59)
+	;DL = hundredths (0-99)
+    mov byte [td1], cl
+    mov byte [td2], ch
+    mov byte [td3], dl
+    mov byte [td4], dh
     return
 
 printFmtDate:
@@ -415,7 +418,6 @@ printFmtDate:
     mov ah, 40h ;Write to handle
     int 21h
     mov dl, " "
-    call outChar
     call outChar
 ;       eax[0:4] = Day of the month, a value in [0,...,31]
 ;       eax[5:8] = Month of the year, a value in [0,...,12]
@@ -898,7 +900,7 @@ getNum:
     add ecx, eax
     jmp short .lp   ;Get next digit
 .exit:
-    mov rax, rcx
+    mov eax, ecx
     pop rcx
     dec rsi
     return
