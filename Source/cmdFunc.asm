@@ -568,7 +568,7 @@ xcopy:  ;tmp command name until we get this ok
     mov qword [cpBufPtr], 0         ;If this is ever null, error!
     mov qword [cpBufSz], 0          
     lea rsi, qword [r8 + cmdLine]
-    lea rdi, rsi                    ;Start scanning chars here
+    mov rdi, rsi                    ;Start scanning chars here
     movzx ecx, byte [rdi - 1]       ;Get the count byte
     mov al, "+"                     ;Are we concatenating?
     repne scasb
@@ -586,17 +586,13 @@ xcopy:  ;tmp command name until we get this ok
     mov eax, 4800h
     int 21h
     jnc .bufOk
-    lea rax, searchspec
+    lea rax, searchSpec
     mov ecx, 256
 .bufOk:
     mov qword [cpBufPtr], rax   ;Save ptr to xfr area
     mov word [cpBufSz], cx      ;Save buffer size
-.copyLoop:
-    call skipDelimiters         ;Strip leading delimiters
-    lea rdi, srcSpec
-    call cpDelimPathToBufz
-    ;Hereon below, preserve rsi as rbp, avoid using a variable
-    mov rbp, rsi    ;rbp points to the delimiter.
+;Now we search for the destination name. This is done by searching for a 
+; delimiter that is followed by a non-+ and non-switchchar
 
 .cpErr:
     push r8
@@ -827,12 +823,18 @@ erase:
     je badAccError ;If the file is RO, fail!
     jmp badFileError
     return
+
 date:
+    lea rsi, qword [r8 + cmdLine]
+    call skipDelimiters
+    cmp byte [rsi], CR  ;If nothing, get input
+    jne .goDate  ;Else rsi is pointing to something possibly a date. Try it!
+    ;Else, we do interactive mode!
     lea rdx, curDate
     mov ah, 09h
     int 21h
     call printFmtDate
-
+.noCur:
     lea rdx, newDate
     mov ah, 09h
     int 21h
@@ -845,17 +847,90 @@ date:
     mov ah, 09h
     int 21h
 
-    lea rdx, inBuffer
+    lea rdx, cpyBuffer
     mov byte [rdx], inBufferL ;Enter a string of up to 126 chars in length
     mov ah, 0Ah
     int 21h
     push rdx
-    lea rdx, crlf
-    mov ah, 09h
-    int 21h
+    call printCRLF
     pop rdx
     cmp byte [rdx + 1], 0   ;If the user typed nothing...
     rete    ;Exit!
+    ;No spaces anywhere, separator chars allowed are / . - only
+    lea rsi, qword [rdx + 2]    ;Go to the text portion
+.goDate:
+    xor eax, eax    
+    cmp byte [ctryData + countryStruc.dtfmt], 1
+    jb .us
+    ja .jpn
+    ;Here for UK style dates
+    call getNum
+    mov byte [td3], al  ;Store the day
+    call .validSep
+    jne .badDate
+    call getNum
+    mov byte [td4], al  ;Store month
+    call .validSep
+    jne .badDate
+    call getNum
+    call .doYear    ;Adjusts the year if necessary
+    mov word [td1], ax  ;Store the word directly
+.writeDate:
+    movzx ecx, word [td1]   ;Get the year
+    mov dx, word [td3]      ;Read time and date together!
+    mov eax, 2B00h
+    int 21h
+    test al, al
+    retz
+.badDate:
+    lea rdx, badDate
+    call printString
+    jmp date.noCur
+.us:
+    call getNum
+    mov byte [td4], al  ;Store the month
+    call .validSep
+    jne .badDate
+    call getNum
+    mov byte [td3], al  ;Store day
+    call .validSep
+    jne .badDate
+    call getNum
+    call .doYear    ;Adjusts the year if necessary
+    mov word [td1], ax  ;Store the word directly
+.writeHop:
+    jmp short .writeDate
+.jpn:
+    call getNum
+    call .doYear    ;Adjusts the year if necessary
+    mov word [td1], ax  ;Store the word directly
+    call .validSep
+    jne .badDate
+    call getNum
+    mov byte [td3], al  ;Store the day
+    call .validSep
+    jne .badDate
+    call getNum
+    mov byte [td4], al  ;Store month
+    jmp short .writeHop
+.doYear:
+    cmp eax, 119    ;If this is larger than 119, return assuming valid
+    reta
+;If the user specifies 80-99 it means 1980-1999
+;If the user specifies 00-79 it means 2000-2079
+    mov ebx, 2000
+    mov ecx, 1900
+    cmp eax, 80     
+    cmovb ecx, ebx
+    add eax, ecx
+    return
+.validSep:
+    lodsb           ;Get the char and return
+    cmp al, "."
+    rete
+    cmp al, "/"
+    rete
+    cmp al, "-"
     return
 
 time:
@@ -880,7 +955,11 @@ time:
     pop rdx
     cmp byte [rdx + 1], 0   ;If the user typed nothing...
     rete    ;Exit!
+    lea rsi, qword [rdx + 2]    ;Go to the text portion
+    xor eax, eax   
+
     return
+
 ctty:
     test byte [arg1Flg], -1
     jz badArgError

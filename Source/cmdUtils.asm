@@ -400,6 +400,7 @@ printFmtDate:
 	;CX = year (1980-2099)
 	;DH = month (1-12)
 	;DL = day (1-31)
+    sub cx, 1980    ;Subtract 1980 from cx
     mov word [td1], cx
     mov byte [td3], dl
     mov byte [td4], dh
@@ -430,21 +431,6 @@ printFmtDate:
     call printDate
     return
 
-BCDtoHex:
-;Converts a BCD value to a Hex byte
-;Takes input in al, returns in al (zero-ed upper seven bytes)
-    push rcx
-    movzx eax, al   ;Zero extend
-    mov ecx, eax    ;Save al in ecx
-    and eax, 0Fh    ;Get lower nybble
-    and ecx, 0F0h   ;Get upper nybble
-    shr ecx, 4      ;Shift upper nybble value down
-.bth:
-    add eax, 10
-    dec ecx
-    jnz .bth
-    pop rcx
-    ret
 
 hexToBCD:
 ;Converts a Hex byte into two BCD digits
@@ -892,6 +878,31 @@ getDecimalWord:
     test rax, rax
     jnz .dpfb0
     return
+
+getNum:
+;Gets a number from a command line.
+;Input: rsi -> String to get number from
+;Output: rsi -> Char which terminated the accumulation
+;        eax = Value of the string. May overflow if we read more than 9 chars...
+    push rcx
+    xor ecx, ecx    ;Start with a value of zero
+.lp:
+    lodsb
+    cmp al, "0"
+    jb .exit
+    cmp al, "9"
+    ja .exit
+    sub al, "0"                     ;Convert to binary 
+    lea ecx, qword [4*ecx + ecx]    ;5*rcx
+    shl ecx, 1                      ;2*(5*rcx)
+    add ecx, eax
+    jmp short .lp   ;Get next digit
+.exit:
+    mov rax, rcx
+    pop rcx
+    dec rsi
+    return
+
 
 freezePC:
     lea rdx, memBad1

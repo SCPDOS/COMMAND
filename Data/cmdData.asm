@@ -124,11 +124,10 @@ cpBufPtr    dq 0    ;Ptr to the xfr arena
 cpBufSz     dw 0    ;Copy Buffer size
 cpyFlg      db 0    ;Copy state flag
 
-ascDef      equ 1   ;Set if ascii copy default
-binDef      equ 2   ;Set if binary copy default
-ascLoc      equ 4   ;Set if ascii copy for this source file
-binLoc      equ 8   ;Set if binary copy for this source file
-catCpy      equ 10  ;Set if we are concatinating files
+ascSrc      equ 1   ;Set if ascii copy for this source file. Else, binary
+ascDes      equ 2   ;Set if ascii write to file. Else, binary.
+catCpy      equ 4   ;Set if we are concatinating files. Default ASCII read.
+wcSrc       equ 8   ;Set if wc's in source pattern. Display source file names.
 
 ;Environment manipulation vars
 envVarSz        dw 0    ;Env var size

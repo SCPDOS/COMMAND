@@ -14,25 +14,25 @@
 ;------------------------------------------------------------------------;
 struc dpb        ;Drive Parameter Block
 
-    .bDriveNumber            resb 1  ;Drive number (0=A, 1=B ...) x
-    .bUnitNumber             resb 1  ;Unit number in device x
-    .wBytesPerSector         resw 1  ;min 512, max 4096 x
-    .bMaxSectorInCluster     resb 1  ;(Maximum sector in cluster) - 1 x
-    .bSectorsPerClusterShift resb 1  ;Sectors per cluster exponent x
-    .wFAToffset              resw 1  ;Number of reserved sectors in partition x
-    .bNumberOfFATs           resb 1  ;Number of FATs x
-    .wNumberRootDirEntries   resw 1  ;In 32 byte units, this is 0 for FAT32 x
-    .dClusterHeapOffset      resd 1  ;Start sector of data area x
-    .dClusterCount           resd 1  ;Total number of clusters in data area x
-    .dFATlength              resd 1  ;FAT length, in sectors x
-    .dFirstUnitOfRootDir     resd 1  
-    ;Unit=Sector/Cluster of Root Directory (FAT12/16 = Sector, FAT32 = Cluster)x
-    .qDriverHeaderPtr        resq 1  ;Pointer to device driver header x
-    .bMediaDescriptor        resb 1  ;Media descriptor x
-    .bAccessFlag             resb 1  ;Access Flag (0 if accessed, else -1) x
-    .qNextDPBPtr             resq 1  ;Pointer to next DPB, -1 if at end
-    .dFirstFreeCluster       resd 1  ;Starting cluster of free space search x
-    .dNumberOfFreeClusters   resd 1  ;Number of free clusters, -1 unknown x
+    .bDriveNumber            db ?  ;Drive number (0=A, 1=B ...)
+    .bUnitNumber             db ?  ;Unit number in device
+    .wBytesPerSector         dw ?  ;min 512, max 4096
+    .bMaxSectorInCluster     db ?  ;(Maximum sector in cluster) - 1
+    .bSectorsPerClusterShift db ?  ;Sectors per cluster exponent
+    .wFAToffset              dw ?  ;Number of reserved sectors in partition
+    .bNumberOfFATs           db ?  ;Number of FATs
+    .wNumberRootDirEntries   dw ?  ;In 32 byte units, this is 0 for FAT32
+    .dClusterHeapOffset      dd ?  ;Start sector of data area
+    .dClusterCount           dd ?  ;Total number of clusters in data area
+    .dFATlength              dd ?  ;FAT length, in sectors
+    .dFirstUnitOfRootDir     dd ?  
+    ;Unit=Sector/Cluster of Root Directory (FAT12/16 = Sector, FAT32 = Cluster)
+    .qDriverHeaderPtr        dq ?  ;Pointer to device driver header
+    .bMediaDescriptor        db ?  ;Media descriptor
+    .bAccessFlag             db ?  ;Access Flag (0 if accessed, else -1)
+    .qNextDPBPtr             dq ?  ;Pointer to next DPB, -1 if at end
+    .dFirstFreeCluster       dd ?  ;Starting cluster of free space search
+    .dNumberOfFreeClusters   dd ?  ;Number of free clusters, -1 unknown
 
 endstruc
 
@@ -54,7 +54,7 @@ struc cds       ;Current Directory structure
     .qDPBPtr             dq ?   ;Ptr to the DPB of the dev using this CDS
     .dStartCluster       dd ?   ;Starting cluster of the directory on disk
     .qIFSPtr             dq ?   ;Reserved for IFS driver expansions
-    .dNetStore           dd ?   ;For storing a owner dword for IFS (41h/5F03h)
+    .dNetStore           dd ?   ;For storing a owner dword for IFS (21h/5F03h)
     .wBackslashOffset    dw ?   ;How many chars to skip for getting the path
 ; currentPath (usually 2 to skip C: in C:\, but when SUBSTing a drive letter to 
 ; another, we save the number of chars to skip to that deep level).
@@ -117,31 +117,31 @@ cdsRdirLocDrive equ 0080h   ;Redirector but Local
 struc sfth   ;System file table header
 ; This is the SFT header.
 ; This structure comes before the start of the first file in the array/table.
-    .qNextSFTPtr resq 1    ;Pointer to the next SFT
-    .wNumFiles   resw 1    ;Number of files in this table
+    .qNextSFTPtr dq ?    ;Pointer to the next SFT
+    .wNumFiles   dw ?    ;Number of files in this table
 endstruc
 
 struc sft
 ;This is the file struc itself
-    .wNumHandles resw 1    ;Number of handles pointing to this file
-    .wOpenMode   resw 1    ;File access permissions and behvaiours
-    .bFileAttrib resb 1    ;Regular File Attributes
-    .wDeviceInfo resw 1    ;Includes unit number if a block device
-    .qPtr        resq 1    ;IF char, ptr to device driver header, ELSE DPBptr
-    .dStartClust resd 1    ;Start cluster of file pointed to by SFT entry
-    .wTime       resw 1    ;File Time, updated on open and writes
-    .wDate       resw 1    ;File Date, updated on open and writes
-    .dFileSize   resd 1    ;File Size, in bytes
-    .dCurntOff   resd 1    ;Current Offset pointed to by SFT entry, in bytes
-    .dRelClust   resd 1    ;Rel cluster pointed to by SFT entry
-    .dAbsClusr   resd 1    ;Absolute cluster pointed to by SFT entry
-    .qDirSect    resq 1    ;Abs number of sector containing directory entry 
-    .bNumDirEnt  resb 1    ;Directory entry within dir sector (byte offset/32)
-    .sFileName   resb 11   ;8.3 Filename
-    .qSharePtr   resq 1    ;SHARE pointer to previous SFT sharing same file
-    .wMachNum    resw 1    ;SHARE number of network machine opening file
-    .qPSPOwner   resq 1    ;Addr of PSP of program which first opened this file
-    .wShareRec   resw 1    ;offset within SHARE code segment of sharing record
+    .wNumHandles dw ?    ;Number of handles pointing to this file
+    .wOpenMode   dw ?    ;File access permissions and behvaiours
+    .bFileAttrib db ?    ;Regular File Attributes
+    .wDeviceInfo dw ?    ;Includes unit number if a block device
+    .qPtr        dq ?    ;IF char, ptr to device driver header, ELSE DPBptr
+    .dStartClust dd ?    ;Start cluster of file pointed to by SFT entry
+    .wTime       dw ?    ;File Time, updated on open and writes
+    .wDate       dw ?    ;File Date, updated on open and writes
+    .dFileSize   dd ?    ;File Size, in bytes
+    .dCurntOff   dd ?    ;Current Offset pointed to by SFT entry, in bytes
+    .dRelClust   dd ?    ;Rel cluster pointed to by SFT entry
+    .dAbsClusr   dd ?    ;Absolute cluster pointed to by SFT entry
+    .qDirSect    dq ?    ;Abs number of sector containing directory entry 
+    .bNumDirEnt  db ?    ;Directory entry within dir sector (byte offset/32)
+    .sFileName   db 11 dup (?)   ;8.3 Filename
+    .qSharePtr   dq ?    ;SHARE pointer to previous SFT sharing same file
+    .wMachNum    dw ?    ;SHARE number of network machine opening file
+    .qPSPOwner   dq ?    ;Addr of PSP of program which first opened this file
+    .wShareRec   dw ?    ;offset within SHARE code segment of sharing record
 ;                           0 means no record
 endstruc
 ;Open Mode equates
@@ -156,32 +156,36 @@ denyRWShare     equ 10h
 denyWriteShare  equ 20h
 denyReadShare   equ 30h
 denyNoneShare   equ 40h
-netFCBShare     equ 70h
+;NetFCB is for files open by a local server, handling IO from a remote
+; client by proxy opened by an FCB! Sets the Net bit to indicate this. 
+;Thus, this is a handle with no JFT entry! Server handles its own JFT!
+netFCBShare     equ 70h     
 noInherit       equ 80h
 ;Bits 8-12 reserved 0
+;Fancy open mode bits
+diskFullFail    equ 2000h   ;Reserved: If set, trigger Int 24h on disk full.
+noBufferWrites  equ 4000h   ;Reserved: If set, flush after each buffer write.
+;Once share is loaded, if a local FCB open occurs, mark the sft as so.
+FCBopenedFile   equ 8000h   ;If set, file is opened by FCB, else handle based.
 
-diskFullFail    equ 2000h   ;DO NOT USE. IF set, Trigger Int 24h on disk full.
-;Buffering on writes
-noBufferWrites  equ 4000h   ;If set, dont buffer writes, always update disk
-;FCB opened file, shouldn't see this as we are depreciating FCB's completely now
-FCBopenedFile   equ 8000h   ;If set, file is opened by FCB, else SFT
 ;Attribute Byte
 readOnlyFile    equ 1h
 hiddenFile      equ 2h
 systemFile      equ 4h
-volumeLabel     equ 8h
+volLabelFile    equ 8h
 directoryFile   equ 10h ;Directory entry
 archiveFile     equ 20h
+charFile        equ 40h ;Reserved, never found in dir
 ;Device Info equates
 ;For a block device, bits [5:0] contain the drive number
 charDevConIn    equ 1h  ;If set, device is CON input
 charDevConOut   equ 2h  ;If set, device is CON output
 charDevNulDev   equ 4h  ;If set, device is NULL device
 charDevClockDev equ 8h  ;If set, device is CLOCK device
-charDevFastOut  equ 10h ;If set, device supports Int 29h
+charDevFastOut  equ 10h ;If set, device supports INT 29h
 charDevBinary   equ 20h ;If set, r/w char device in Binary mode!!!
 charDevNoEOF    equ 40h ;If set, no EOF when reading from device!!
-blokFileNoFlush equ 40h ;Set if file has not yet been accessed (sol no flush!)
+blokFileNoFlush equ 40h ;Set if file is synchronised with hard store!
 devCharDev      equ 80h ;If set, it is a char device!
 charDevNetSpool equ 800h    ;If set, device is a network spooler
 devNoInherit    equ 1000h   ;If set, handle not inherited by child processes
@@ -204,15 +208,15 @@ devRedirDev     equ 8000h   ;If set, dev/file is redirected!
 ;------------------------------------------------------------------------;
 
 struc bufferHdr
-    .nextBufPtr  resq  1   ;Pointer to the next buffer in the chain or -1 at end
-    .driveNumber resb  1   ;Drive number the buffer is used for (or -1 for free)
-    .bufferFlags resb  1   ;Standard Flags
-    .bufferLBA   resq  1   ;LBA the buffer contains
-    .bufFATcopy  resb  1   ;Number of copies of the FAT to write (1 if non-FAT)
-    .bufFATsize  resd  1   ;Number of sectors per FAT (or 0 if non-FAT)
-    .driveDPBPtr resq  1   ;Pointer to the device DPB block
-    .owningFile  resq  1   ;Ptr to SFT/FCBS which owns buff (-1 if not in chain)
-    .reserved    resb  9   ;Alignment bytes
+    .nextBufPtr  dq  ?   ;Pointer to the next buffer in the chain or -1 at end
+    .wDrvNumFlg:         ;Read as a word to get the following two bytes!
+    .driveNumber db  ?   ;Drive number the buffer is used for (or -1 for free)
+    .bufferFlags db  ?   ;Standard Flags
+    .bufferLBA   dq  ?   ;LBA the buffer contains
+    .bufFATcopy  db  ?   ;Number of copies of the FAT to write (1 if non-FAT)
+    .bufFATsize  dd  ?   ;Number of sectors per FAT (or 0 if non-FAT)
+    .driveDPBPtr dq  ?   ;Pointer to the device DPB block
+    .reserved    db  ?   ;Alignment byte
     .dataarea:             ;Points to the start of the data area
 endstruc
 ;Buffer Flag equates
@@ -222,24 +226,39 @@ dirBuffer   equ 4h  ;Directory sector in buffer
 dataBuffer  equ 8h  ;File Data sector in buffer
 refBuffer   equ 20h ;Data in buffer has been referenced by an application
 dirtyBuffer equ 40h ;Data in buffer modified by an application
-;Note! A buffer is marked as referenced only when the application 
-; is done with that buffer OR if a hard error has occured (both read and write)
+freeBuffer  equ 00FFh   ;A word which goes into the drive number to clear both fields
+;Note! A buffer is marked as referenced when the buffer is "obtained" by a syscall
 ;------------------------------------------------------------------------;
 ; Memory control block for each memory arena
 ;------------------------------------------------------------------------;
 struc mcb
-    .marker     resb 1  ;M = Member of the MCB chain. Z = Last member
-    .owner      resq 1  ;Owning application PSP (para aligned) or 0 for free
-    .blockSize  resd 1  ;Number of contiguous paragraphs owned by this block
-    .reserved   resb 3  ;Reserved three bytes
+    .marker     db ?  ;M = Member of the MCB chain. Z = Last member
+    .owner      dq ?  ;Owning application PSP (para aligned) or 0 for free
+    .blockSize  dd ?  ;Number of contiguous paragraphs owned by this block
+    ;The following byte is reserved outside of sysinit
+    .subSysMark db ?  ;Marks the optional DOS subsystem of the MCB
+    .reserved   db 2 dup (?) 
     .program:
 endstruc
 ;MCB equates
 mcbOwnerHole    equ 7   ;Owner = 7 => Memory hole, always fail free/realloc
 mcbOwnerFree    equ 0   ;Owner = 0 => Free and available space
 mcbOwnerDOS     equ 8   ;Owner = 8 => Owned by DOS
+mcbOwnerNewDOS  equ 9   ;Owner = 9 => New Kernel driver alloc. Needs setting to 8.
 mcbMarkCtn      equ "M"
 mcbMarkEnd      equ "Z"
+;The following are used on MCB's that belong to DOS, that are not part of the
+; main kernel (i.e. the CONFIG.SYS optional parts).
+mcbSubDriver    equ "D" ;Any memory allocated for a device driver's code.
+mcbSubDrvExtra  equ "L" ;Any memory allocated by a device driver.
+mcbSubDrvDPB    equ "P" ;Blocks used for DPB's are marked so.
+mcbSubIFS       equ "I" ;Unused for now
+mcbSubFiles     equ "F" ;Any memory allocated for Files.
+mcbSubFCBS      equ "X" ;Unused for now
+mcbSubBuffers   equ "B" ;Any memory allocated for Buffers.
+mcbSubCDS       equ "L" ;Any memory allocated to store a CDS.
+mcbSubStacks    equ "S" ;Unused for now
+
 
 memFirstFit     equ 0   ;First free block goes to application
 memBestFit      equ 1   ;Block whos size closest matches requirement
@@ -255,142 +274,162 @@ memLastFit      equ 2   ;Last free block goes to application
 ; registers by accessing the caller register stack frame.
 ;------------------------------------------------------------------------;
 struc callerFrame
-    .rax    resq 1  ;Bottom of frame, pointer to rax saved in oldRSP
-    .rbx    resq 1    
-    .rcx    resq 1
-    .rdx    resq 1
-    .rsi    resq 1
-    .rdi    resq 1
-    .rbp    resq 1
-    .r8     resq 1  ;To be removed if truly not needed
-    .r9     resq 1
+    .rax    dq ?  ;Bottom of frame, pointer to rax saved in oldRSP
+    .rbx    dq ?    
+    .rcx    dq ?
+    .rdx    dq ?
+    .rsi    dq ?
+    .rdi    dq ?
+    .rbp    dq ?
+    .r8     dq ?  ;To be removed if truly not needed
+    .r9     dq ?
 ;Pushed by Processor when invoked via Interrupt
-    .rip    resq 1
-    .cs     resq 1
-    .flags  resq 1
+    .rip    dq ?
+    .cs     dq ?
+    .flags  dq ?
 endstruc
 
 struc dpl
 ;DOS parameter list, pointer to this stack is passed to DOS in rdx on
 ; server calls
-    .rax    resq 1
-    .rbx    resq 1
-    .rcx    resq 1
-    .rdx    resq 1
-    .rsi    resq 1
-    .rdi    resq 1
-    .r8     resq 1
-    .r9     resq 1
-    .align  resq 1
-    .compID resq 1  ;Computer id, low word used only
-    .procID resq 1  ;Process ID
+    .rax    dq ?
+    .rbx    dq ?
+    .rcx    dq ?
+    .rdx    dq ?
+    .rsi    dq ?
+    .rdi    dq ?
+    .r8     dq ?
+    .r9     dq ?
+    .align  dq ?
+    .compID dq ?  ;Computer id, low word used only
+    .procID dq ?  ;Process ID
 endstruc
 
 struc cfgFrame  ;Frame used for config.sys parsing
-                    resq 1  ;Alignment qword
-    .newBuffers     resq 1  ;New buffers value
-    .newSFTVal      resq 1
-    .newFCBSVal     resq 1
-    .newProtFCBSVal resq 1  ;Number of protected FCBS
-    .newLastdrive   resq 1
-    .newStacks      resq 1  ;Ignored for now
-    .newStackSize   resq 1  ;Ignored for now
-    .newAllocSize   resq 1  ;Used to keep track of reallocation size
-    .cfgHandle      resq 1  ;CONFIG.SYS handle
-    .lastLine       resq 1  ;Set if the last line is current
-    .endPtr         resq 1  ;Pointer to the end of the allocation space
-    .linePtr        resq 1  ;Ptr to line being processed by CONFIG.SYS
+    .oldRBP         dq ?  ;Ptr to DOSSEG
+    .newBuffers     dq ?  ;New buffers value
+    .newSFTVal      dq ?
+    .newFCBSVal     dq ?
+    .newProtFCBSVal dq ?  ;Number of protected FCBS
+    .newLastdrive   dq ?
+    .newStacks      dq ?  ;Ignored for now
+    .newStackSize   dq ?  ;Ignored for now
+    .cfgHandle      dq ?  ;CONFIG.SYS handle
+    .lastLine       dq ?  ;Set if the last line is current
+    .linePtr        dq ?  ;Ptr to line buffer of line being processed
+    .driverBreak    dq ?  ;Ptr to the pathname terminator 
+    .breakChar      dq ?  ;Char that was replaced by null for terminator
 endstruc
 
 struc filename
 ;8.3 File name struct
-    .fName  resb 8
-    .fExt   resb 3
+    .fName  db 8 dup (?)
+    .fExt   db 3 dup (?)
 endstruc
 
 struc ffBlock   ;The structure of the Find First structure at the DTA
-    .driveNum   resb 1  ;Drive we are searching on
-    .template   resb 11 ;Search template (? meaning anything)
-    .attrib     resb 1  ;Search attribute
-    .dirOffset  resd 1  ;32 byte entry within dir cluster
-    .parDirClus resd 1  ;Parent Directory Cluster number
-    .attribFnd  resb 1  ;Attrib of file found
-    .fileTime   resw 1  ;File time
-    .fileDate   resw 1  ;File date
-    .fileSize   resd 1  ;Number of bytes
-    .asciizName resb 13 ;ASCIIZ name with dot and terminating nul
+    .driveNum   db ?  ;Drive we are searching on, 1 based number
+    .template   db 11 dup (?) ;Search template (? meaning anything)
+    .attrib     db ?  ;Search attribute
+    .dirOffset  dd ?  ;32 byte entry within dir cluster
+    .parDirClus dd ?  ;Parent Directory Cluster number
+    .attribFnd  db ?  ;Attrib of file found
+    .fileTime   dw ?  ;File time
+    .fileDate   dw ?  ;File date
+    .fileSize   dd ?  ;Number of bytes
+    .asciizName db 13 dup (?) ;ASCIIZ name with dot and terminating nul
 endstruc
 
 struc psp
-    .return     resb 2  ;Should always be CDh 40h, same place as DOS
-    .allocSize  resd 1  ;Number of paras in init alloc or when exiting as TSR.
-                resd 1  ;Reserved 4 bytes
-    .oldInt22h  resq 1  ;Int 22h pointer on overlay load
-    .oldInt23h  resq 1  ;Int 23h pointer on overlay load
-    .oldInt24h  resq 1  ;Int 24h pointer on overlay load
-    .parentPtr  resq 1  ;Pointer to parent process PSP
-    .externalJFTPtr:    ;Ptr to external JFT array (first byte AFTER MCB)
-    .jobFileTbl resb 20 ;Main File handle array, JFT
-    .envPtr     resq 1  ;Pointer to the environment
-    .rspPtr     resq 1  ;Pointer to rsp on entry to Int 21h
-    .jftSize    resw 1  ;JFT array size, 20 => PSP JFT in use
-    .unixEntry  resb 3  ;Must always be CDh 41h CBh, same place as DOS
-    .prevPSP    resq 1  ;Pointer to the previous PSP in chain (used by SHARE)
-                resb 1  ;Reserved byte
-;If xtraHdlSz > 20, then the QWORD at .jobFileTbl becomes a pointer
+    .return     db 2 dup (?)  ;Should always be CDh 20h, same place as DOS
+    .allocSize  dd ?  ;Number of paras in init alloc or when exiting as TSR.
+                dd ?  ;Reserved 4 bytes
+    .oldInt22h  dq ?  ;Int 22h pointer on overlay load
+    .oldInt23h  dq ?  ;Int 23h pointer on overlay load
+    .oldInt24h  dq ?  ;Int 24h pointer on overlay load
+    .parentPtr  dq ?  ;Pointer to parent process PSP
+;If jftSize > 20, then the QWORD at .jobFileTbl becomes a pointer
 ; to the actual in use JFT and the other 12 bytes are left undefined.
-;If xtraHdlSz < 20 (DOS will never set it so), then it is considered as 20
+;If jftSize < 20 (DOS will never set it so), then it is considered as 20
 ;If the user tries to reduce handle count to 20 or less, then the PSP JFT is 
-; always used and xtraHdlSz.
-;Will need to add two SYSCALLS for future expansion:
-;       1) Get Program Environment Pointer
-;       2) Get Command Line arguments pointer
+; always used and jftSize.
+    .externalJFTPtr:    ;Ptr to external JFT array (first byte AFTER MCB)
+    .jobFileTbl resb dfltJFTsize ;Main File handle array, JFT
+    .envPtr     dq ?  ;Pointer to the environment
+    .rspPtr     dq ?  ;Pointer to rsp on entry to Int 21h
+    .jftSize    dw ?  ;JFT array size, 20 => PSP JFT in use
+    .unixEntry  db 3 dup (?)  ;Must always be CDh 21h CBh, same place as DOS
+    .prevPSP    dq ?  ;Pointer to the previous PSP in chain (used by SHARE)
+                db ?  ;Reserved byte
 ;The below are in the same place as in DOS.
     .cmdLineArgPtr: ;Symbol for future use
-    .fcb1       resb 16  ;First FCB,    argument 1 
-    .fcb2       resb 20  ;Second FCB,   argument 2
+    .fcb1       db 16 dup (?)  ;First FCB,    argument 1 
+    .fcb2       db 20 dup (?)  ;Second FCB,   argument 2
     .dta:   ;Pointer to the default DTA in the PSP
-    .parmList   resb 1   ;Number of characters in command tail
-    .progTail   resb 127 ;Default DTA/Program tail
+    .parmList   db ?   ;Number of characters in command tail
+    .progTail   db 127 dup (?) ;Default DTA/Program tail
 endstruc
 
 dfltJFTsize equ 20  ;Default size of PSP JFT
 
 struc clkStruc
-    .dateWord   resw 1
-    .minutes    resb 1
-    .hours      resb 1
-    .hseconds   resb 1  ;Hundreths of seconds
-    .seconds    resb 1
+    .dateWord   dw ?
+    .minutes    db ?
+    .hours      db ?
+    .hseconds   db ?  ;Hundreths of seconds
+    .seconds    db ?
 endstruc
 
-struc countryStruc
-    .dtfmt     resw 1   ;Date time format (2 bytes)
+
+struc extCtryStruc
+    .infoIDCode db ?    ;Information ID code (01h)
+    .strucSize  dw ?    ;Length of the structure  (42 or less)
+    .ctryID     dw ?    ;Country ID number
+    .cpNumber   dw ?    ;Code page number
+    .dtfmt      dw ?    ;Date time format (2 bytes)
                         ;0 = month day year hh:mm:ss
                         ;1 = day month year hh:mm:ss
                         ;2 = year month day hh:mm:ss
-    .curr      resb 5   ;ASCIIZ Currency symbol (5 chars)
-    .thouSep   resb 2   ;ASCIIZ Thousands separator
-    .dcmlSep   resb 2   ;ASCIIZ Decimal separator
-    .dateSep   resb 2   ;ASCIIZ Date separator
-    .timeSep   resb 2   ;ASCIIZ Time separator
-    .currFmt   resb 1   ;Currency Format
+    .curr       db 5 dup (?)   ;ASCIIZ Currency symbol (5 chars)
+    .thouSep    db 2 dup (?)   ;ASCIIZ Thousands separator
+    .dcmlSep    db 2 dup (?)   ;ASCIIZ Decimal separator
+    .dateSep    db 2 dup (?)   ;ASCIIZ Date separator
+    .timeSep    db 2 dup (?)   ;ASCIIZ Time separator
+    .currFmt    db ?    ;Currency Format
                         ;0 = Symbol leads, without space
                         ;1 = Symbol follows, without space
                         ;2 = Symbol leads, one space
                         ;3 = Symbol follows, one space
                         ;4 = Symbol replace decimal separator
-    .digtdpt   resb 1   ;Number of digits after the decimal point
-    .timefmt   resb 1   ;Time format, Bit 0 = 0 => 12 hour, = 1 => 24 hour clock
-    .mapaddr   resb 8   ;Case map address (0 is nulptr), needs fixing up
-    .dataSep   resb 2   ;Data list separator
-    .resv      resb 10  ;Reserve 10 bytes
+    .digtdpt    db ?    ;Number of digits after the decimal point
+    .timefmt    db ?    ;Time format, Bit 0 = 0 => 12 hour, = 1 => 24 hour clock
+    .mapptr     db 8 dup (?)  ;Case map address (0 is nulptr), needs fixing up
+    .dataSep    db 2 dup (?)  ;Data list separator
+    .resv       db 10 dup (?) ;Reserve 10 bytes
 endstruc
 
-;60 4kb pages, giving a total of 264kb of space allocated to paging
-;for a space of 64Gb
-dosAPTsize  equ 60*4096 ;(APT = Additional Page Tables)
-dosLowBase  equ 600h    ;Low load address
+struc countryStruc
+    .dtfmt      dw ?    ;Date time format (2 bytes)
+                        ;0 = month day year hh:mm:ss
+                        ;1 = day month year hh:mm:ss
+                        ;2 = year month day hh:mm:ss
+    .curr       db 5 dup (?)   ;ASCIIZ Currency symbol (5 chars)
+    .thouSep    db 2 dup (?)   ;ASCIIZ Thousands separator
+    .dcmlSep    db 2 dup (?)   ;ASCIIZ Decimal separator
+    .dateSep    db 2 dup (?)   ;ASCIIZ Date separator
+    .timeSep    db 2 dup (?)   ;ASCIIZ Time separator
+    .currFmt    db ?    ;Currency Format
+                        ;0 = Symbol leads, without space
+                        ;1 = Symbol follows, without space
+                        ;2 = Symbol leads, one space
+                        ;3 = Symbol follows, one space
+                        ;4 = Symbol replace decimal separator
+    .digtdpt    db ?    ;Number of digits after the decimal point
+    .timefmt    db ?    ;Time format, Bit 0 = 0 => 12 hour, = 1 => 24 hour clock
+    .mapptr     db 8 dup (?)  ;Case map address (0 is nulptr), needs fixing up
+    .dataSep    db 2 dup (?)  ;Data list separator
+    .resv       db 10 dup (?) ;Reserve 10 bytes
+endstruc
 
 ;Critical Error AH bitfield equates
 critRead    equ 0h
@@ -450,3 +489,10 @@ filesDefault    equ 20
 fcbsDefault     equ 4
 safeFcbsDeflt   equ 0
 lastDriveDeflt  equ 5   
+
+;ASCII char property table equates. If such a bit is clear in signature in table
+; then the char has this property.
+badChar     equ 1   ;Bad ASCIIZ filename char
+termChar    equ 2   ;Terminator char type
+sepChar     equ 4   ;Separator char type
+badFCBChar  equ 8   ;FCB filename char
