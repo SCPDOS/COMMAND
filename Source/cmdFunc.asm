@@ -994,7 +994,6 @@ time:
 .goMsec:
     call .checkNum
     jc .badTime
-    breakpoint
     call getNum
     mov byte [td3], al  ;Save miliseconds
 .setTime:
