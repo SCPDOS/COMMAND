@@ -999,7 +999,7 @@ time:
     jc .badTime
     mov byte [td4], al  ;Save seconds
     lodsb       ;Move rsi forwards
-    call .vsep2 ;Now we dont allow for colon now
+    cmp al, "." ;Now we dont allow for colon now, only dot!
     je .goMsec
     dec rsi ;Go back a char
     call skipDelimiters ;Skip any delimiters
@@ -1028,12 +1028,9 @@ time:
     jmp time.noCur
 .validsep:
     lodsb
-    cmp al, ":"
+    cmp al, byte [ctryData + countryStruc.timeSep]  ;Usually a colon
     rete
-.vsep2:
     cmp al, "."
-    rete
-    cmp al, byte [ctryData + countryStruc.timeSep]
     return
 .checkNum:
     lodsb   ;Now ensure the first char past the delim is a number
