@@ -672,8 +672,7 @@ copy:
     jnz .okExit
     ;Here the char dev must be in cooked mode. Check if the last char was ^Z
     or eax, eax ;Clear upper bits in eax
-    lea rdi, qword [rdx + rax - 1]  ;Point to the last char in the buffer
-    cmp byte [rdi], EOF ;Was this EOF?
+    cmp byte [rdx + rax - 3], EOF ;Was char before CRLF a EOF?
     jne .copyLoop   ;Jump if not
 .okExit:
     call .leaveCopyClose
