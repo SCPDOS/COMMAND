@@ -95,4 +95,31 @@ promptEVar  db "PROMPT=",CR     ;Must be CR terminated!
 extStr  db "COMEXEBAT"  ;Used for extension searches
 ;If anything goes wrong with piping or redirecting just close first two 
 ; handles and reopen CON
-conName db "CON",0      
+conName db "CON",0    
+  
+;Int 24h strings
+errorMsgTable: ;Each table entry is 18 chars long
+            db "Write Protect $   "       ;Error 0
+            db "Unknown Unit $    "       ;Error 1
+            db "Not Ready $       "       ;Error 2
+            db "Unknown Command $ "       ;Error 3
+            db "Data $            "       ;Error 4
+            db "Bad Request $     "       ;Error 5
+            db "Seek $            "       ;Error 6
+            db "Unknown Media $   "       ;Error 7
+            db "Sector Not Found $"       ;Error 8
+            db "Out Of Paper $    "       ;Error 9
+            db "Write Fault $     "       ;Error A
+            db "Read Fault $      "       ;Error B
+            db "General Failure $ "       ;Error C
+
+drvMsg     db "drive $"
+readMsg    db "error reading $"
+writeMsg   db "error writing $"
+abortMsg   db "Abort$" 
+ignoreMsg  db "Ignore$"
+retryMsg   db "Retry$"
+failMsg    db "Fail$"
+betweenMsg db ", $"
+endMsg     db "? $"
+i24Resp    db "IRAF"   ;Abort Retry Ignore Fail

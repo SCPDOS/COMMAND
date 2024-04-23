@@ -41,12 +41,12 @@ critErrorHandler:   ;Int 24h
     shl rdi, 4  ;Multiply by 16
     shl rdx, 1  ;Multiply by 2
     add rdi, rdx    ;Add the resultant multiplications
-    lea rdx, qword [.errorMsgTable]
+    lea rdx, errorMsgTable
     lea rdx, qword [rdx+rdi]   ;Load EA to rdx
     call printString     ;Call DOS to print first part of message
 
-    lea rdx, qword [.readmsg]
-    lea rdi, qword [.writemsg]
+    lea rdx, readMsg
+    lea rdi, writeMsg
     test bh, 1  ;Bit 0 is set if write operation
     cmovnz rdx, rdi ;Move the correct r/w part of the message to rdx
     call printString     ;Call DOS to print error reading/writing portion
@@ -54,7 +54,7 @@ critErrorHandler:   ;Int 24h
     test bh, 80h    ;Test bit 7 for char/Disk assertation
     jnz .charError
 ;Disk error continues here
-    lea rdx, qword [.drive] ;Drive message
+    lea rdx, drvMsg ;Drive message
     call printString
     mov dl, bl  ;Get zero based drive number into dl
     add dl, "A" ;Add ASCII code
@@ -66,35 +66,35 @@ critErrorHandler:   ;Int 24h
 ;Last message gets a ?, otherwise a comma followed by a 20h (space)
 .userAbort:
 ;Abort is always an option
-    lea rdx, qword [.abortmsg]
+    lea rdx, abortMsg
     call printString ;Call DOS to prompt user for ABORT option
 .userRetry:
     test bh, 10h  ;Bit 4 is retry bit
     jz .userIgnore    ;If clear, dont print message
-    lea rdx, qword [.betweenMsg]
+    lea rdx, betweenMsg
     call printString
-    lea rdx, qword [.retrymsg]
+    lea rdx, retryMsg
     call printString
 .userIgnore:
     test bh, 20h    ;Bit 5 is ignore bit
     jz .userFail
-    lea rdx, qword [.betweenMsg]
+    lea rdx, betweenMsg
     call printString
-    lea rdx, qword [.ignoremsg]
+    lea rdx, ignoreMsg
     call printString
 .userFail:
     test bh, 08h    ;Bit 3 is Fail bit
     jz .userMsgEnd
-    lea rdx, qword [.betweenMsg]
+    lea rdx, betweenMsg
     call printString
-    lea rdx, qword [.failmsg]
+    lea rdx, failMsg
     call printString
 .userMsgEnd:
-    lea rdx, qword [.endMsg]
+    lea rdx, endMsg
     call printString
 ;Get user input now 
     xor ecx, ecx  ;4 Possible Responses
-    lea rdi, qword [.responses] ;Go to start of string
+    lea rdi, i24Resp ;Go to start of string
     mov eax, 0C01h ;Flush and get STDIN without Console Echo
     int 21h ;Get char in al
     cmp al, "a" ;Chack if lowercase, consider using UC char DOS multiplex
@@ -147,31 +147,6 @@ critErrorHandler:   ;Int 24h
     loop .ce1   ;Keep looping until all 8 char device chars have been printed
     jmp .userInput
 
-.errorMsgTable: ;Each table entry is 18 chars long
-            db "Write Protect $   "       ;Error 0
-            db "Unknown Unit $    "       ;Error 1
-            db "Not Ready $       "       ;Error 2
-            db "Unknown Command $ "       ;Error 3
-            db "Data $            "       ;Error 4
-            db "Bad Request $     "       ;Error 5
-            db "Seek $            "       ;Error 6
-            db "Unknown Media $   "       ;Error 7
-            db "Sector Not Found $"       ;Error 8
-            db "Out Of Paper $    "       ;Error 9
-            db "Write Fault $     "       ;Error A
-            db "Read Fault $      "       ;Error B
-            db "General Failure $ "       ;Error C
-
-.drive      db "drive $"
-.readmsg    db "error reading $"
-.writemsg   db "error writing $"
-.abortmsg   db "Abort$" 
-.ignoremsg  db "Ignore$"
-.retrymsg   db "Retry$"
-.failmsg    db "Fail$"
-.betweenMsg db ", $"
-.endMsg     db "? $"
-.responses  db "IRAF"   ;Abort Retry Ignore Fail
 
 int23h:
     test byte [permaSwitch], -1
