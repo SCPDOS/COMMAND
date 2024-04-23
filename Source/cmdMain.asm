@@ -404,10 +404,11 @@ appRet:  ;Return point from a task, jumped to from internal functions
     cmp ah, 3       ;TSR exit
     je commandMain.okRet
     ;Here we ask if we want to stop any batch processing, ret to 2Eh etc.
-    ;For now, do nothing
-    cmp ah, 1       ;Was this Ctrl^C?
-    je commandMain
-    jmp commandMain  ;If we aborted, fully reset!
+    ;For now, just clean redirs
+    jmp redirPipeFailureCommon.noPrint  ;Jumps to commandMain
+    ;cmp ah, 1       ;Was this Ctrl^C?
+    ;je commandMain
+    ;jmp commandMain  ;If we aborted, fully reset!
 
 hardSynErr:
 ;Hard syntax error in cmd line. Delete pipe files and reset completely!
