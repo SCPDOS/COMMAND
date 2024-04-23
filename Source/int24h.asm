@@ -26,6 +26,7 @@ critErrorHandler:   ;Int 24h
     push rdx
     push rdi
     push rsi
+    call errSwapHdls
     cld         ;Make String ops go forward
     mov bx, ax  ;Save ah in bh and al in bl (if needed)
     lea rdx, crlf
@@ -94,7 +95,7 @@ critErrorHandler:   ;Int 24h
 ;Get user input now 
     xor ecx, ecx  ;4 Possible Responses
     lea rdi, qword [.responses] ;Go to start of string
-    mov ah, 01h ;STDIN without Console Echo
+    mov eax, 0C01h ;Flush and get STDIN without Console Echo
     int 21h ;Get char in al
     cmp al, "a" ;Chack if lowercase, consider using UC char DOS multiplex
     jb .uip1    ;If the value is below, ignore subtraction
@@ -128,6 +129,7 @@ critErrorHandler:   ;Int 24h
     test bh, 10h    ;Bit 4 is Retry bit
     jz .userInput
 .cehExit:
+    call errRetHdls
     pop rsi
     pop rdi
     pop rdx
@@ -173,7 +175,7 @@ critErrorHandler:   ;Int 24h
 
 int23h:
     test byte [permaSwitch], -1
-    jnz .exit   ;If this is non-zero, just exit as normal
+    jnz .noJug   ;If this is non-zero, just exit as normal
     ;Else, we juggle parent PSP's
     push rax
     push rbx
@@ -182,6 +184,53 @@ int23h:
     mov qword [rbx + psp.parentPtr], rax    ;Store the parent there
     pop rbx
     pop rax
+.noJug:
+    cmp word [errHdls], -1  ;If these are not -1, return to normal!
+    je .exit
+    call errRetHdls 
 .exit:
     stc     ;Set CF to kill the task
     ret 8   ;Return and pop CS off the stack to indicate we wanna kill task
+
+errSwapHdls:
+;Swaps STDIO to STDERR
+;Start by tmporarily moving the stderr handler into stdio
+;In principle dangerous, but since we cannot exit our routine, its oki.
+    push rax
+    push rbx
+    call getJftPtr  ;Get the jft pointer into rbx. Saves rax
+    movzx eax, word [rbx]       ;Get STDIO into ax
+    mov word [errHdls], ax      ;Save em
+    movzx eax, byte [rbx + 2]   ;Now get the STDERR SFTndx in al
+    mov ah, al                  ;Move STDERR hdl into ah too 
+    mov word [rbx], ax          ;And set STDIO to STDERR
+    pop rbx
+    pop rax
+    return
+
+errRetHdls:
+;Returns STDIO from STDERR.
+    push rax
+    push rbx
+    call getJftPtr  ;Get ptr in rbx. Preserves rax.
+    movzx eax, word [errHdls]
+    mov word [errHdls], -1  ;Reset values
+    mov word [rbx], ax      ;Store the handle word back
+    pop rbx
+    pop rax
+    return
+
+getJftPtr:
+;Preserves all registers except rbx.
+;Output: rbx -> JFT of current task
+    push rax        ;Save rax
+    mov eax, 5100h  ;Get current PSP in rbx
+    int 21h
+    pop rax
+    cmp word [rbx + psp.jftSize], 20    ;If >20, pspjft is ptr to real jft
+    jbe .pspJftExit
+    mov rbx, qword [rbx + psp.externalJFTPtr]   ;Get ptr to jft from the psp
+    return
+.pspJftExit:
+    lea rbx, qword [rbx + psp.jobFileTbl]       ;Make into a ptr to jft in psp
+    return

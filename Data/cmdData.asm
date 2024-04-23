@@ -16,7 +16,7 @@ ctryData    db countryStruc_size dup (0)  ;Length of the country table
 currDirStr  db fullDirPathZL dup (0) ;Current Directory String
 inCritical  db 0    ;Up if processing a command.
 echoFlg     db -1   ;Global Echo flag, starts up!
-
+errHdls     dw -1   ;Set to the STDIO handles. Non -1 => Handles swapped
 
 cmdLineStatePtr:
 pipeFlag    db 0    ;If set, we fired up a pipe for this command line
