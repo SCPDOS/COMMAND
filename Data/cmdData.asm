@@ -121,13 +121,16 @@ destHdl     dw -1
 srcHdlInfo  dw 0 ;Used to save the handle device info (bit 7 Set -> Char dev)
 copyBuffer  db 128 dup (0)  ;Copy up to 128 bytes at a time, if we cant alloc
 cpBufPtr    dq 0    ;Ptr to the xfr arena
-cpBufSz     dw 0    ;Copy Buffer size
-cpyFlg      db 0    ;Copy state flag
+wCpBufSz    dw 0    ;Copy Buffer size, max 4096 bytes
+dCpCnt      dd 0    ;Number of files we have copied
+bCpFlg      db 0    ;Copy state flag
 
 ascSrc      equ 1   ;Set if ascii copy for this source file. Else, binary
 ascDes      equ 2   ;Set if ascii write to file. Else, binary.
-catCpy      equ 4   ;Set if we are concatinating files. Default ASCII read.
-wcSrc       equ 8   ;Set if wc's in source pattern. Display source file names.
+wcSrc       equ 4   ;Set if wc's in source pattern. Display source file names.
+mod1Cpy     equ 8   ;Set if we are copying files to new disk with same names
+mod2Cpy     equ 10h ;Set if we are copying files with new names
+mod3Cpy     equ 20h ;Set if we are concatenating files to a single destination
 
 ;Environment manipulation vars
 envVarSz        dw 0    ;Env var size
