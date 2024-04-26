@@ -704,6 +704,13 @@ copy:
     add rdi, 2              ;Point after the colon
     mov qword [srcPtr], rdi ;Store chars past the colon
 .srcEnd:
+;Finally, if the second char is a colon, capitalise the first char!
+    cmp byte [srcSpec + 1], ":"
+    jne .checkDestDir
+    mov al, byte [srcSpec]
+    call ucChar
+    mov byte [srcSpec], al
+.checkDestDir:
 ;Now establish if destination is a directory or not!
     test byte [bCpFlg], mod1Cpy ;If we already know its mod1, skip
     jnz .mod1
@@ -719,11 +726,25 @@ copy:
     cmp al, byte [pathSep]  ;Else, check if byte 3 was a pathsep!
     je .mod1    ;If it is, then it was a X:\<NUL>
 .isDestDir:
+;Only here if we suspect the destination pathspec is a path, not file!
     lea rdx, destSpec
     mov ecx, dirDirectory
     mov eax, 4E00h
     int 21h
-    jnc .mod1
+    jc .mod2
+    ;Here we just check if we have a terminating slash on the destination path.
+    ;If not, we need to place one there!
+    mov rdi, rdx    ;Move destSpec
+    call strlen
+    dec ecx         ;Lose the null terminator, zero upper bits
+    add rdi, rcx    ;Go to null terminator
+    movzx eax, byte [pathSep]
+    cmp byte [rdi - 1], al  ;Is the char before the null a pathsep?
+    je .mod1        ;If so, skip adding another one!
+    stosw           ;Else, store the pathsep and null!
+    dec rdi         ;Point back to null
+    mov qword [destPtr], rdi    ;Save this pointer
+    jmp .mod1
 .mod2:
 ;Here we are copying files(s) to file(s)! Filenames are copied according 
 ; to rename wildcard semantics. Always run through this as the destination
@@ -933,6 +954,12 @@ copyMain:
     jc .badExit
     mov word [sourceHdl], ax
     movzx ebx, ax   ;For bx
+
+    mov eax, 4400h  ;Get device info for file in bx in dx
+    int 21h
+    mov word [srcHdlInfo], dx   ;Store information here
+    test dl, 80h    ;Is this a chardev?
+    jnz .charDev
     ;Work out file size!
     mov eax, 4202h  ;LSEEK to the end of the file, if it is 0, exit w/o copy
     xor edx, edx
@@ -948,11 +975,7 @@ copyMain:
     mov eax, 4200h  ;Start from the start of the file
     int 21h
     jc .badExit
-
-    mov eax, 4400h  ;Get device info for file in bx in dx
-    int 21h
-    mov word [srcHdlInfo], dx   ;Store information here
-
+.charDev:
     lea rdx, destSpec
     mov eax, 3C00h  ;Create the file
     xor ecx, ecx    ;No file attributes
@@ -981,8 +1004,7 @@ copyMain:
 ;If not char dev, exit
     test word [srcHdlInfo], 80h ;Char dev bit set?
     jz .okExit
-;Is handle in cooked or binary mode?
-    test word [srcHdlInfo], 20h
+    test word [srcHdlInfo], 20h ;Is handle in cooked or binary mode?
     jnz .okExit
 ;Here the char dev must be in cooked mode. 
 ;Check if the last char was ^Z
@@ -1002,7 +1024,7 @@ copyMain:
     mov bx, word [destHdl]
     cmp bx, -1
     rete
-    mov eax, 3E00h
+    mov eax, 3E00h  ;Close this one too!
     int 21h
     return
 
