@@ -560,58 +560,42 @@ rmdir:
     lea rdx, badRD
     jmp printString
 
-;copy:
-;    mov word [sourceHdl], -1
-;    mov word [destHdl], -1
-;    mov word [srcHdlInfo], -1
-;    mov byte [bCpFlg], 0
-;    mov qword [cpBufPtr], 0         ;If this is ever null, error!
-;    mov word [wCpBufSz], 0          
-;    mov dword [dCpCnt], 0
-;Start with getting a disk buffer, of the size of the internal disk buffers. 
-;If we cant get a disk buffer, use searchspec as an input buffer! 
-;   (Can copy 256 chars at once)
-;    mov eax, 5200h
-;    int 21h ;Get in rbx ptr to sysvars
-;    movzx ecx, word [rbx + 20h] ;Get the internal buffer size in ecx!
-;    mov ebx, ecx
-;    shr ebx, 4  ;Convert to paragraphs, save bytes in ecx
-;    mov eax, 4800h
-;    int 21h
-;    jnc .bufOk
-;    lea rax, searchSpec
-;    mov ecx, 256
-;.bufOk:
-;    mov qword [cpBufPtr], rax   ;Save ptr to xfr area
-;    mov word [wCpBufSz], cx     ;Save buffer size
-
-;    lea rsi, qword [r8 + cmdLine]
-;    mov rdi, rsi                    ;Start scanning chars here
-;    movzx ecx, byte [rdi - 1]       ;Get the count byte
-;    mov al, "+"                     ;Are we concatenating?
-;    repne scasb
-;    jne .noCat
-;    or byte [bCpFlg], catCpy        ;We are concatenating 
-;.noCat:
-;Now we search for the destination name. This is done by searching for a 
-; delimiter that is followed by a non-+ and non-switchchar
-;
-;.cpErr:
-;    push r8
-;    mov r8, qword [cpBufPtr]
-;    mov eax, 4900h
-;    int 21h
-;    pop r8
-;    jc freezePC ;Bad ptr or bad mcb. Bad ptr shouldnt happen, badMCB big error
-;    ;Other cleanup here
-;    return
 copy:
-    test byte [arg1Flg], -1
-    jz badArgError
-    test byte [arg2Flg], -1
-    jz badArgError
-    movzx eax, byte [arg1Off]
-    mov r8, [pspPtr]
+    mov word [sourceHdl], -1
+    mov word [destHdl], -1
+    mov word [srcHdlInfo], -1
+    mov byte [bCpFlg],      ;State flag!
+    mov qword [cpBufPtr], 0         ;Init to null ptr!
+    mov word [wCpBufSz], 0  ;Clear buffer count        
+    mov dword [dCpCnt], 0   ;Clear file count
+;Start with getting a disk buffer, of the size of the internal disk buffers. 
+;If we cant allocate full diskbuffer, get as much as we can
+;Diskbuffer as thats the best optimisation for IO buffers
+    mov eax, 5200h
+    int 21h ;Get in rbx ptr to sysvars
+    movzx ecx, word [rbx + 20h] ;Get the internal buffer size in ecx!
+    mov ebx, ecx
+    shr ebx, 4  ;Convert to paragraphs, save bytes in ecx
+    mov eax, 4800h
+    int 21h
+    jnc .bufOk
+    test ebx, ebx       ;Cannot allocate? Yikes...
+    jnz .okSize
+.badAlloc:
+;Not enough memory error!
+    lea rdx, cpNoMem
+    jmp badCmn  ;Print the string and return!
+.okSize:
+    mov ecx, ebx    
+    shl ecx, 4  ;Convert into bytes from paragraphs
+    mov eax, 4800h
+    int 21h
+    jc .badAlloc
+.bufOk:
+    mov qword [cpBufPtr], rax   ;Save ptr to xfr area
+    mov word [wCpBufSz], cx     ;Save buffer size
+
+
     lea rsi, qword [r8 + cmdLine]
     mov rbx, rsi    ;Save the ptr to the start of the string in rbx
     add rsi, rax    ;Go to the start of the command
@@ -634,7 +618,7 @@ copy:
     lea rdx, srcSpec
     mov eax, 3D00h  ;Read open
     int 21h
-    jc badParamError
+    jc .badExit
     mov word [sourceHdl], ax
 
     movzx ebx, ax   ;For bx
@@ -649,9 +633,9 @@ copy:
     jc .badExit
     mov word [destHdl], ax
     xor esi, esi
-    lea rdx, copyBuffer
+    mov rdx, qword [cpBufPtr]   ;Get the buffer pointer
 .copyLoop:
-    mov ecx, 128
+    movzx ecx, word [wCpBufSz]
     movzx ebx, word [sourceHdl]
     mov ah, 3Fh ;Read
     int 21h
@@ -664,7 +648,8 @@ copy:
     mov ah, 40h ;Write
     int 21h
     jc .badExit
-    cmp eax, 128    ;Did we read 128 chars?
+    movzx ecx, word [wCpBufSz]
+    cmp eax, ecx    ;Did we read full buffer of chars?
     je .copyLoop
     ;If not char dev, exit
     test word [srcHdlInfo], 80h ;Char dev bit set?
@@ -715,6 +700,12 @@ copy:
     je badParamError
     mov eax, 3E00h
     int 21h
+    push r8
+    mov r8, qword [cpBufPtr]
+    mov eax, 4900h
+    int 21h
+    pop r8
+    jc freezePC ;If free fails, man....
     jmp badParamError
 
 erase:

@@ -119,7 +119,7 @@ renName     db 11 dup (" ") ;Build a name pattern here in FCB format
 sourceHdl   dw -1
 destHdl     dw -1
 srcHdlInfo  dw 0 ;Used to save the handle device info (bit 7 Set -> Char dev)
-copyBuffer  db 128 dup (0)  ;Copy up to 128 bytes at a time, if we cant alloc
+;copyBuffer  db 128 dup (0)  ;Copy up to 128 bytes at a time, if we cant alloc
 cpBufPtr    dq 0    ;Ptr to the xfr arena
 wCpBufSz    dw 0    ;Copy Buffer size, max 4096 bytes
 dCpCnt      dd 0    ;Number of files we have copied

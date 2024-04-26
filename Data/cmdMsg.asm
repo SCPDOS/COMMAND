@@ -14,6 +14,7 @@ noSelfCopy  db  "File cannot be copied onto itself",CR,LF,"$"
 filLostErr  db  "Content of destination lost before copy",CR,LF,"$"
 ;Copy end message. First write # files copied then this message 
 copyOk  db  " File(s) copied",CR,LF, "$"
+cpNoMem db  "Not enough memory for COPY",CR,LF,"$"      ;Never should happen
 ;Dir end1 msg. First write # files in dir then this
 dirOk   db  " File(s) $"
 ;Dir end2 msg. First write # bytes free then this message
