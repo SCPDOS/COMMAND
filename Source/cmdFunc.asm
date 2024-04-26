@@ -640,7 +640,14 @@ copy:
     pop rdi
     call findLastPathComponant  ;Get last path componant in rdi
     mov qword [destPtr], rdi
-
+    cmp byte [rdi + 1], ":" ;Is this a colon?
+    jne .destEnd    ;Dont worry
+    mov al, byte [rdi]      ;Pick up drive letter
+    call ucChar             ;Make sure we UC the drive letter
+    mov byte [rdi], al      ;Store the drive letter
+    add rdi, 2              ;Point to this null
+    mov qword [destPtr], rdi    ;Store chars over the null
+.destEnd:
 ;Now start with source processing!!
     lea rsi, qword [r8 + cmdLine]
 .srcLp:
@@ -689,10 +696,18 @@ copy:
 .oneCp:
     call findLastPathComponant  ;Get last componant of src in rdi
     mov qword [srcPtr], rdi     ;Now save the last componant
+    cmp byte [rdi + 1], ":"     ;Is this a colon?
+    jne .srcEnd             ;Dont worry
+    mov al, byte [rdi]      ;Pick up drive letter
+    call ucChar             ;Make sure we UC the drive letter
+    mov byte [rdi], al      ;Store the drive letter
+    add rdi, 2              ;Point after the colon
+    mov qword [srcPtr], rdi ;Store chars past the colon
+.srcEnd:
 ;Now establish if destination is a directory or not!
     test byte [bCpFlg], mod1Cpy ;If we already know its mod1, skip
     jnz .mod1
-    lea rdi, destSpec
+    lea rsi, destSpec
     lodsw   ;Get the first word, i.e. candidate "X:"
     cmp ah, ":"
     jne .isDestDir
@@ -780,28 +795,29 @@ copy:
     mov eax, 4E00h
     int 21h
     jc .badSrcFile  ;File not found error!!
-.copyLp:
-    breakpoint
+.mod1Lp:
     lea rsi, cmdFFBlock + ffBlock.asciizName
+    mov rdi, qword [srcPtr]
+    call strcpy2    ;Place the asciiz name at the end of the path
     mov rdi, qword [destPtr]
     call strcpy2    ;Place the asciiz name at the end of the path
     call .prntFilespec
     call copyMain   ;And copy it!
-    jnc .copyOk
+    jnc .mod1Ok
     ;Errors EXCEPT root dir full are ignored if in wildcard mode
     cmp al, -2
     je .rootDirFull
     test byte [bCpFlg], wcSrc   ;If in wc mode, proceed with next copy
-    jnz .copyOk     ;Ignore any errors in file creation   
+    jnz .mod1Ok     ;Ignore any errors in file creation   
     cmp al, -1      ;Source and destination same?
     je .badSameFile 
     jmp .badExit    ;Else generic error message
-.copyOk:
+.mod1Ok:
     test byte [bCpFlg], wcSrc   ;If no Wildcards in source, we are done!
     jz .copyDone
     mov eax, 4F00h      ;Find Next File
     int 21h
-    jnc .copyLp         ;If no more files, we are done! Fall thru!
+    jnc .mod1Lp         ;If no more files, we are done! Fall thru!
 
 .copyDone:
     call .copyCleanup   ;Clean up resources!
@@ -822,11 +838,15 @@ copy:
 ;Prints the filespec to STDOUT. If the path is 
     test byte [bCpFlg], wcSrc   ;If no wildcard, then don't print name
     retz
-    lea rdx, .pfStr
-    mov eax, 0900h
+    lea rdx, srcSpec
+    mov rdi, rdx
+    call strlen
+    dec ecx     ;Drop terminating null
+    mov ebx, 1  ;STDOUT
+    mov eax, 4000h  ;Write
     int 21h
-    return  ;Temporarily do nothing!
-.pfStr: db "FILESPEC ECHO UNIMPLEMENTED",CR,LF,"$"
+    call printCRLF
+    return
 .doSwitch:
 ;Since switches can come before or after a name, handle them here!
 ;If invalid switch char, returns ZF=NZ.
