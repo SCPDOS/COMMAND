@@ -564,10 +564,18 @@ copy:
     mov word [sourceHdl], -1
     mov word [destHdl], -1
     mov word [srcHdlInfo], -1
-    mov byte [bCpFlg],      ;State flag!
-    mov qword [cpBufPtr], 0         ;Init to null ptr!
+    mov byte [bCpFlg], 0    ;State flag!
+    mov qword [cpBufPtr], 0 ;Init to null ptr!
     mov word [wCpBufSz], 0  ;Clear buffer count        
     mov dword [dCpCnt], 0   ;Clear file count
+    mov byte [srcSpec], 0   ;Clear first bytes of the buffers
+    mov byte [destSpec], 0
+    mov qword [srcPtr], 0
+    mov qword [destPtr], 0
+    call setDTA
+    mov eax, 5400h  ;Get verify flag
+    int 21h
+    mov byte [verifyFlg], al    ;Save verify flag!
 ;Start with getting a disk buffer, of the size of the internal disk buffers. 
 ;If we cant allocate full diskbuffer, get as much as we can
 ;Diskbuffer as thats the best optimisation for IO buffers
@@ -594,35 +602,330 @@ copy:
 .bufOk:
     mov qword [cpBufPtr], rax   ;Save ptr to xfr area
     mov word [wCpBufSz], cx     ;Save buffer size
-
-
+;Go to the end of the cmd line and search backwards for the destination first
     lea rsi, qword [r8 + cmdLine]
-    mov rbx, rsi    ;Save the ptr to the start of the string in rbx
-    add rsi, rax    ;Go to the start of the command
-    lea rdi, srcSpec
-    call cpDelimPathToBufz    
-    movzx eax, byte [arg2Off]
-    mov rsi, rbx    ;Get back the start of the ptr
-    add rsi, rax    ;Go to the start of the command
+    movzx ecx, byte [r8 + cmdLineCnt]
+    add rsi, rcx
+    std ;Go in reverse
+.sd:    ;At this point, any switch chars affect destination!
+    call skipDelimiters ;SkipDelimiters in reverse!
+    mov al, byte [switchChar]
+    cmp byte [rsi], al  ;Did we hit a switch?
+    jne .noSwitch
+    ;Here we hit a switchchar! Process it!
+    mov al, byte [rsi + 1]  ;Get the char after the switchchar
+    mov bl, ascDes
+    call .doSwitchRev
+    jnz .badExit    ;Invalid switch, abort procedure!
+    jmp short .sd   ;Now go back to skipping delimiters again!
+.noSwitch:
+;Ok so we hit a path. Now search for the starting delimiter or start of line
+    lodsb   ;Get char at rsi, go back a char
+    call isALdelimiter
+    je .destFnd
+    mov al, byte [switchChar]
+    cmp byte [rsi - 1], al  ;Peek if an embedded switch?
+    je .se  ;Jump if so!
+    dec ecx ;One less char left to search
+    jmp short .noSwitch
+.se:
+    dec rsi     ;Dec to make the below work!
+.destFnd:
+    add rsi, 2  ;Go back to the first char past the delimiter
+    cld 
+    mov rbp, rsi    ;Save this ptr in rbp temporarily
     lea rdi, destSpec
-    call cpDelimPathToBufz   
-;Before we open, we check if the two filenames are equal
-; If so, crap out.
+    push rdi
+    call cpDelimPathToBufz ;Copy this over!   
+    pop rdi
+    call findLastPathComponant  ;Get last path componant in rdi
+    mov qword [destPtr], rdi
+
+;Now start with source processing!!
+    lea rsi, qword [r8 + cmdLine]
+.srcLp:
+    call skipDelimiters 
+    mov al, byte [switchChar]
+    cmp byte [rsi], al
+    jne .noSrcSw    ;Not switch! Must be filename start!
+    mov bl, ascSrc
+    call .doSwitch
+    jnz .badExit
+    jmp short .srcLp    ;Now keep searching for start of filename
+.noSrcSw:
+    cmp rbp, rsi
+    jne .noSameSrcDest
+    ;Here if the destination we specified earlier is the same as the source
+    ;This means, the actual destination is the current default drive
+    ; on the current directory. Pass to DOS X:FILENAME.EXT<NUL> string.
+    call getCurrentDrive    ;Get current drive
+    add al, "A"             ;Turn into a drive letter
+    mov ah, ":"
+    movzx eax, ax
+    mov dword [destSpec], eax   ;Add a default null terminator
+    lea rdi, destSpec+2         ;Point to the null after the colon
+    mov qword [destPtr], rdi    ;Copy the filenames here
+    or byte [bCpFlg], mod1Cpy   ;Copy to curdir in cur drive
+.noSameSrcDest:
+    lea rdi, srcSpec            ;rsi now goes into the source spec!
+    push rdi
+    call cpDelimPathToBufz      ;Copy this over!
+    pop rdi
+    ;Now go forwards and pick up any more switches.
+    ;Also any "+" signs here!!
+.swSrcSwPost:
+    call skipDelimiters ;Skips trailing delimiters
+    cmp al, byte [switchChar]
+    jne .swSrcSwPostExit
+    mov bl, ascSrc
+    call .doSwitch
+    jnz .badExit
+    jmp short .swSrcSwPost
+.swSrcSwPostExit:
+    mov rsi, rdi
+    call scanForWildcards   ;Find if we have a WC in this source!
+    jnz .oneCp
+    or byte [bCpFlg], wcSrc ;We are copying many files. Disp names
+.oneCp:
+    call findLastPathComponant  ;Get last componant of src in rdi
+    mov qword [srcPtr], rdi     ;Now save the last componant
+;Now establish if destination is a directory or not!
+    test byte [bCpFlg], mod1Cpy ;If we already know its mod1, skip
+    jnz .mod1
+    mov rdi, destSpec
+    lodsw   ;Get the first word, i.e. candidate "X:"
+    cmp ah, ":"
+    jne .isDestDir
+    lodsw   ;Get second word, i.e. candidate "\<NUL>" or "<NUL>"
+    test al, al ;Is byte three nul?
+    jz .mod1    ;If so, it was a X:<NUL>
+    test ah, ah ;Is byte four nul?
+    jnz .isDestDir  ;If not, check if destination is a directory
+    cmp al, byte [pathSep]  ;Else, check if byte 3 was a pathsep!
+    je .mod1    ;If it is, then it was a X:\<NUL>
+.isDestDir:
+    lea rdx, destSpec
+    mov ecx, dirDirectory
+    mov eax, 4E00h
+    int 21h
+    jnc .mod1
+.mod2:
+;Here we are copying files(s) to file(s)! Filenames are copied according 
+; to rename wildcard semantics. Always run through this as the destination
+; name may have wildcards in it! But we don't add any.
+    or byte [bCpFlg], mod2Cpy   ;Set to remind us what we are doing!
+;Search for the source file
+    lea rdx, srcSpec
+    xor ecx, ecx    ;Normal and RO files pls
+    mov eax, 4E00h
+    int 21h
+    jc .badSrcFile
+    mov rsi, qword [destPtr]
+    lea rdi, qword [r8 + fcb2]  ;Create the permanent destination pattern
+    mov eax, 2901h
+    int 21h
+.md2Lp:
+    lea rsi, cmdFFBlock + ffBlock.asciizName
+    lea rdi, qword [r8 + fcb1]  ;Create the source pattern
+    mov eax, 2901h
+    int 21h  
+;Now depending on source and dest patterns, build a filename in renName
+    lea rsi, qword [r8 + fcb2 + fcb.filename]    
+    lea rdi, renName    ;Start by copying the destination pattern
+    push rdi
+    movsq
+    movsw
+    movsb
+    pop rdi
+    lea rsi, qword [r8 + fcb1 + fcb.filename] ;Now start sourcing chars!
+    mov ecx, 11 ;11 chars to copy!
+.md2NameMake:
+    lodsb   ;Get the char from the source string
+    cmp byte [rdi], "?" ;Are we over a WC?
+    jne .noStore    ;Dont store the char there
+    mov byte [rdi], al  ;If we are over a wc, store the char there!
+.noStore:
+    inc rdi ;Goto next char position
+    dec ecx
+    jnz .md2NameMake
+    lea rsi, cmdFFBlock + ffBlock.asciizName
+    mov rdi, qword [srcPtr]
+    call strcpy ;Doesn't matter that we preserve the pointers
+    lea rsi, renName
+    mov rdi, qword [destPtr]
+    call FCBToAsciiz
+    call .prntFilespec  ;Prints the source filename
+    call copyMain       ;And copy it!
+    jnc .md2Ok
+;Errors EXCEPT root dir full are ignored if in wildcard mode
+    cmp al, -2
+    je .rootDirFull
+    test byte [bCpFlg], wcSrc   ;If in wc mode, proceed with next copy
+    jnz .md2Ok      ;Ignore any errors in file creation   
+    cmp al, -1      ;Source and destination same?
+    je .badSameFile 
+    jmp .badExit    ;Else generic error message
+.md2Ok:
+    test byte [bCpFlg], wcSrc   ;If no Wildcards in source, we are done!
+    jz .copyDone        ;Copy complete!
+    mov eax, 4F00h      ;Else, find Next File
+    int 21h
+    jc .copyDone        ;If no more files, we are done!
+    jmp .md2Lp    ;Else, now build a new source and destination!
+.mod1:
+;Here we are copying file(s) into a directory. Filenames are copied verbatum.
+    or byte [bCpFlg], mod1Cpy   ;Ensure this bit is set!
+    lea rdx, srcSpec
+    xor ecx, ecx    ;Normal and read only files pls!!
+    mov eax, 4E00h
+    int 21h
+    jc .badSrcFile  ;File not found error!!
+.copyLp:
+    lea rsi, cmdFFBlock + ffBlock.asciizName
+    mov rdi, qword [destPtr]
+    call strcpy2    ;Place the asciiz name at the end of the path
+    call .prntFilespec
+    call copyMain   ;And copy it!
+    jnc .copyOk
+    ;Errors EXCEPT root dir full are ignored if in wildcard mode
+    cmp al, -2
+    je .rootDirFull
+    test byte [bCpFlg], wcSrc   ;If in wc mode, proceed with next copy
+    jnz .copyOk     ;Ignore any errors in file creation   
+    cmp al, -1      ;Source and destination same?
+    je .badSameFile 
+    jmp .badExit    ;Else generic error message
+.copyOk:
+    test byte [bCpFlg], wcSrc   ;If no Wildcards in source, we are done!
+    jz .copyDone
+    mov eax, 4F00h      ;Find Next File
+    int 21h
+    jnc .copyLp         ;If no more files, we are done! Fall thru!
+
+.copyDone:
+    call .copyCleanup   ;Clean up resources!
+    lea rdx, crlf
+    mov ah, 09h
+    int 21h
+    lea rdx, fourSpc
+    mov ah, 09h
+    int 21h
+    mov eax, dword [dCpCnt] ;Get number of files copied
+    call printDecimalWord   ;n File(s) copied
+    lea rdx, copyOk
+    mov ah, 09h
+    int 21h    
+    return
+
+.prntFilespec:
+;Prints the filespec to STDOUT. If the path is 
+    test byte [bCpFlg], wcSrc   ;If no wildcard, then don't print name
+    retz
+    lea rdx, .pfStr
+    mov eax, 0900h
+    int 21h
+    return  ;Temporarily do nothing!
+.pfStr: db "FILESPEC ECHO UNIMPLEMENTED",CR,LF,"$"
+.doSwitch:
+;Since switches can come before or after a name, handle them here!
+;If invalid switch char, returns ZF=NZ.
+;Input: bl = ASCII bit to set (either 1 or 2) 
+    inc rsi ;Point to char past switchchar
+    lodsb   ;Get this char, goto next char
+.doSwitchRev:
+    call ucChar
+    cmp al, "A"
+    rete
+    cmp al, "B"
+    rete
+    cmp al, "V"
+    retne
+    pushfq  ;Save the ZF=ZE state
+    test byte [verifyFlg], -1   ;If verify flag set, do nothing
+    jnz .dsExit                 ;If not zero, flag already set!
+    ;Else, set it. We return it at the end!
+    mov eax, 2E01h  ;Set Verify Flag
+    int 21h
+.dsExit:
+    popfq
+    return
+
+;COPY Bad Exits!!
+.rootDirFull:
+    call .copyCleanup
+    lea rdx, fulRootDir
+    jmp badCmn
+.badSrcFile:
+    call .copyCleanup
+    jmp badFnf  ;File not found!!
+.badSameFile:
+    call .copyCleanup
+    jmp noSelfCopyError
+.badExit:
+    call .copyCleanup   ;Clean resources
+    jmp badParamError
+.copyCleanup:
+;Clean all resources!! Reset verify and free copy buffer. 
+;Handles are never open in this process!
+    mov eax, 2E00h
+    mov al, byte [verifyFlg]
+    int 21h
+    push r8
+    mov r8, qword [cpBufPtr]
+    test r8, r8 ;Check zero, clear CF
+    jz .skipFree
+    mov eax, 4900h
+    int 21h
+.skipFree:
+    pop r8
+    jc freezePC ;If free fails, man....
+    return
+
+copyMain:
+;This is the main copying procedure! 
+;Start by checking the two files are not the same. If so, complain!
+;If returns CF=CY, error code in al. 
+;   If al = -1, same filename error!
+;   If al = -2, Root Dir full (couldn't create file)
+;If returns CF=NC, file copied successfully.
     lea rsi, srcSpec
     lea rdi, destSpec
     mov eax, 121Eh
     int 2Fh
-    jz .sameFilename
-    ;Open source with read permission
-    ;Open destination with write permission
+    jnz .notSameFile
+    mov al, -1  ;Same filename error!
+.badExit:
+    push rax
+    call .closeHandles
+    pop rax
+    stc
+    return
+.badExitNoSpace:
+    mov al, -2  ;Access denied from Create happens if Root Dir full!
+    jmp short .badExit
+.notSameFile:
+;Open source with read permission
+;Open destination with write permission
     lea rdx, srcSpec
     mov eax, 3D00h  ;Read open
     int 21h
     jc .badExit
     mov word [sourceHdl], ax
-
     movzx ebx, ax   ;For bx
-    mov eax, 4400h  ;Get device info in dx
+    ;Work out file size!
+    mov eax, 4202h  ;LSEEK to the end of the file, if it is 0, exit w/o copy
+    xor edx, edx
+    xor ecx, ecx    ;ecx:edx is pointer
+    int 21h         ;Returns in edx:eax
+    jc .badExit
+    test edx, eax   ;If both are zero, then we have 0 byte file
+    jz .closeHandles  ;Skip this file!
+    xor edx, edx    ;Return low bits to 0 = ecx:edx
+    mov eax, 4200h  ;Start from the start of the file
+    int 21h
+    jc .badExit
+
+    mov eax, 4400h  ;Get device info for file in bx in dx
     int 21h
     mov word [srcHdlInfo], dx   ;Store information here
 
@@ -630,7 +933,7 @@ copy:
     mov eax, 3C00h  ;Create the file
     xor ecx, ecx    ;No file attributes
     int 21h
-    jc .badExit
+    jc .badExitNoSpace
     mov word [destHdl], ax
     xor esi, esi
     mov rdx, qword [cpBufPtr]   ;Get the buffer pointer
@@ -640,7 +943,7 @@ copy:
     mov ah, 3Fh ;Read
     int 21h
     jc .badExit
-    test eax, eax
+    test eax, eax   ;If no bytes read, exit!
     jz .okExit
     add esi, eax
     mov ecx, eax
@@ -651,62 +954,33 @@ copy:
     movzx ecx, word [wCpBufSz]
     cmp eax, ecx    ;Did we read full buffer of chars?
     je .copyLoop
-    ;If not char dev, exit
+;If not char dev, exit
     test word [srcHdlInfo], 80h ;Char dev bit set?
     jz .okExit
-    ;Is handle in cooked or binary mode?
+;Is handle in cooked or binary mode?
     test word [srcHdlInfo], 20h
     jnz .okExit
-    ;Here the char dev must be in cooked mode. Check if the last char was ^Z
+;Here the char dev must be in cooked mode. 
+;Check if the last char was ^Z
     or eax, eax ;Clear upper bits in eax
     cmp byte [rdx + rax - 3], EOF ;Was char before CRLF a EOF?
     jne .copyLoop   ;Jump if not
 .okExit:
-    call .leaveCopyClose
-    lea rdx, crlf
-    mov ah, 09h
-    int 21h
-    lea rdx, fourSpc
-    mov ah, 09h
-    int 21h
-    mov ah, 02h
-    mov dl, "1" ;1 File(s) copied
-    int 21h
-    lea rdx, copyOk
-    mov ah, 09h
-    int 21h
-    return
-.sameFilename:
-    call .leaveCopyClose ;Close the handles
-    jmp noSelfCopyError
-.leaveCopyClose:
-    mov bx, word [sourceHdl]
-    mov eax, 3E00h
-    int 21h
-    mov bx, word [destHdl]
-    mov eax, 3E00h
-    int 21h
-    return
-.badExit:
-;Prototypically use badParamError for error reporting... sucks I know
+    inc dword [dCpCnt]
+.closeHandles:
+;Closes copy handles!
     mov bx, word [sourceHdl]
     cmp bx, -1
-    je .skipSource
+    je .beSkipSource
     mov eax, 3E00h  ;Close this handle
     int 21h
-.skipSource:
+.beSkipSource:
     mov bx, word [destHdl]
     cmp bx, -1
-    je badParamError
+    rete
     mov eax, 3E00h
     int 21h
-    push r8
-    mov r8, qword [cpBufPtr]
-    mov eax, 4900h
-    int 21h
-    pop r8
-    jc freezePC ;If free fails, man....
-    jmp badParamError
+    return
 
 erase:
     test byte [arg1Flg], -1

@@ -112,25 +112,25 @@ td4 db 0    ;Seconds/Month
 delPath:
 srcSpec     db cmdBufferL dup (0)
 destSpec    db cmdBufferL dup (0)
-srcPtr      dq 0    ;Where to copy the pattern to
-destPtr     dq 0    ;Where to copy the pattern to
+srcPtr      dq 0    ;Where to copy pattern to in src path
+destPtr     dq 0    ;Where to copy pattern to in dest path
 renName     db 11 dup (" ") ;Build a name pattern here in FCB format
 ;Copy vars
+verifyFlg   db 0    ;Set if verify on before copy
 sourceHdl   dw -1
 destHdl     dw -1
-srcHdlInfo  dw 0 ;Used to save the handle device info (bit 7 Set -> Char dev)
-;copyBuffer  db 128 dup (0)  ;Copy up to 128 bytes at a time, if we cant alloc
+srcHdlInfo  dw 0    ;Save the hdl device info (bit 7 Set -> Char dev)
 cpBufPtr    dq 0    ;Ptr to the xfr arena
 wCpBufSz    dw 0    ;Copy Buffer size, max 4096 bytes
 dCpCnt      dd 0    ;Number of files we have copied
 bCpFlg      db 0    ;Copy state flag
 
 ascSrc      equ 1   ;Set if ascii copy for this source file. Else, binary
-ascDes      equ 2   ;Set if ascii write to file. Else, binary.
+ascDes      equ 2   ;Set if add ^Z at end of file. Clear if not!
 wcSrc       equ 4   ;Set if wc's in source pattern. Display source file names.
-mod1Cpy     equ 8   ;Set if we are copying files to new disk with same names
-mod2Cpy     equ 10h ;Set if we are copying files with new names
-mod3Cpy     equ 20h ;Set if we are concatenating files to a single destination
+mod1Cpy     equ 8   ;Set if copying files to new dir with same names
+mod2Cpy     equ 10h ;Set if copying files with new names
+mod3Cpy     equ 20h ;Set if concatenating files to a single destination
 
 ;Environment manipulation vars
 envVarSz        dw 0    ;Env var size
