@@ -692,7 +692,7 @@ copy:
 ;Now establish if destination is a directory or not!
     test byte [bCpFlg], mod1Cpy ;If we already know its mod1, skip
     jnz .mod1
-    mov rdi, destSpec
+    lea rdi, destSpec
     lodsw   ;Get the first word, i.e. candidate "X:"
     cmp ah, ":"
     jne .isDestDir
@@ -781,6 +781,7 @@ copy:
     int 21h
     jc .badSrcFile  ;File not found error!!
 .copyLp:
+    breakpoint
     lea rsi, cmdFFBlock + ffBlock.asciizName
     mov rdi, qword [destPtr]
     call strcpy2    ;Place the asciiz name at the end of the path
@@ -918,8 +919,11 @@ copyMain:
     xor ecx, ecx    ;ecx:edx is pointer
     int 21h         ;Returns in edx:eax
     jc .badExit
-    test edx, eax   ;If both are zero, then we have 0 byte file
-    jz .closeHandles  ;Skip this file!
+    test eax, eax   ;Are low bytes 0?
+    jnz .nonZero
+    test edx, edx   ;If both are zero, then we have 0 byte file
+    jz .closeHandles  ;So skip this file!
+.nonZero:
     xor edx, edx    ;Return low bits to 0 = ecx:edx
     mov eax, 4200h  ;Start from the start of the file
     int 21h
