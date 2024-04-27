@@ -749,7 +749,6 @@ copy:
     je .srctpsp
     stosb   ;Store the pathsep over the null, inc rdi
 .srctpsp:
-    breakpoint
     mov qword [srcPtr], rdi ;Update the srcPtr
     mov eax, "*.*"
     stosd   ;Store the WC with terminating nul!
@@ -794,6 +793,11 @@ copy:
 ; to rename wildcard semantics. Always run through this as the destination
 ; name may have wildcards in it! But we don't add any.
     or byte [bCpFlg], mod2Cpy   ;Set to remind us what we are doing!
+    lea rsi, destSpec
+    call scanForWildcards   ;ZF=ZE if WC cound
+    jz .m2Wc
+    or byte [bCpFlg], noWcDes   ;The destination is a single file!
+.m2Wc:
 ;Search for the source file
     lea rdx, srcSpec
     xor ecx, ecx    ;Normal and RO files pls
@@ -1020,12 +1024,30 @@ copyMain:
     int 21h
     jc .badExit
 .charDev:
-    lea rdx, destSpec
+    lea rdx, destSpec   ;Prepare rdx to the destination
+    test byte [bCpFlg], noWcDes
+    jz .normalOpen
+    ;Now we first try to open this file. If this is file 0, we create.
+    ;If this is more than file 0, we open
+    cmp dword [dCpCnt], 0
+    je .normalOpen
+    ;Now we open the file instead and append to the end
+    mov eax, 3D02h  ;Open the file in exclusive read/write mode
+    int 21h
+    mov word [destHdl], ax
+    movzx ebx, ax
+    xor edx, edx
+    xor ecx, ecx
+    mov eax, 4202h  ;LSEEK from the end
+    int 21h
+    jmp short .prepCopy
+.normalOpen:
     mov eax, 3C00h  ;Create the file
     xor ecx, ecx    ;No file attributes
     int 21h
     jc .badExitNoSpace
     mov word [destHdl], ax
+.prepCopy:
     xor esi, esi
     mov rdx, qword [cpBufPtr]   ;Get the buffer pointer
 .copyLoop:

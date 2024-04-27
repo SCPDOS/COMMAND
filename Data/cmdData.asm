@@ -128,9 +128,10 @@ bCpFlg      db 0    ;Copy state flag
 ascSrc      equ 1   ;Set if ascii copy for this source file. Else, binary
 ascDes      equ 2   ;Set if add ^Z at end of file. Clear if not!
 wcSrc       equ 4   ;Set if wc's in source pattern. Display source file names.
-mod1Cpy     equ 8   ;Set if copying files to new dir with same names
-mod2Cpy     equ 10h ;Set if copying files with new names
-mod3Cpy     equ 20h ;Set if concatenating files to a single destination
+noWcDes     equ 8   ;Single destination, not dir 
+mod1Cpy     equ 10h ;Set if copying files to new dir with same names
+mod2Cpy     equ 20h ;Set if copying files with new names
+mod3Cpy     equ 40h ;Set if dflt cat ASCII files to a single destination
 
 ;Environment manipulation vars
 envVarSz        dw 0    ;Env var size
