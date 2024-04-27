@@ -545,6 +545,18 @@ ucChar:
     pop rbx
     return
 
+normalisePath:
+;Uppercases chars and flips pathseps
+;Input: rsi -> Path to normalise
+    push rax
+    push rdi
+    mov rdi, rsi
+    mov eax, 1211h
+    int 2fh
+    pop rdi
+    pop rax
+    return
+
 skipDelimiters:
 ;Skips all "standard" command delimiters. This is not the same as FCB 
 ; command delimiters but a subset thereof. 

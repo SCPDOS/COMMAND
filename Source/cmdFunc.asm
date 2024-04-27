@@ -709,12 +709,51 @@ copy:
     add rdi, 2              ;Point after the colon
     mov qword [srcPtr], rdi ;Store chars past the colon
 .srcEnd:
-;Finally, if the second char is a colon, capitalise the first char!
-    cmp byte [srcSpec + 1], ":"
-    jne .checkDestDir
-    mov al, byte [srcSpec]
-    call ucChar
-    mov byte [srcSpec], al
+;Now uppercase both paths
+    lea rsi, srcSpec
+    call normalisePath
+    lea rdi, destSpec
+    call normalisePath
+;Now establish if the source is a directory or not!
+    test byte [bCpFlg], wcSrc
+    jnz .checkDestDir   ;Skip check if source has wildcards
+    lea rdx, srcSpec
+    mov rsi, rdx
+    lodsw   ;Get the first two chars, is it "X:" style
+    cmp ah, ":"
+    jne .isSrcDir   ;If not, check explicitly
+    lodsb           ;Get char past :
+    test al, al     ;Is byte three nul?
+    jz .srcStorWc   ;If so, we have "X:<NUL>"
+    cmp al, byte [pathSep]  ;If char past : isnt pathsep, check manually
+    jne .isSrcDir
+    lodsb           ;Get char past char past "X:\"
+    test al, al     
+    jnz .isSrcDir   ;Fall thru is "X:\<NUL>"
+.srcStorWc:
+;rsi points past the char to store the WC at
+    mov dword [rsi - 1], "*.*"  ;Store with terminating null!
+    or byte [bCpFlg], wcSrc     ;We're adding the wildcard to the source!
+    jmp short .checkDestDir
+.isSrcDir:
+    mov ecx, dirDirectory
+    mov eax, 4E00h
+    int 21h
+    jc .checkDestDir    ;Wasn't a dir!
+    mov rdi, rdx
+    call strlen
+    dec ecx
+    add rdi, rcx    ;Move rdi to the terminating null
+    mov al, byte [pathSep]
+    cmp byte [rdi - 1], al  ;Do we have a trailing pathsep?
+    je .srctpsp
+    stosb   ;Store the pathsep over the null, inc rdi
+.srctpsp:
+    breakpoint
+    mov qword [srcPtr], rdi ;Update the srcPtr
+    mov eax, "*.*"
+    stosd   ;Store the WC with terminating nul!
+    or byte [bCpFlg], wcSrc ;We're adding the wildcard to the source!
 .checkDestDir:
 ;Now establish if destination is a directory or not!
     test byte [bCpFlg], mod1Cpy ;If we already know its mod1, skip
