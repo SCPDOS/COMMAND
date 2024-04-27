@@ -610,21 +610,26 @@ copy:
 ;Go to the end of the cmd line and search backwards for the destination first
     lea rsi, qword [r8 + cmdLine]
     movzx ecx, byte [r8 + cmdLineCnt]
+    dec ecx ;Turn into offset
     add rsi, rcx
     std ;Go in reverse
 .sd:    ;At this point, any switch chars affect destination!
     call skipDelimiters ;SkipDelimiters in reverse!
     mov al, byte [switchChar]
-    cmp byte [rsi], al  ;Did we hit a switch?
+    cmp byte [rsi + 1], al  ;Did we hit a switch?
     jne .noSwitch
-    ;Here we hit a switchchar! Process it!
+    ;Here we hit a switchchar! Process it! rsi points to char before switchchar
+    inc rsi ;Point to the switch
     mov al, byte [rsi + 1]  ;Get the char after the switchchar
     mov bl, ascDes
     call .doSwitchRev
     jnz .badExit    ;Invalid switch, abort procedure!
+    dec rsi         ;Go past the switchchar
     jmp short .sd   ;Now go back to skipping delimiters again!
 .noSwitch:
 ;Ok so we hit a path. Now search for the starting delimiter or start of line
+    inc rsi ;Go to the last char in the path
+.noSwitchLp:
     lodsb   ;Get char at rsi, go back a char
     call isALdelimiter
     je .destFnd
@@ -632,7 +637,7 @@ copy:
     cmp byte [rsi - 1], al  ;Peek if an embedded switch?
     je .se  ;Jump if so!
     dec ecx ;One less char left to search
-    jmp short .noSwitch
+    jmp short .noSwitchLp
 .se:
     dec rsi     ;Dec to make the below work!
 .destFnd:
@@ -660,9 +665,11 @@ copy:
     mov al, byte [switchChar]
     cmp byte [rsi], al
     jne .noSrcSw    ;Not switch! Must be filename start!
+    ;rsi points to switch after switchchar
     mov bl, ascSrc
     call .doSwitch
     jnz .badExit
+    add rsi, 2
     jmp short .srcLp    ;Now keep searching for start of filename
 .noSrcSw:
     cmp rbp, rsi
@@ -681,17 +688,21 @@ copy:
 .noSameSrcDest:
     lea rdi, srcSpec            ;rsi now goes into the source spec!
     push rdi
-    call cpDelimPathToBufz      ;Copy this over!
+    call cpDelimPathToBufz      ;Copy this over! rsi points past delimiter
     pop rdi
     ;Now go forwards and pick up any more switches.
     ;Also any "+" signs here!!
+    dec rsi ;Point back to the first delimiter
 .swSrcSwPost:
     call skipDelimiters ;Skips trailing delimiters
-    cmp al, byte [switchChar]
+    mov al, byte [switchChar]
+    cmp byte [rsi], al
     jne .swSrcSwPostExit
+    ;rsi points to switch after switchchar
     mov bl, ascSrc
-    call .doSwitch
+    call .doSwitch  ;Puts us at the char past the switch itself
     jnz .badExit
+    add rsi, 2      ;Go past the switch
     jmp short .swSrcSwPost
 .swSrcSwPostExit:
     mov rsi, rdi
@@ -740,6 +751,9 @@ copy:
     mov eax, 4E00h
     int 21h
     jc .checkDestDir    ;Wasn't a dir!
+    ;Was the file we found actually a directory?
+    cmp byte [cmdFFBlock + ffBlock.attribFnd], dirDirectory
+    jne .checkDestDir   ;Wasn't a dir
     mov rdi, rdx
     call strlen
     dec ecx
@@ -775,6 +789,9 @@ copy:
     mov eax, 4E00h
     int 21h
     jc .mod2
+    ;Was the file we found actually a directory?
+    cmp byte [cmdFFBlock + ffBlock.attribFnd], dirDirectory
+    jne .mod2
     ;Here we just check if we have a terminating slash on the destination path.
     ;If not, we need to place one there!
     mov rdi, rdx    ;Move destSpec
@@ -920,25 +937,34 @@ copy:
 ;Since switches can come before or after a name, handle them here!
 ;If invalid switch char, returns ZF=NZ.
 ;Input: bl = ASCII bit to set (either 1 or 2) 
+;       rsi -> Switchchar
+    push rsi
     inc rsi ;Point to char past switchchar
     lodsb   ;Get this char, goto next char
+    pop rsi
 .doSwitchRev:
     call ucChar
     cmp al, "A"
-    rete
+    jne .cB
+    or byte [bCpFlg], bl    ;Set the ASCII bit
+.cExit:
+    xor ebx, ebx    ;Clear ZF 
+    return
+.cB:
     cmp al, "B"
-    rete
+    jne .cV
+    not bl  ;Reverse bits
+    and byte [bCpFlg], bl   ;Clear the ASCII bit.
+    jmp short .cExit
+.cV:
     cmp al, "V"
-    retne
-    pushfq  ;Save the ZF=ZE state
+    retne   ;Exit w/o clearing ZF
     test byte [verifyFlg], -1   ;If verify flag set, do nothing
-    jnz .dsExit                 ;If not zero, flag already set!
+    jnz .cExit                  ;If not zero, flag already set!
     ;Else, set it. We return it at the end!
     mov eax, 2E01h  ;Set Verify Flag
     int 21h
-.dsExit:
-    popfq
-    return
+    jmp short .cExit
 
 ;COPY Bad Exits!!
 .rootDirFull:
@@ -978,9 +1004,18 @@ copyMain:
 ;   If al = -1, same filename error!
 ;   If al = -2, Root Dir full (couldn't create file)
 ;If returns CF=NC, file copied successfully.
+;Check the two files are not the same using truename in searchspec
     lea rsi, srcSpec
-    lea rdi, destSpec
-    mov eax, 121Eh
+    lea rdi, searchSpec
+    mov eax, 6000h  ;TRUENAME
+    int 21h 
+    push rdi    ;Save this searchSpec
+    lea rsi, destSpec
+    lea rdi, searchSpec + cmdBufferL ;Use the latter half to store this bit
+    mov eax, 6000h
+    int 21h
+    pop rsi     ;Get this ptr back
+    mov eax, 121Eh  ;Cmpr ASCII strings
     int 2Fh
     jnz .notSameFile
     mov al, -1  ;Same filename error!
