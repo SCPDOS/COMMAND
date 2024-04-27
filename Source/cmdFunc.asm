@@ -462,26 +462,31 @@ dir:
     lea rdx, crlf
     mov ah, 09h
     int 21h
+    mov al, 23  ;23 lines... for the next bit
     jmp short .dirPrintNameExit
 .widePrint:
 ;If /W, print name space ext space space space space
     lea rdx, fourSpc
     mov ah, 09h ;Print string
     int 21h
+    mov al, 5*23    ;5 entries per line...
 .dirPrintNameExit:
     inc dword [dirFileCtr]   ;Increment file counter
     inc byte [dirLineCtr]
-    cmp byte [dirLineCtr], 23
+    cmp byte [dirLineCtr], al
     retne
+    test byte [dirFlags], dirPageType
+    jz .dirPrnNoPag
     lea rdx, pauseMes
     mov ah, 09h
     int 21h
     mov ah, 01h ;Wait for a char from STDIN
     int 21h
-    mov byte [dirLineCtr], 0
     lea rdx, crlf   ;Force new line
     mov ah, 09h
     int 21h
+.dirPrnNoPag:
+    mov byte [dirLineCtr], 0
     return
 
 chdir:
