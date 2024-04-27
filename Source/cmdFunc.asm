@@ -612,6 +612,7 @@ copy:
     movzx ecx, byte [r8 + cmdLineCnt]
     dec ecx ;Turn into offset
     add rsi, rcx
+    xor edx, edx    ;Use edx as a counter for number of destination switches
     std ;Go in reverse
 .sd:    ;At this point, any switch chars affect destination!
     call skipDelimiters ;SkipDelimiters in reverse!
@@ -619,15 +620,23 @@ copy:
     cmp byte [rsi + 1], al  ;Did we hit a switch?
     jne .noSwitch
     ;Here we hit a switchchar! Process it! rsi points to char before switchchar
-    inc rsi ;Point to the switch
-    mov al, byte [rsi + 1]  ;Get the char after the switchchar
-    mov bl, ascDes
-    call .doSwitchRev
-    jnz .badExit    ;Invalid switch, abort procedure!
-    dec rsi         ;Go past the switchchar
+    movzx eax, byte [rsi + 2]   ;Get the char
+    push rax        ;Push the switchchar
+    inc edx         ;Inc the counter
     jmp short .sd   ;Now go back to skipping delimiters again!
 .noSwitch:
-;Ok so we hit a path. Now search for the starting delimiter or start of line
+;Ok so we hit a path. Now set the flags based on the stack!
+    test edx, edx
+    jz .noDestSwitch
+.ns1:
+    pop rax ;Pop the switch char
+    mov bl, ascDes
+    call .doSwitchRev
+    jnz .badExit    ;Invalid switch, abort procedure!    
+    dec edx
+    jnz .ns1
+.noDestSwitch:
+;Now search for the starting delimiter or start of line
     inc rsi ;Go to the last char in the path
 .noSwitchLp:
     lodsb   ;Get char at rsi, go back a char
