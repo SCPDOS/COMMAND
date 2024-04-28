@@ -22,9 +22,6 @@ badEnvSpaceError:
 badAccError:
     lea rdx, accDenMsg
     jmp short badCmn
-noSelfCopyError:
-    lea rdx, noSelfCopy
-    jmp short badCmn
 badParamError:
     lea rdx, badParm
     jmp short badCmn
@@ -667,7 +664,8 @@ copy:
     add rdi, 2              ;Point to this null
     mov qword [destPtr], rdi    ;Store chars over the null
 .destEnd:
-;Now start with source processing!!
+;Now start with source processing!! Clear the binSrc bit in bCpFlg
+    and byte [bCpFlg], ~binSrc  ;Mightve been accidentally set by dest flags
     lea rsi, qword [r8 + cmdLine]
 .srcLp:
     call skipDelimiters 
@@ -867,11 +865,12 @@ copy:
     call .prntFilespec  ;Prints the source filename
     call copyMain       ;And copy it!
     jnc .md2Ok
-;Errors EXCEPT root dir full are ignored if in wildcard mode
+;Errors are not ignored, only when overwrite on ASCII concat mode, in which case
+; we display a "contents lost" message and proceed. Here all errors halt!
+    cmp al, -3
+    je .badBinCdevErr
     cmp al, -2
     je .rootDirFull
-    test byte [bCpFlg], wcSrc   ;If in wc mode, proceed with next copy
-    jnz .md2Ok      ;Ignore any errors in file creation   
     cmp al, -1      ;Source and destination same?
     je .badSameFile 
     jmp .badExit    ;Else generic error message
@@ -899,11 +898,12 @@ copy:
     call .prntFilespec
     call copyMain   ;And copy it!
     jnc .mod1Ok
-    ;Errors EXCEPT root dir full are ignored if in wildcard mode
+;Errors are not ignored, only when overwrite on ASCII concat mode, in which case
+; we display a "contents lost" message and proceed. Here all errors halt!
+    cmp al, -3
+    je .badBinCdevErr
     cmp al, -2
     je .rootDirFull
-    test byte [bCpFlg], wcSrc   ;If in wc mode, proceed with next copy
-    jnz .mod1Ok     ;Ignore any errors in file creation   
     cmp al, -1      ;Source and destination same?
     je .badSameFile 
     jmp .badExit    ;Else generic error message
@@ -916,11 +916,8 @@ copy:
 
 .copyDone:
     call .copyCleanup   ;Clean up resources!
-    lea rdx, crlf
-    mov ah, 09h
-    int 21h
-    lea rdx, fourSpc
-    mov ah, 09h
+    mov eax, 0200h      ;Beep a TAB out :)
+    mov dl, TAB
     int 21h
     mov eax, dword [dCpCnt] ;Get number of files copied
     call printDecimalWord   ;n File(s) copied
@@ -956,6 +953,7 @@ copy:
     cmp al, "A"
     jne .cB
     or byte [bCpFlg], bl    ;Set the ASCII bit
+    and byte [bCpFlg], ~binSrc  ;ASCII flag clears this
 .cExit:
     xor ebx, ebx    ;Clear ZF 
     return
@@ -964,6 +962,7 @@ copy:
     jne .cV
     not bl  ;Reverse bits
     and byte [bCpFlg], bl   ;Clear the ASCII bit.
+    or byte [bCpFlg], binSrc    ;This was explicitly set
     jmp short .cExit
 .cV:
     cmp al, "V"
@@ -976,19 +975,24 @@ copy:
     jmp short .cExit
 
 ;COPY Bad Exits!!
+.badBinCdevErr:
+    lea rdx, binDevErr
+    jmp short .badExitCmn
 .rootDirFull:
-    call .copyCleanup
     lea rdx, fulRootDir
-    jmp badCmn
-.badSrcFile:
-    call .copyCleanup
-    jmp badFnf  ;File not found!!
+    jmp short .badExitCmn
 .badSameFile:
-    call .copyCleanup
-    jmp noSelfCopyError
+    lea rdx, noSelfCopy
+.badExitCmn:
+    call badCmn     ;Print error message
+    jmp .copyDone   ;Clean resources
+.badSrcFile:
+    call badFnf  ;File not found!!
+    jmp .copyDone
 .badExit:
-    call .copyCleanup   ;Clean resources
-    jmp badParamError
+    call badParamError
+    jmp .copyDone
+
 .copyCleanup:
 ;Clean all resources!! Reset verify and free copy buffer. 
 ;Handles are never open in this process!
@@ -1012,6 +1016,7 @@ copyMain:
 ;If returns CF=CY, error code in al. 
 ;   If al = -1, same filename error!
 ;   If al = -2, Root Dir full (couldn't create file)
+;   If al = -3, attempted binary read from a device
 ;If returns CF=NC, file copied successfully.
 ;Check the two files are not the same using truename in searchspec
     lea rsi, srcSpec
@@ -1051,7 +1056,13 @@ copyMain:
     int 21h
     mov word [srcHdlInfo], dx   ;Store information here
     test dl, 80h    ;Is this a chardev?
-    jnz .charDev
+    jz .diskFile
+    ;Check the binary flag was not set on this source file
+    test byte [bCpFlg], binSrc
+    jz .cdSkip  ;If not set, good to go! Skip file size computation
+    mov al, -3
+    jmp short .badExit
+.diskFile:
     ;Work out file size!
     mov eax, 4202h  ;LSEEK to the end of the file, if it is 0, exit w/o copy
     xor edx, edx
@@ -1067,7 +1078,7 @@ copyMain:
     mov eax, 4200h  ;Start from the start of the file
     int 21h
     jc .badExit
-.charDev:
+.cdSkip:
     lea rdx, destSpec   ;Prepare rdx to the destination
     test byte [bCpFlg], noWcDes
     jz .normalOpen
@@ -1130,12 +1141,14 @@ copyMain:
     je .beSkipSource
     mov eax, 3E00h  ;Close this handle
     int 21h
+    mov word [sourceHdl], -1    ;Reset the var
 .beSkipSource:
     mov bx, word [destHdl]
     cmp bx, -1
     rete
     mov eax, 3E00h  ;Close this one too!
     int 21h
+    mov word [destHdl], -1  ;Reset the var
     return
 
 erase:

@@ -125,13 +125,14 @@ wCpBufSz    dw 0    ;Copy Buffer size, max 4096 bytes
 dCpCnt      dd 0    ;Number of files we have copied
 bCpFlg      db 0    ;Copy state flag
 
-ascSrc      equ 1   ;Set if ascii copy for this source file. Else, binary
-ascDes      equ 2   ;Set if add ^Z at end of file. Clear if not!
-wcSrc       equ 4   ;Set if wc's in source pattern. Display source file names.
-noWcDes     equ 8   ;Single destination, not dir 
-mod1Cpy     equ 10h ;Set if copying files to new dir with same names
-mod2Cpy     equ 20h ;Set if copying files with new names
-mod3Cpy     equ 40h ;Set if dflt cat ASCII files to a single destination
+ascSrc      equ 1   ;Set if ascii copy for this source file.
+binSrc      equ 2   ;Set if last encountered src file flag was binary
+ascDes      equ 4   ;Set if add ^Z at end of file. Clear if not!
+wcSrc       equ 8   ;Set if wc's in source pattern. Display source file names.
+noWcDes     equ 10h ;Single destination, not dir 
+mod1Cpy     equ 20h ;Set if copying files to new dir with same names
+mod2Cpy     equ 40h ;Set if copying files with new names
+mod3Cpy     equ 80h ;Set if dflt cat ASCII files to a single destination
 
 ;Environment manipulation vars
 envVarSz        dw 0    ;Env var size
