@@ -129,7 +129,7 @@ ascSrc      equ 1   ;Set if ascii copy for this source file.
 binSrc      equ 2   ;Set if last encountered src file flag was binary
 ascDes      equ 4   ;Set if add ^Z at end of file. Clear if not!
 wcSrc       equ 8   ;Set if wc's in source pattern. Display source file names.
-noWcDes     equ 10h ;Single destination, not dir 
+oneDest     equ 10h ;Single destination, not dir 
 mod1Cpy     equ 20h ;Set if copying files to new dir with same names
 mod2Cpy     equ 40h ;Set if copying files with new names
 mod3Cpy     equ 80h ;Set if dflt cat ASCII files to a single destination

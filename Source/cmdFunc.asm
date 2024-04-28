@@ -820,7 +820,7 @@ copy:
     lea rsi, destSpec
     call scanForWildcards   ;ZF=ZE if WC cound
     jz .m2Wc
-    or byte [bCpFlg], noWcDes   ;The destination is a single file!
+    or byte [bCpFlg], oneDest   ;The destination is a single file!
 .m2Wc:
 ;Search for the source file
     lea rdx, srcSpec
@@ -1035,7 +1035,7 @@ copyMain:
     mov al, -1  ;Same filename error!
 .badExit:
     push rax
-    call .closeHandles
+    call .exitCleanup
     pop rax
     stc
     return
@@ -1056,86 +1056,66 @@ copyMain:
     int 21h
     mov word [srcHdlInfo], dx   ;Store information here
     test dl, 80h    ;Is this a chardev?
-    jz .diskFile
-    ;Check the binary flag was not set on this source file
+    jz .prepCopy
+;Check the binary flag was not set on this source filespec
+    mov al, -3  ;Prep the error code
     test byte [bCpFlg], binSrc
-    jz .cdSkip  ;If not set, good to go! Skip file size computation
-    mov al, -3
-    jmp short .badExit
-.diskFile:
-    ;Work out file size!
-    mov eax, 4202h  ;LSEEK to the end of the file, if it is 0, exit w/o copy
-    xor edx, edx
-    xor ecx, ecx    ;ecx:edx is pointer
-    int 21h         ;Returns in edx:eax
-    jc .badExit
-    test eax, eax   ;Are low bytes 0?
-    jnz .nonZero
-    test edx, edx   ;If both are zero, then we have 0 byte file
-    jz .closeHandles  ;So skip this file!
-.nonZero:
-    xor edx, edx    ;Return low bits to 0 = ecx:edx
-    mov eax, 4200h  ;Start from the start of the file
-    int 21h
-    jc .badExit
-.cdSkip:
-    lea rdx, destSpec   ;Prepare rdx to the destination
-    test byte [bCpFlg], noWcDes
-    jz .normalOpen
-    ;Now we first try to open this file. If this is file 0, we create.
-    ;If this is more than file 0, we open
-    cmp dword [dCpCnt], 0
-    je .normalOpen
-    ;Now we open the file instead and append to the end
-    mov eax, 3D02h  ;Open the file in exclusive read/write mode
-    int 21h
-    mov word [destHdl], ax
-    movzx ebx, ax
-    xor edx, edx
-    xor ecx, ecx
-    mov eax, 4202h  ;LSEEK from the end
-    int 21h
-    jmp short .prepCopy
-.normalOpen:
-    mov eax, 3C00h  ;Create the file
-    xor ecx, ecx    ;No file attributes
-    int 21h
-    jc .badExitNoSpace
-    mov word [destHdl], ax
+    jnz .badExit    ;Return with the error code in al
+    or byte [bCpFlg], ascSrc    ;Set the ascii read bit for later!
 .prepCopy:
-    xor esi, esi
+    xor esi, esi                ;Flag if ASCII copy done after write!
     mov rdx, qword [cpBufPtr]   ;Get the buffer pointer
 .copyLoop:
     movzx ecx, word [wCpBufSz]
     movzx ebx, word [sourceHdl]
-    mov ah, 3Fh ;Read
+    mov eax, 3F00h ;Read
     int 21h
     jc .badExit
-    test eax, eax   ;If no bytes read, exit!
-    jz .okExit
-    add esi, eax
-    mov ecx, eax
-    movzx ebx, word [destHdl]
-    mov ah, 40h ;Write
+    mov ecx, eax    ;Save the binary # of bytes read
+    test byte [bCpFlg], ascSrc  ;Are we copying in ascii mode
+    jz .notAscii
+;Now scan the buffer for a EOF. If we find, we stop the copy at that char
+    push rax        ;Save the original char count
+    mov rdi, rdx    ;rdx keeps the buffer ptr
+    mov al, EOF
+    repne scasb     ;Loop thru now!
+    mov eax, ecx    ;Move the offset into the buffer in eax
+    pop rcx         ;Get the original read count into ecx
+    jne .notAscii   ;If EOF not found, ecx has the full buffer size to write
+;Here if EOF found.
+    inc eax         ;Drop one for the EOF char itself
+    sub ecx, eax    ;Get difference for # of chars to write
+    dec esi         ;Set to -1 to indicate we are done with ASCII copy!
+.notAscii:
+    test ecx, ecx   ;If no bytes were read, exit!
+    jz .exitCleanup
+    push rcx    ;Save the number of bytes to write
+    push rdx    ;Save the buffer ptr
+    call .getWriteHandle    ;Gets hdl in bx. Inc file ctr on create/open
+    pop rdx
+    pop rcx
+    jc .badExitNoSpace
+    mov eax, 4000h ;Write to handle in bx, to buffer in rdx
     int 21h
     jc .badExit
-    movzx ecx, word [wCpBufSz]
-    cmp eax, ecx    ;Did we read full buffer of chars?
-    je .copyLoop
-;If not char dev, exit
-    test word [srcHdlInfo], 80h ;Char dev bit set?
-    jz .okExit
-    test word [srcHdlInfo], 20h ;Is handle in cooked or binary mode?
-    jnz .okExit
-;Here the char dev must be in cooked mode. 
-;Check if the last char was ^Z
-    or eax, eax ;Clear upper bits in eax
-    cmp byte [rdx + rax - 3], EOF ;Was char before CRLF a EOF?
-    jne .copyLoop   ;Jump if not
-.okExit:
-    inc dword [dCpCnt]
-.closeHandles:
-;Closes copy handles!
+    cmp ecx, eax            ;ecx=bytes to write, eax=bytes written
+    jne .badExitNoSpace     ;Disk must be full!!
+    test esi, esi           ;Always clear in Binary mode
+    jz .copyLoop            ;Set possible in ASCII mode
+.exitCleanup:
+;Add a terminating EOF if we have been asked to. Else, skip!
+    test byte [bCpFlg], ascDes
+    jz .ecNoEOF
+    movsx ebx, word [destHdl]
+    cmp ebx, -1 ;If this hdl is closed, skip this!
+    je .ecNoEOF
+    mov rdx, qword [cpBufPtr]
+    mov byte [rdx], EOF
+    mov ecx, 1
+    mov eax, 4000h  ;Write and ignore any errors that come from this!
+    int 21h
+.ecNoEOF:
+;Now close copy handles!
     mov bx, word [sourceHdl]
     cmp bx, -1
     je .beSkipSource
@@ -1149,6 +1129,54 @@ copyMain:
     mov eax, 3E00h  ;Close this one too!
     int 21h
     mov word [destHdl], -1  ;Reset the var
+    return
+
+.getWriteHandle:
+;Returns in bx the handle to the destination file. If the file has not 
+; yet been opened, creates/opens the destination file as appropriate.
+;Input: Nothing
+;Output: CF=NC: bx = Handle to the file
+;        CF=CY: File failed to open/create. 
+    movzx ebx, word [destHdl]
+    cmp bx, -1
+    je .gwHProceed
+    clc     ;Clear the CF
+    return
+.gwHProceed:
+;Here if the destination has not been opened yet!
+    lea rdx, destSpec   ;Prepare rdx to the destination
+;Now we create/reopen the file here!
+    test byte [bCpFlg], oneDest ;If single destination, concatenate
+    jz .createFile
+;Now we first try to open this file. If this is file 0, we create.
+;If this is more than file 0, we open
+    cmp dword [dCpCnt], 0
+    je .createFile
+    ;Now we open the file instead and append to the end
+    mov eax, 3D02h  ;Open the file in exclusive read/write mode
+    int 21h
+    retc
+    inc dword [dCpCnt]  ;We've opened the file for writing!
+    mov word [destHdl], ax
+    movzx ebx, ax
+    xor ecx, ecx
+    xor edx, edx
+    test byte [bCpFlg], ascDes  ;Did we write a terminating ^Z before?
+    jz .gwHNoAscii
+    dec edx                     ;Overwrite the ^Z
+    dec ecx                     ;PASS A SIGNED -1 !!!!
+.gwHNoAscii:
+    mov eax, 4202h  ;LSEEK from the end
+    int 21h
+    return
+.createFile:
+    mov eax, 3C00h  ;Create the file
+    xor ecx, ecx    ;No file attributes
+    int 21h
+    retc
+    inc dword [dCpCnt]  ;File created for writing!
+    mov word [destHdl], ax
+    movzx ebx, ax
     return
 
 erase:
