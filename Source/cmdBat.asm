@@ -41,7 +41,12 @@ batLaunch:
     call skipDelimiters ;Skip leading delimiters, leave rsi at char1
     call .bbCheckEndOfCmdLine   ;Is this the end of the command?
     je .bbArgsDone      ;Yes
-    call .bbAddWordOff  ;Add the word offset to the table
+    ;Add the entry to the table!
+    mov rax, rsi
+    lea rdx, qword [rbx + batBlockHdr.cmdLine]  ;Get addr of start of cmdline
+    sub rax, rdx    ;Now get the difference in ax
+    mov word [rbx + batBlockHdr.wArgs + rcx], ax    ;Store this offset here
+    
     inc ecx
     cmp ecx, 10         ;Did we just process %9?
     je .bbArgsDone
@@ -59,14 +64,6 @@ batLaunch:
     mov byte [batFlag], -1  ;Fire up the batch processor as we are ready now!
     jmp batNextLine         ;Now we start reading the batch file!
 
-.bbAddWordOff:
-;Input: rsi -> First char of argument
-;       ecx = Argument number
-    mov rax, rsi
-    lea rdx, qword [rbx + batBlockHdr.cmdLine]  ;Get addr of start of cmdline
-    sub rax, rdx    ;Now get the difference in ax
-    mov word [rbx + batBlockHdr.wArgs + rcx], ax    ;Store this offset here
-    return
 .bbCheckEndOfCmdLine:
 ;Input: rsi -> Char to check 
 ;Output: ZF=ZE if we hit a CR or a <NUL>
@@ -79,9 +76,10 @@ batNextLine:
 ;This will:
 ;1) Open the batch file
 ;2) Read a line from the batch file one char at a time. 
-;       Do any %%ENVVAR or %ARGUMENT replacements
+;       Do any %ENVVAR% or %ARGUMENT replacements
 ;       MAX LEN OF BATCH FILE LINE POST REPLACEMENT: 127 + CR or 128 chars raw
 ;3) Close the batch file
+;4) Check if we are at the end of the file. If so, turn off bat flag.
     lea rdx, .l1
     mov eax, 0900h
     int 21h
@@ -95,4 +93,10 @@ batNextLine:
     jmp commandMain
 .l1 db "Batch mode... wait, what? How did you do that?",CR,LF,"$"
 
-batErrorHandler:
+batExpandVar:
+;Input: rsi -> Char after the % sign that triggered this call.
+;       rdi -> Position to place the substitution string
+;Output: CF=NC: Substitution string is placed in buffer
+;        CF=CY: No substitution string found
+    cmp byte [rsi], "%"
+    j

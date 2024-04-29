@@ -4,6 +4,7 @@ crlf2   db  CR,LF,CR,LF,"$"
 badBat  db  CR,LF,"Batch file missing",CR,LF,"$"    ;Used in BAT
 needBat db  CR,LF,"Insert disk with batch file"     ;Used in BAT
         db  CR,LF,"and press any key when ready",CR,LF,"$"
+batFail db  CR,LF,"Terminate batch job (Y/N)? $"
 badCmd  db  "Bad command or file name",CR,LF,"$"
 dupName db  "Duplicate file name or "
 fnfMsg  db  "File not found",CR,LF,"$"

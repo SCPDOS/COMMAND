@@ -9,12 +9,13 @@ sysVars     dq 0    ;Ptr to DOS sysvars
 numHdls     dw 20   ;Get number of handles permitted
 pathSep     db "\"  ;Default path sep
 switchChar  db "/"  ;Default switch char
-permaSwitch db 0    ;If -1, EXIT should just return. If 0, EXIT returns
+permaSwitch db 0    ;If -1, EXIT should just return. If 0, EXIT kills
 parentInt22 dq 0    ;Stores the parent values to restore upon exiting if it can
 ;Static strings, not used in command line parsing
 ctryData    db countryStruc_size dup (0)  ;Length of the country table
 currDirStr  db fullDirPathZL dup (0) ;Current Directory String
 inCritical  db 0    ;Up if processing a command.
+inCtrlC     db 0    ;Up if we are processing int 23h
 echoFlg     db -1   ;Global Echo flag, starts up!
 errHdls     dw -1   ;Set to the STDIO handles. Non -1 => Handles swapped
 
@@ -48,6 +49,7 @@ batFlag     db 0    ;Batch mode flag. Set to -1 if batch mode on
 bbPtr       dq 0    ;Ptr to the batch block
 batFile     db fileSpecZL dup (0)   ;Path to bat to execute. Qual with path!
 batCurDir   db fileSpecZL dup (0)   ;Get dir on bat drive and save here.
+batYNstr    db 4,1,N,CR             ;String for buffered Y/N input
 ;batCallPtr  dq 0    ;Ptr to the call state block
 
 ;Structs and strings

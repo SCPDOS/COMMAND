@@ -403,8 +403,9 @@ appRet:  ;Return point from a task, jumped to from internal functions
     cmp ah, 3       ;TSR exit
     je commandMain.okRet
     ;Here we ask if we want to stop any batch processing, ret to 2Eh etc.
-    ;For now, just clean redirs
-    jmp redirPipeFailureCommon.noPrint  ;Jumps to commandMain
+    ;For now, just clean redirs and fully reset!
+    call cleanupRedirs
+    jmp commandMain
     ;cmp ah, 1       ;Was this Ctrl^C?
     ;je commandMain
     ;jmp commandMain  ;If we aborted, fully reset!
@@ -428,7 +429,13 @@ redirPipeFailureCommon:
     mov eax, 4000h  ;Write handle
     mov ebx, 2  ;Write to STDERR
     int 21h
-.noPrint:
+    call cleanupRedirs  ;Cleans the redirections 
+    jmp commandMain ;Retake input from the command line
+
+cleanupRedirs:
+;Cleans all active redirections, returning to the saved state.
+;Deletes any pipe files, leaves any redir out files.
+;Resets the internal vars
     movzx eax, word [redirSTDIN]
     movzx edx, word [pipeSTDIN]
     xor ebx, ebx    ;Select STDIN for closing
@@ -470,8 +477,8 @@ redirPipeFailureCommon:
     mov qword [oldPipe], rax
     mov dword [pipe1Filespec], eax
     mov dword [pipe2Filespec], eax
+    return
 
-    jmp commandMain ;Retake input from the command line
 .closeHandle:
     cmp ebx, -1
     rete
