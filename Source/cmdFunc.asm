@@ -13,6 +13,9 @@ badDiskFull:
     cmovnz rdx, rcx ;Swap error messages if pipe flag is on
     call badCmn     ;Print the string
     jmp redirPipeFailureCommon.noPrint  ;Now close pipes and fully reset!
+badNoMemError:
+    lea rdx, noMemMsg
+    jmp short badCmn
 badSyntaxError:
     lea rdx, syntaxErr
     jmp short badCmn
@@ -2781,12 +2784,6 @@ prompt:
     rep movsb
     pop rsi
     jmp set.altEp
-
-batLaunch:
-;Preps and launches a batch file!
-    lea rdx, .batMsg
-    jmp printString
-.batMsg db "BATCH preprocessor not implemented",CR,LF,"$"
 
 echo:
     test byte [arg1Flg], -1 ;If no argument, display if on or off

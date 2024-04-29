@@ -14,6 +14,7 @@ Segment .data align=1
 %include "./Data/cmdMsg.asm"
 %include "./Data/cmdEnv.asm"
 %include "./Source/cmdMain.asm"
+%include "./Source/cmdBat.asm"
 %include "./Source/cmdFunc.asm"
 %include "./Source/cmdUtils.asm"
 %include "./Source/int24h.asm"

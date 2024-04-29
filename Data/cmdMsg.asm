@@ -63,11 +63,13 @@ offMes  db "off",CR,LF,"$"
 onMes   db "on",CR,LF,"$"
 breakIs db "BREAK is $"
 verifyIs    db "VERIFY is $"
-echoIs  db "ECHO is $"  ;Used in BAT
+echoIs  db "ECHO is $"  
 badSpec db "Invalid path or file name",CR,LF,"$"
 badArgs db "Invalid number of parameters",CR,LF,"$"
 devWriteErr db "Error writing to device"
 backSpace   db BSP," ",BSP,NUL
+noMemMsg  db "Program too big to fit in memory",CR,LF,"$"
+
 
 memSys  db CR,LF,"              Total system memory: $"
 memDOS  db CR,LF,"               Memory used by DOS: $"

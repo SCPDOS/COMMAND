@@ -21,6 +21,29 @@ cmdLine     equ psp.progTail
 
 
 ;Struct Declarations
+;In batch, for pointers, 0 means NULL.
+;FOR/CALL not priorities for implementation right now.
+struc batBlockHdr
+    .zero       db ?    ;Always null
+    .bEchoFlg   db ?    ;Echo flag on entry to batch. 1 if echo on!
+    .pCallBlk   dq ?    ;Pointer to the previous batch block when CALLed
+    .pForBlk    dq ?    ;Pointer to the active FOR block
+    .bBatFlg    db ?    ;Indicates type of command currently active
+    .dBatOffLo  dd ?    ;LSEEK Low dword of the batch offset
+    .dBatOffHi  dd ?    ;LSEEK High dword of the batch offset (0 unless net FS)
+    .wArgs      dw 10 dup (?) ;Offsets of parameters %0-%9. -1 means no param
+    .cmdLine:   ;0 terminated path (%0) followed by cmd line params.
+    ;We include terminating CR. Add null at the end to mean end of params.
+endstruc
+bbNoParam   equ -1
+bbNull      equ 0
+bbEchoOn    equ 1
+bbEchoOff   equ 0
+bbMaxAlloc  equ batBlockHdr_size + cmdBufferL + 1 ;Add 1 for good measure :)
+batNoEchoChar   equ "@" ;If a line starts with this, no echo!
+
+
+
 struc drvHdr  ;Device Driver Header for character and block devices
     .nxtPtr resq 1  ;Pointer to the next driver header, -1 if at the end
     .attrib resw 1  ;Attribute Word

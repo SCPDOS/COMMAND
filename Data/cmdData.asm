@@ -45,9 +45,9 @@ cmdLineStateL equ $ - cmdLineStatePtr
 
 ;Batch state variables. Batch changes current dir to dir of batch file!
 batFlag     db 0    ;Batch mode flag. Set to -1 if batch mode on
-batBlockPtr dq 0    ;Ptr to the batch block
-batOgCD     db fileSpecZL dup (0)   ;Original current dir for batch
+bbPtr       dq 0    ;Ptr to the batch block
 batFile     db fileSpecZL dup (0)   ;Path to bat to execute. Qual with path!
+batCurDir   db fileSpecZL dup (0)   ;Get dir on bat drive and save here.
 ;batCallPtr  dq 0    ;Ptr to the call state block
 
 ;Structs and strings
@@ -58,7 +58,7 @@ cmdFFBlock  db ffBlock_size dup (0) ;Internal Find First Block to use as default
 launchBlock db execProg_size dup (0)
 
 inBuffer    db cmdBufferL dup (0)  ;Add one to add space for terminating CR
-inBufferL   equ 127 ;127 chars so we can copy to PSP with terminating CR
+inBufferL   equ 127 ;127 chars so to always copy to PSP with terminating CR
 cpyBuffer   db cmdBufferL dup (0)   ;Copied input for processing
 cmdBuffer   db cmdBufferL dup (0)   ;Buffer with the command pipeline
 cmdPathSpec db fileSpecZL dup (0)   ;Space for full path to a ext cmd

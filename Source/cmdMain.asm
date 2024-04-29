@@ -392,8 +392,7 @@ doCommandLine:
 
 appRet:  ;Return point from a task, jumped to from internal functions
 ;Reset our PSP vectors (and IVT copies) in the event they got mangled.
-;Can depend on RSP here if the rsp ptr in the psp was not mangled (i.e. in an
-; abort or CTRL+C call).
+;Can depend on RSP here because I fixed DOS.
     mov rsp, qword [stackTop]   ;Reset stack ptr
     call resetIDTentries
     mov eax, 4D00h              ;Get retcode, will be 0 for internal commands
@@ -786,15 +785,6 @@ pullCommandline:
 .pctExit:
     mov byte [r8 + cmdLineCnt], cl  ;Save the count
     return
-
-batNextLine:
-;Not yet implemented, if this is set to 1, print error and reset!
-    lea rdx, .l1
-    mov eax, 0900h
-    int 21h
-    mov byte [batFlag], 0
-    jmp commandMain
-.l1 db "Batch mode... wait, what? How did you do that?",CR,LF,"$"
 
 int2Eh:   ;Interrupt interface for parsing and executing command lines
 ;Input: rsi points to the count byte of a command line
