@@ -80,7 +80,7 @@ batNextLine:
 ;1) Open the batch file
 ;2) Read a line from the batch file one char at a time. 
 ;       Do any %%ENVVAR or %ARGUMENT replacements
-;       MAX LEN OF BATCH FILE LINE POST REPLACEMENT: 127 + CR
+;       MAX LEN OF BATCH FILE LINE POST REPLACEMENT: 127 + CR or 128 chars raw
 ;3) Close the batch file
     lea rdx, .l1
     mov eax, 0900h

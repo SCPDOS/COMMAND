@@ -2804,7 +2804,7 @@
     80                              <1> ;1) Open the batch file
     81                              <1> ;2) Read a line from the batch file one char at a time. 
     82                              <1> ;       Do any %%ENVVAR or %ARGUMENT replacements
-    83                              <1> ;       MAX LEN OF BATCH FILE LINE POST REPLACEMENT: 127 + CR
+    83                              <1> ;       MAX LEN OF BATCH FILE LINE POST REPLACEMENT: 127 + CR or 128 chars raw
     84                              <1> ;3) Close the batch file
     85 00001B2A 488D1535000000      <1>     lea rdx, .l1
     86 00001B31 B800090000          <1>     mov eax, 0900h
