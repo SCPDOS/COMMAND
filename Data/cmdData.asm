@@ -57,8 +57,8 @@ cmdFFBlock  db ffBlock_size dup (0) ;Internal Find First Block to use as default
 
 launchBlock db execProg_size dup (0)
 
-inBuffer    db cmdBufferL dup (0)  ;Add one to add space for terminating CR
-inBufferL   equ 127 ;127 chars so to always copy to PSP with terminating CR
+inBuffer    db cmdBufferL dup (0)  ;Original input from user! 128 chars max! 
+inBufferL   equ 128 ;Will be enuf space for PSP copy to have terminating CR
 cpyBuffer   db cmdBufferL dup (0)   ;Copied input for processing
 cmdBuffer   db cmdBufferL dup (0)   ;Buffer with the command pipeline
 cmdPathSpec db fileSpecZL dup (0)   ;Space for full path to a ext cmd

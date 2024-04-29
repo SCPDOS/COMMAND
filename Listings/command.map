@@ -568,7 +568,7 @@ FFFFFFFFFFFFFFFF  bbNoParam
 00000006  dirIncFiles
 00000007  cmdStateL
 00000012  cmdLineStateL
-0000007F  inBufferL
+00000080  inBufferL
 00000001  dirWideType
 00000002  dirPageType
 00000004  dirFileType

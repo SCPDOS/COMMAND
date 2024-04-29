@@ -952,7 +952,7 @@
     58 000001A7 000000000000000000- <1>
     58 000001B0 0000000000          <1>
     59                              <1> 
-    60 000001B5 000000000000000000- <1> inBuffer    db cmdBufferL dup (0)  ;Add one to add space for terminating CR
+    60 000001B5 000000000000000000- <1> inBuffer    db cmdBufferL dup (0)  ;Original input from user! 128 chars max! 
     60 000001BE 000000000000000000- <1>
     60 000001C7 000000000000000000- <1>
     60 000001D0 000000000000000000- <1>
@@ -967,7 +967,7 @@
     60 00000221 000000000000000000- <1>
     60 0000022A 000000000000000000- <1>
     60 00000233 00000000            <1>
-    61                              <1> inBufferL   equ 127 ;127 chars so to always copy to PSP with terminating CR
+    61                              <1> inBufferL   equ 128 ;Will be enuf space for PSP copy to have terminating CR
     62 00000237 000000000000000000- <1> cpyBuffer   db cmdBufferL dup (0)   ;Copied input for processing
     62 00000240 000000000000000000- <1>
     62 00000249 000000000000000000- <1>
@@ -1603,9 +1603,9 @@
     11                              <1> commandMain:
     12 00001085 488B2579EFFFFF      <1>     mov rsp, qword [stackTop]    ;Reset internal stack pointer pos
     13 0000108C FC                  <1>     cld ;Ensure stringops are done the right way
-    14 0000108D C60521F1FFFF7F      <1>     mov byte [inBuffer], inBufferL      ;Reset the buffer length
-    15 00001094 C6059CF1FFFF7F      <1>     mov byte [cpyBuffer], inBufferL     ;Reset the buffer length
-    16 0000109B C60517F2FFFF7F      <1>     mov byte [cmdBuffer], inBufferL     ;Reset the buffer length
+    14 0000108D C60521F1FFFF80      <1>     mov byte [inBuffer], inBufferL      ;Reset the buffer length
+    15 00001094 C6059CF1FFFF80      <1>     mov byte [cpyBuffer], inBufferL     ;Reset the buffer length
+    16 0000109B C60517F2FFFF80      <1>     mov byte [cmdBuffer], inBufferL     ;Reset the buffer length
     17                              <1> .inputMain:         ;Only reset once per line!
     18 000010A2 E8F02E0000          <1>     call printCRLF  ;Command complete, indicate with new line!
     19 000010A7 B8095D0000          <1>     mov eax, 5D09h  ;Flush network printers
@@ -4438,7 +4438,7 @@
   1314 00002B37 CD21                <1>     int 21h
   1315                              <1> 
   1316 00002B39 488D15F7D6FFFF      <1>     lea rdx, cpyBuffer
-  1317 00002B40 C6027F              <1>     mov byte [rdx], inBufferL ;Enter a string of up to 126 chars in length
+  1317 00002B40 C60280              <1>     mov byte [rdx], inBufferL ;Enter a string of up to 126 chars in length
   1318 00002B43 B40A                <1>     mov ah, 0Ah
   1319 00002B45 CD21                <1>     int 21h
   1320 00002B47 52                  <1>     push rdx
@@ -4665,7 +4665,7 @@
   1429 00002CBD CD21                <1>     int 21h
   1430                              <1> 
   1431 00002CBF 488D15EFD4FFFF      <1>     lea rdx, inBuffer
-  1432 00002CC6 C6027F              <1>     mov byte [rdx], inBufferL ;Enter a string of up to 126 chars in length
+  1432 00002CC6 C60280              <1>     mov byte [rdx], inBufferL ;Enter a string of up to 126 chars in length
   1433 00002CC9 B40A                <1>     mov ah, 0Ah
   1434 00002CCB CD21                <1>     int 21h
   1435 00002CCD 52                  <1>     push rdx
