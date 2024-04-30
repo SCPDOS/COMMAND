@@ -143,8 +143,3 @@ mod3Cpy     equ 80h ;Set if dflt cat ASCII files to a single destination
 ;Environment manipulation vars
 envVarSz        dw 0    ;Env var size
 envVarNamSz     dw 0    ;Env var "name="" length
-;Used to swap stacks to return back to us in nested Int 23h.
-;This is to avoid the issue of possibly having an extra qword on the stack
-; for no reason and navigating that crap...
-swaprsp     dq 0    
-swapss      dq 0

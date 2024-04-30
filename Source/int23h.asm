@@ -20,15 +20,14 @@ int23h:
 .retFromDosCall:
 ;Go past the Int 23h stack frame to the entry to Int 21h stack frame
     push rax
-    mov rax, qword [rsp + 4*8]
-    mov qword [swaprsp], rax
-    mov rax, qword  [rsp + 5*8]
-    mov word [swapss], ax
+    lea rax, .i23Bounce
+    mov qword [rsp + 8], rax        ;Store as ret add
+    xor eax, eax
+    mov ax, cs
+    mov qword [rsp + 2*8], rax      ;Store the segment too
     pop rax
-    cli
-    mov rsp, qword [swaprsp]
-    mov ss, word [swapss]
-    sti
+    iretq   ;Iretq to the next instruction instead of DOS :)
+.i23Bounce:
     or byte [rsp + 2*8], 1  ;Set CF on stack frame flags!
 .inInt23:
     iretq
