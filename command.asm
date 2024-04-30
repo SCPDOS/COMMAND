@@ -17,6 +17,7 @@ Segment .data align=1
 %include "./Source/cmdBat.asm"
 %include "./Source/cmdFunc.asm"
 %include "./Source/cmdUtils.asm"
+%include "./Source/int23h.asm"
 %include "./Source/int24h.asm"
 endOfAlloc: ;End of alloc
 ;The stack is always setup one stackSize away from the endOfAlloc, aligned to

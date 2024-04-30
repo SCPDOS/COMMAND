@@ -2814,7 +2814,7 @@ echo:
     cmp byte [rsi], CR
     pop rsi
     jne .directEcho ;If its not, just echo the string
-    mov byte [echoFlg], -1
+    mov byte [echoFlg], 1   ;Set to 1 if on
     return
 .checkOff:
     mov al, byte [rsi + 1]  ;Get first char past O

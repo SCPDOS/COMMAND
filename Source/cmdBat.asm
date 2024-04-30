@@ -19,7 +19,6 @@ batLaunch:
     rep stosb               ;Clean the arena
     mov rdi, rbx            ;Point back to the head
     mov al, byte [echoFlg]
-    and al, 1               ;Keep only low bit
     mov byte [rbx + batBlockHdr.bEchoFlg], al
     mov eax, -1
     mov ecx, 5
@@ -74,7 +73,7 @@ batLaunch:
 
 batNextLine:
 ;This will:
-;1) Open the batch file
+;1) Open the batch file. If we are at the end of the file, exit batch mode!
 ;2) Read a line from the batch file one char at a time. File is open/closed
 ;       after each char. If file not found during read, print needBat error.
 ;       If file not found before read, print badBat error.
@@ -100,5 +99,27 @@ batExpandVar:
 ;       rdi -> Position to place the substitution string
 ;Output: CF=NC: Substitution string is placed in buffer
 ;        CF=CY: No substitution string found
-    cmp byte [rsi], "%"
-    j
+    return
+    ;cmp byte [rsi], "%"
+
+batCleanup:
+;This function is called after the last line has been processed by the 
+; batch interpreter! Cleans up all the batch resources. Also called if 
+; CTRLC called during a batch job and the user wants to kill the batch.
+    mov rbx, qword [bbPtr]
+    mov al, byte [rbx + batBlockHdr.bEchoFlg]   ;Reset the echo flag
+    mov byte [echoFlg], al
+;-----------------------------------------------------------------------
+;===Now free the FOR and CALL blocks... oops havent implemented yet!!===
+;-----------------------------------------------------------------------
+;Finally free this batch header
+    push r8
+    mov r8, rbx
+    mov eax, 4900h
+    int 21h
+    pop r8
+    call cleanupRedirs  ;Clean up all redirections, close files etc
+    mov qword [bbPtr], 0    
+    and byte [statFlg1], ~inBatch   ;Oh bye bye batch mode!
+    return
+    

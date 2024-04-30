@@ -22,8 +22,8 @@ commandMain:
     mov edx, 1      ;Start new print job
     int 21h
 .inputGetAgain:
-    call clearCommandLineState  ;Cleans all handles 5->MAX
-    test byte [statFlg1], inBat ;If batch on, get the next line to execute
+    call clearCommandLineState      ;Cleans all handles 5->MAX
+    test byte [statFlg1], inBatch   ;If batch on, get the next line to execute
     jnz batNextLine
 .inputGetCmdlineAgain:
     call printPrompt    ;Ok we are gonna get more input, output prompt
@@ -429,6 +429,7 @@ redirPipeFailureCommon:
     mov eax, 4000h  ;Write handle
     mov ebx, 2  ;Write to STDERR
     int 21h
+.noPrint:
     call cleanupRedirs  ;Cleans the redirections 
     jmp commandMain ;Retake input from the command line
 

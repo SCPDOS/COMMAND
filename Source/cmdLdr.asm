@@ -11,6 +11,7 @@ cmdLdr:
     int 20h ;Exit to caller or DOS to print bad command interpreter line
 .okVersion:
 ;If ok then store self as parent in the PSP, to prevent accidental closure
+    or byte [statFlg1], inLdr  ;Ok now we start our special work
     mov qword [pspPtr], r8  ;Store PSP ptr in internal var 
     mov rax, qword [r8 + psp.parentPtr] ;Get PSP parent
     mov qword [r8 + psp.parentPtr], r8  ;Store self as parent
@@ -74,8 +75,10 @@ cmdLdr:
     lea rdx, crlf
     mov ah, 09h
     int 21h
+    or byte [statFlg1], inLdrDT
     call time
     call date
+    and byte [statFlg1], ~inLdrDT
     lea rdx, crlf
     mov ah, 09h
     int 21h
@@ -115,6 +118,7 @@ cmdLdr:
     shl rbx, 4
     mov rsp, rbx    ;Move the stack pointer to this address
     mov qword [stackTop], rbx   ;Save this value of the stack ptr in var
+    and byte [statFlg1], ~inLdr    ;Special work complete :-)
     jmp commandStart    ;We jump with rbx = base address to jettison
 ;Loader Data here
 initString: 

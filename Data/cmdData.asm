@@ -19,8 +19,9 @@ inCritical  equ 1   ;Up if processing a command
 inCtrlC     equ 2   ;Up if we are processing int 23h
 inSingle    equ 4   ;Up if processing a single command (\C mode)
 inBatch     equ 8   ;Up if processing a batch file
-inInit      equ 80h ;Up if in init
-echoFlg     db -1   ;Global Echo flag, starts up!
+inLdrDT     equ 40h ;Up if in the Date / Time part of Loader
+inLdr       equ 80h ;Up if in loader
+echoFlg     db 1    ;Global Echo flag, starts up! 1 means on
 errHdls     dw -1   ;Set to the STDIO handles. Non -1 => Handles swapped
 
 cmdLineStatePtr:
@@ -52,7 +53,7 @@ cmdLineStateL equ $ - cmdLineStatePtr
 bbPtr       dq 0    ;Ptr to the batch block
 batFile     db fileSpecZL dup (0)   ;Path to bat to execute. Qual with path!
 batCurDir   db fileSpecZL dup (0)   ;Get dir on bat drive and save here.
-batYNstr    db 4,1,N,CR             ;String for buffered Y/N input
+batYNstr    db 4,1,"N",CR           ;String for buffered Y/N input
 ;batCallPtr  dq 0    ;Ptr to the call state block
 
 ;Structs and strings
@@ -142,3 +143,8 @@ mod3Cpy     equ 80h ;Set if dflt cat ASCII files to a single destination
 ;Environment manipulation vars
 envVarSz        dw 0    ;Env var size
 envVarNamSz     dw 0    ;Env var "name="" length
+;Used to swap stacks to return back to us in nested Int 23h.
+;This is to avoid the issue of possibly having an extra qword on the stack
+; for no reason and navigating that crap...
+swaprsp     dq 0    
+swapss      dq 0
