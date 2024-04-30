@@ -536,12 +536,10 @@ ucChar:
 ;Input: al = Char to uppercase
 ;Output: al = Adjusted char 
     push rbx
-    mov rbx, rsp    ;Save the stack ptr
     push rax    ;Push the char twice on the stack
-    push rax
     mov eax, 1213h  ;Get DOS to uppercase the char
     int 2fh         ;Returns the processed char in al
-    mov rsp, rbx    ;Return the stack ptr to where it was
+    pop rbx         ;Pop the old word off the stack
     pop rbx
     return
 

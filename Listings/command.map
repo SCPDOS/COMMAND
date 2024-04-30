@@ -12,8 +12,8 @@ Output file:  ./Binaries/COMMAND.COM
 
 Vstart            Start             Stop              Length    Class     Name
                0                 0                 0  00000000  progbits  .text
-               0                 0              496E  0000496E  progbits  .data
-            496E              496E              4B8C  0000021E  progbits  transient
+               0                 0              4968  00004968  progbits  .data
+            4968              4968              4B86  0000021E  progbits  transient
 
 -- Sections (detailed) --------------------------------------------------------
 
@@ -31,7 +31,7 @@ vfollows:  not defined
 ---- Section .data ------------------------------------------------------------
 
 class:     progbits
-length:                496E
+length:                4968
 start:                    0
 align:                    1
 follows:   not defined
@@ -43,10 +43,10 @@ vfollows:  not defined
 
 class:     progbits
 length:                 21E
-start:                 496E
+start:                 4968
 align:                    1
 follows:   .data
-vstart:                496E
+vstart:                4968
 valign:    not defined
 vfollows:  not defined
 
@@ -1357,175 +1357,175 @@ Real              Virtual           Name
             422E              422E  strlen
             4237              4237  ..@309._ret
             4238              4238  ucChar
-            4249              4249  ..@310._ret
-            424A              424A  normalisePath
-            4258              4258  ..@311._ret
-            4259              4259  skipDelimiters
-            425A              425A  skipDelimiters.l1
-            4262              4262  skipDelimiters.exit
-            4266              4266  ..@312._ret
-            4267              4267  isALdelimiter
-            4269              4269  ..@314._base
-            426D              426D  ..@316._base
-            4271              4271  ..@318._base
-            4275              4275  ..@320._base
-            4279              4279  ..@321._ret
-            427A              427A  clearCommandState
-            428A              428A  ..@322._ret
-            428B              428B  clearCommandLineState
-            42BB              42BB  clearCommandLineState.lp
-            42C5              42C5  ..@323._ret
-            42C6              42C6  asciiFilenameToFCB
-            42E3              42E3  asciiFilenameToFCB.processName
-            42F3              42F3  asciiFilenameToFCB.extSpace
-            42FC              42FC  asciiFilenameToFCB.ext
-            4300              4300  asciiFilenameToFCB.processExt
-            430C              430C  asciiFilenameToFCB.exitBadChar
-            430E              430E  asciiFilenameToFCB.exit
-            430F              430F  ..@324._ret
-            4310              4310  findLastPathComponant
-            432E              432E  findLastPathComponant.exit
-            4333              4333  ..@325._ret
-            4334              4334  FCBToAsciiz
-            433B              433B  FCBToAsciiz.scanNameSpace
-            434E              434E  FCBToAsciiz.ext
-            435B              435B  FCBToAsciiz.validExt
-            4365              4365  FCBToAsciiz.scanExtSpace
-            4370              4370  FCBToAsciiz.exit
-            4373              4373  ..@326._ret
-            4374              4374  cpDelimOrCtrlStringToBufz
-            4377              4377  cpDelimOrCtrlStringToBufz.lp
-            4386              4386  cpDelimOrCtrlStringToBufz.exit
-            4389              4389  ..@327._ret
-            438A              438A  cpDelimPathToBufz
-            4391              4391  cpDelimPathToBufz.lp
-            43A8              43A8  cpDelimPathToBufz.gotRedirPath
-            43C9              43C9  cpDelimPathToBufz.notColon
-            43CC              43CC  ..@328._ret
-            43CD              43CD  buildCommandPath
-            43E5              43E5  copyArgumentToSearchSpec
-            43F1              43F1  ..@329._ret
-            43F2              43F2  scanForWildcards
-            43F4              43F4  scanForWildcards.lp
-            4403              4403  scanForWildcards.exit
-            4405              4405  ..@330._ret
-            4406              4406  printDecimalWord
-            441A              441A  printDecimalWord.notZero
-            4421              4421  printDecimalWord.dpfb0
-            4431              4431  printDecimalWord.dpfb00
-            4435              4435  printDecimalWord.dpfb01
-            4445              4445  printDecimalWord.dpfb1
-            4451              4451  printDecimalWord.dpfb10
-            4453              4453  printDecimalWord.dpfb11
-            4458              4458  printDecimalWord.dpfb2
-            4468              4468  printDecimalWord.dpfb20
-            446E              446E  printDecimalWord.dpfb21
-            4476              4476  ..@331._ret
-            4477              4477  getDecimalWord
-            4480              4480  getDecimalWord.dpfb0
-            4496              4496  getDecimalWord.dpfb1
-            449D              449D  ..@332._ret
-            449E              449E  getByte
-            44A9              44A9  ..@333._ret
-            44AA              44AA  getNum
-            44AD              44AD  getNum.lp
-            44C2              44C2  getNum.exit
-            44C8              44C8  ..@334._ret
-            44C9              44C9  freezePC
-            44D4              44D4  freezePC.altEP
-            44DF              44DF  freezePC.lp
-            44E4              44E4  setDTA
-            44F6              44F6  ..@335._ret
-            44F7              44F7  getDTA
-            44FE              44FE  ..@336._ret
-            44FF              44FF  resetIDTentries
-            4535              4535  ..@337._ret
-            4536              4536  cmpEnvVar
-            453B              453B  cmpEnvVar.lp
-            454E              454E  cmpEnvVar.exit
-            4550              4550  ..@338._ret
-            4551              4551  checkEnvGoodAndGet
-            4567              4567  checkEnvGoodAndGet.pathNulScan
-            4579              4579  checkEnvGoodAndGet.badExit
-            457E              457E  ..@339._ret
-            457F              457F  findEnvSpace
-            458A              458A  ..@341._base
-            4595              4595  findEnvSpace.endsearch
-            45AA              45AA  ..@342._ret
-            45AB              45AB  searchForEnvVar
-            45B5              45B5  searchForEnvVar.varLp
-            45D4              45D4  searchForEnvVar.varNotFound
-            45D5              45D5  searchForEnvVar.varFound
-            45D8              45D8  ..@343._ret
-            45D9              45D9  envFree
-            45DE              45DE  envFree.freeLp
-            45E6              45E6  envFree.exitLp
-            45F4              45F4  envFree.prepPullup
-            45F7              45F7  envFree.pullUp
-            4602              4602  envFree.cleanEnv
-            4611              4611  ..@344._ret
-            4612              4612  getFreeSpace
-            4629              4629  ..@345._ret
-            462A              462A  getEnvSize
-            4636              4636  ..@346._ret
-            4637              4637  getPtrToEndOfEnv
-            4643              4643  getPtrToEndOfEnv.lp
-            464B              464B  ..@347._ret
-            464C              464C  growEnvBlock
-            468B              468B  growEnvBlock.exit
-            4690              4690  ..@348._ret
-            4691              4691  growEnvBlock.tooLarge
-            4697              4697  int23h
-            46B1              46B1  int23h.notLoading
-            46C3              46C3  int23h.retFromDosCall
-            46DD              46DD  int23h.i23Bounce
-            46E2              46E2  int23h.inInt23
-            46E4              46E4  int23h.notNested
-            46FD              46FD  int23h.skipReset
-            4714              4714  int23h.ynLp
-            4743              4743  int23h.endBat
-            474D              474D  int23h.killBat
-            4754              4754  int23h.notBat
-            4787              4787  int23h.noJuggle
-            4792              4792  int23h.exitBat
-            4797              4797  int23h.exit
-            479E              479E  int23h.exitIn
-            47A2              47A2  critErrorHandler
-            47C2              47C2  critErrorHandler.notError15
-            4825              4825  critErrorHandler.userInput
-            482A              482A  critErrorHandler.userAbort
-            4836              4836  critErrorHandler.userRetry
-            4853              4853  critErrorHandler.userIgnore
-            4870              4870  critErrorHandler.userFail
-            488D              488D  critErrorHandler.userMsgEnd
-            48AF              48AF  critErrorHandler.uip1
-            48C1              48C1  critErrorHandler.validInput
-            48D4              48D4  critErrorHandler.viFail
-            48DF              48DF  critErrorHandler.viIgnore
-            48EA              48EA  critErrorHandler.viRetry
-            48F3              48F3  critErrorHandler.cehExit
-            48FF              48FF  critErrorHandler.charError
-            490B              490B  critErrorHandler.ce1
-            4919              4919  errSwapHdls
-            4935              4935  ..@349._ret
-            4936              4936  errRetHdls
-            4952              4952  ..@350._ret
-            4953              4953  getJftPtr
-            4968              4968  ..@351._ret
-            4969              4969  getJftPtr.pspJftExit
-            496D              496D  ..@352._ret
-            496E              496E  endOfAlloc
+            4243              4243  ..@310._ret
+            4244              4244  normalisePath
+            4252              4252  ..@311._ret
+            4253              4253  skipDelimiters
+            4254              4254  skipDelimiters.l1
+            425C              425C  skipDelimiters.exit
+            4260              4260  ..@312._ret
+            4261              4261  isALdelimiter
+            4263              4263  ..@314._base
+            4267              4267  ..@316._base
+            426B              426B  ..@318._base
+            426F              426F  ..@320._base
+            4273              4273  ..@321._ret
+            4274              4274  clearCommandState
+            4284              4284  ..@322._ret
+            4285              4285  clearCommandLineState
+            42B5              42B5  clearCommandLineState.lp
+            42BF              42BF  ..@323._ret
+            42C0              42C0  asciiFilenameToFCB
+            42DD              42DD  asciiFilenameToFCB.processName
+            42ED              42ED  asciiFilenameToFCB.extSpace
+            42F6              42F6  asciiFilenameToFCB.ext
+            42FA              42FA  asciiFilenameToFCB.processExt
+            4306              4306  asciiFilenameToFCB.exitBadChar
+            4308              4308  asciiFilenameToFCB.exit
+            4309              4309  ..@324._ret
+            430A              430A  findLastPathComponant
+            4328              4328  findLastPathComponant.exit
+            432D              432D  ..@325._ret
+            432E              432E  FCBToAsciiz
+            4335              4335  FCBToAsciiz.scanNameSpace
+            4348              4348  FCBToAsciiz.ext
+            4355              4355  FCBToAsciiz.validExt
+            435F              435F  FCBToAsciiz.scanExtSpace
+            436A              436A  FCBToAsciiz.exit
+            436D              436D  ..@326._ret
+            436E              436E  cpDelimOrCtrlStringToBufz
+            4371              4371  cpDelimOrCtrlStringToBufz.lp
+            4380              4380  cpDelimOrCtrlStringToBufz.exit
+            4383              4383  ..@327._ret
+            4384              4384  cpDelimPathToBufz
+            438B              438B  cpDelimPathToBufz.lp
+            43A2              43A2  cpDelimPathToBufz.gotRedirPath
+            43C3              43C3  cpDelimPathToBufz.notColon
+            43C6              43C6  ..@328._ret
+            43C7              43C7  buildCommandPath
+            43DF              43DF  copyArgumentToSearchSpec
+            43EB              43EB  ..@329._ret
+            43EC              43EC  scanForWildcards
+            43EE              43EE  scanForWildcards.lp
+            43FD              43FD  scanForWildcards.exit
+            43FF              43FF  ..@330._ret
+            4400              4400  printDecimalWord
+            4414              4414  printDecimalWord.notZero
+            441B              441B  printDecimalWord.dpfb0
+            442B              442B  printDecimalWord.dpfb00
+            442F              442F  printDecimalWord.dpfb01
+            443F              443F  printDecimalWord.dpfb1
+            444B              444B  printDecimalWord.dpfb10
+            444D              444D  printDecimalWord.dpfb11
+            4452              4452  printDecimalWord.dpfb2
+            4462              4462  printDecimalWord.dpfb20
+            4468              4468  printDecimalWord.dpfb21
+            4470              4470  ..@331._ret
+            4471              4471  getDecimalWord
+            447A              447A  getDecimalWord.dpfb0
+            4490              4490  getDecimalWord.dpfb1
+            4497              4497  ..@332._ret
+            4498              4498  getByte
+            44A3              44A3  ..@333._ret
+            44A4              44A4  getNum
+            44A7              44A7  getNum.lp
+            44BC              44BC  getNum.exit
+            44C2              44C2  ..@334._ret
+            44C3              44C3  freezePC
+            44CE              44CE  freezePC.altEP
+            44D9              44D9  freezePC.lp
+            44DE              44DE  setDTA
+            44F0              44F0  ..@335._ret
+            44F1              44F1  getDTA
+            44F8              44F8  ..@336._ret
+            44F9              44F9  resetIDTentries
+            452F              452F  ..@337._ret
+            4530              4530  cmpEnvVar
+            4535              4535  cmpEnvVar.lp
+            4548              4548  cmpEnvVar.exit
+            454A              454A  ..@338._ret
+            454B              454B  checkEnvGoodAndGet
+            4561              4561  checkEnvGoodAndGet.pathNulScan
+            4573              4573  checkEnvGoodAndGet.badExit
+            4578              4578  ..@339._ret
+            4579              4579  findEnvSpace
+            4584              4584  ..@341._base
+            458F              458F  findEnvSpace.endsearch
+            45A4              45A4  ..@342._ret
+            45A5              45A5  searchForEnvVar
+            45AF              45AF  searchForEnvVar.varLp
+            45CE              45CE  searchForEnvVar.varNotFound
+            45CF              45CF  searchForEnvVar.varFound
+            45D2              45D2  ..@343._ret
+            45D3              45D3  envFree
+            45D8              45D8  envFree.freeLp
+            45E0              45E0  envFree.exitLp
+            45EE              45EE  envFree.prepPullup
+            45F1              45F1  envFree.pullUp
+            45FC              45FC  envFree.cleanEnv
+            460B              460B  ..@344._ret
+            460C              460C  getFreeSpace
+            4623              4623  ..@345._ret
+            4624              4624  getEnvSize
+            4630              4630  ..@346._ret
+            4631              4631  getPtrToEndOfEnv
+            463D              463D  getPtrToEndOfEnv.lp
+            4645              4645  ..@347._ret
+            4646              4646  growEnvBlock
+            4685              4685  growEnvBlock.exit
+            468A              468A  ..@348._ret
+            468B              468B  growEnvBlock.tooLarge
+            4691              4691  int23h
+            46AB              46AB  int23h.notLoading
+            46BD              46BD  int23h.retFromDosCall
+            46D7              46D7  int23h.i23Bounce
+            46DC              46DC  int23h.inInt23
+            46DE              46DE  int23h.notNested
+            46F7              46F7  int23h.skipReset
+            470E              470E  int23h.ynLp
+            473D              473D  int23h.endBat
+            4747              4747  int23h.killBat
+            474E              474E  int23h.notBat
+            4781              4781  int23h.noJuggle
+            478C              478C  int23h.exitBat
+            4791              4791  int23h.exit
+            4798              4798  int23h.exitIn
+            479C              479C  critErrorHandler
+            47BC              47BC  critErrorHandler.notError15
+            481F              481F  critErrorHandler.userInput
+            4824              4824  critErrorHandler.userAbort
+            4830              4830  critErrorHandler.userRetry
+            484D              484D  critErrorHandler.userIgnore
+            486A              486A  critErrorHandler.userFail
+            4887              4887  critErrorHandler.userMsgEnd
+            48A9              48A9  critErrorHandler.uip1
+            48BB              48BB  critErrorHandler.validInput
+            48CE              48CE  critErrorHandler.viFail
+            48D9              48D9  critErrorHandler.viIgnore
+            48E4              48E4  critErrorHandler.viRetry
+            48ED              48ED  critErrorHandler.cehExit
+            48F9              48F9  critErrorHandler.charError
+            4905              4905  critErrorHandler.ce1
+            4913              4913  errSwapHdls
+            492F              492F  ..@349._ret
+            4930              4930  errRetHdls
+            494C              494C  ..@350._ret
+            494D              494D  getJftPtr
+            4962              4962  ..@351._ret
+            4963              4963  getJftPtr.pspJftExit
+            4967              4967  ..@352._ret
+            4968              4968  endOfAlloc
 
 ---- Section transient --------------------------------------------------------
 
 Real              Virtual           Name
-            496E              496E  cmdLdr
-            4981              4981  cmdLdr.exitBad
-            4983              4983  cmdLdr.okVersion
-            49D8              49D8  cmdLdr.skipSwitch
-            4A82              4A82  cmdLdr.skipMaster
-            4AB0              4AB0  cmdLdr.printInit
-            4B00              4B00  initString
-            4B36              4B36  initString2
-            4B74              4B74  badVerStr
+            4968              4968  cmdLdr
+            497B              497B  cmdLdr.exitBad
+            497D              497D  cmdLdr.okVersion
+            49D2              49D2  cmdLdr.skipSwitch
+            4A7C              4A7C  cmdLdr.skipMaster
+            4AAA              4AAA  cmdLdr.printInit
+            4AFA              4AFA  initString
+            4B30              4B30  initString2
+            4B6E              4B6E  badVerStr
 
