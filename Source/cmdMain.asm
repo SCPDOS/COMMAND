@@ -23,7 +23,7 @@ commandMain:
     int 21h
 .inputGetAgain:
     call clearCommandLineState  ;Cleans all handles 5->MAX
-    test byte [batFlag], -1 ;If batch on, get the next line to execute
+    test byte [statFlg1], inBat ;If batch on, get the next line to execute
     jnz batNextLine
 .inputGetCmdlineAgain:
     call printPrompt    ;Ok we are gonna get more input, output prompt

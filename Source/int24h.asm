@@ -199,10 +199,10 @@ getJftPtr:
     return
 
 int23h:
-    test byte [inCtrlC], -1
+    test byte [statFlg1], inCtrlC
     jnz .inInt23    ;IRETQ immediately if we are in int23
-    mov byte [inCtrlC], -1  ;Set that we are in CTRL+C
-    test byte [batFlag], -1 ;Are we processing a batch file?
+    or byte [statFlg1], inCtrlC  ;Set that we are in CTRL+C
+    test byte [statFlg1], inBatch ;Are we processing a batch file?
     jz .notBat
     call errSwapHdls    ;Swap STDIO back
 .ynLp:
@@ -217,7 +217,7 @@ int23h:
     je .killBat
     cmp al, "N"
     jne .ynLp
-    mov byte [inCtrlC], 0   ;Exiting, now safe to reenter!
+    and byte [statFlg1], ~inCtrlC   ;Exiting, now safe to reenter!
 .inInt23:
     iretq   ;Ignore the CTRLC
 .killBat:
@@ -245,6 +245,6 @@ int23h:
     je .exit
     call errRetHdls 
 .exit:
-    mov byte [inCtrlC], 0   ;Can enter CTRL+C again
+    and byte [statFlg1], ~inCtrlC
     stc     ;Set CF to kill the task
     ret 8   ;Return and pop CS off the stack to indicate we wanna kill task

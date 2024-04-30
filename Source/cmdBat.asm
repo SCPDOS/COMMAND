@@ -61,7 +61,7 @@ batLaunch:
     lea rsi, cmdPathSpec
     lea rdi, batFile
     call strcpy             ;Copy the batch file name over
-    mov byte [batFlag], -1  ;Fire up the batch processor as we are ready now!
+    or byte [statFlg1], inBatch ;Fire up the batch processor!
     jmp batNextLine         ;Now we start reading the batch file!
 
 .bbCheckEndOfCmdLine:
@@ -91,7 +91,7 @@ batNextLine:
     int 21h
     pop r8
     mov qword [bbPtr], 0
-    mov byte [batFlag], 0
+    and byte [statFlg1], ~inBatch
     jmp commandMain
 .l1 db "Batch mode... wait, what? How did you do that?",CR,LF,"$"
 

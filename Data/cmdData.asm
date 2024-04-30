@@ -14,8 +14,12 @@ parentInt22 dq 0    ;Stores the parent values to restore upon exiting if it can
 ;Static strings, not used in command line parsing
 ctryData    db countryStruc_size dup (0)  ;Length of the country table
 currDirStr  db fullDirPathZL dup (0) ;Current Directory String
-inCritical  db 0    ;Up if processing a command.
-inCtrlC     db 0    ;Up if we are processing int 23h
+statFlg1    db 0    ;Flags 1 for the command interpreter
+inCritical  equ 1   ;Up if processing a command
+inCtrlC     equ 2   ;Up if we are processing int 23h
+inSingle    equ 4   ;Up if processing a single command (\C mode)
+inBatch     equ 8   ;Up if processing a batch file
+inInit      equ 80h ;Up if in init
 echoFlg     db -1   ;Global Echo flag, starts up!
 errHdls     dw -1   ;Set to the STDIO handles. Non -1 => Handles swapped
 
@@ -45,7 +49,6 @@ cmdStateL equ $ - cmdStatePtr
 cmdLineStateL equ $ - cmdLineStatePtr
 
 ;Batch state variables. Batch changes current dir to dir of batch file!
-batFlag     db 0    ;Batch mode flag. Set to -1 if batch mode on
 bbPtr       dq 0    ;Ptr to the batch block
 batFile     db fileSpecZL dup (0)   ;Path to bat to execute. Qual with path!
 batCurDir   db fileSpecZL dup (0)   ;Get dir on bat drive and save here.
