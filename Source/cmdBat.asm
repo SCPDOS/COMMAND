@@ -75,7 +75,9 @@ batLaunch:
 batNextLine:
 ;This will:
 ;1) Open the batch file
-;2) Read a line from the batch file one char at a time. 
+;2) Read a line from the batch file one char at a time. File is open/closed
+;       after each char. If file not found during read, print needBat error.
+;       If file not found before read, print badBat error.
 ;       Do any %ENVVAR% or %ARGUMENT replacements
 ;       MAX LEN OF BATCH FILE LINE POST REPLACEMENT: 127 + CR or 128 chars raw
 ;3) Close the batch file

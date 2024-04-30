@@ -33,6 +33,13 @@ critErrorHandler:   ;Int 24h
     call printString
 
     and edi, 00FFh   ;Zero the upper bytes of DI just in case
+;    cmp edi, 0Fh     ;Is this special case error 15h?
+;    jne .notError15
+; Need to do Extended Error call to get the ptr to the volume label.
+; Disk driver doesnt currently update the volume label in the BPB and doesn't
+; place the volume label in the field in the driver block, but DOS assumes it 
+; does. Once that is implemented, I will activate this section of code!
+.notError15:
     mov ecx, 0Ch
     cmp edi, ecx  ;Check if the error number is erroniously above Gen Error
     cmova edi, ecx  ;If it is, move Gen Error into edi
