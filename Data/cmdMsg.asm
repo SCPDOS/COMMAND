@@ -117,7 +117,7 @@ errorMsgTable: ;Each table entry is 18 chars long
             db "Read Fault $      "       ;Error B
             db "General Failure $ "       ;Error C
 
-errMsg0Fh   db "Please Insert disk "
+errMsg0Fh   db "Please Insert disk "      ;Error F
 vol0Fh      db 11 dup (" ")
             db CR,LF,"$"
 

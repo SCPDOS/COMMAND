@@ -510,6 +510,29 @@ cleanupRedirs:
     int 21h
     return
 
+cleanRedirOut:
+;Used to oust any stdout redir if necessary. This is different to the above in 
+; that it deletes the redir out file. Therefore, this is only called in 
+; particular cases like launching bat files which needs special handling in 
+; that all redirs need to be completely removed.
+    cmp word [redirSTDOUT], -1  ;Do we have > xyzzy.fil?
+    rete  ;Return if no stdout redir! We are ok!
+    movzx ebx, word [redirSTDOUT]
+    mov ecx, 1      ;STDOUT
+    mov eax, 4600h  ;DUP this into STDOUT closing redirout
+    int 21h
+    movzx ebx, word [redirSTDOUT]   ;Kill the duplicate now
+    mov eax, 3E00h  
+    int 21h
+    mov word [redirSTDOUT], -1  ;Set default value back
+    lea rdx, rdrOutFilespec
+    mov eax, 4100h      ;Del stdout file
+    int 21h
+    mov byte [rdx], 0   ;Ensure this is a clear path (not necessary)
+    ;Ignore any errors in this procedures. Errors mean either sharing problems
+    ; or the file doesnt exist, which in either case, is fine to leave it be!
+    return
+
 advanceRedir:
 ;Cleans up the redir stuff after we are done. Advances the pipe.
 ;Close stdin redir then stdout redir. 

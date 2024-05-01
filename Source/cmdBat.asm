@@ -2,9 +2,6 @@
 
 batLaunch:
 ;Preps and launches a batch file!
-    lea rdx, .batMsg
-    jmp printString
-.batMsg db "BATCH preprocessor not implemented",CR,LF,"$"
     mov ebx, bbMaxAlloc << 4    ;Convert to paragraphs
     mov eax, 4800h
     int 21h
@@ -60,6 +57,11 @@ batLaunch:
     lea rsi, cmdPathSpec
     lea rdi, batFile
     call strcpy             ;Copy the batch file name over
+;Now deactivate any redirs. Do redir out as cleanupRedirs somewhat ignores it.
+;Do the handle close as deleting the file without closing the handle is asking 
+; for SHARING trouble...
+    call cleanRedirOut      ;Liquidates redirout if needed
+    call cleanupRedirs      ;Now liquidate remaining redirs and pipes
     or byte [statFlg1], inBatch ;Fire up the batch processor!
     jmp batNextLine         ;Now we start reading the batch file!
 
@@ -84,13 +86,7 @@ batNextLine:
     lea rdx, .l1
     mov eax, 0900h
     int 21h
-    push r8
-    mov rax, 4900h
-    mov r8, qword [bbPtr]   ;Just free, do this properly later
-    int 21h
-    pop r8
-    mov qword [bbPtr], 0
-    and byte [statFlg1], ~inBatch
+    call batCleanup
     jmp commandMain
 .l1 db "Batch mode... wait, what? How did you do that?",CR,LF,"$"
 
