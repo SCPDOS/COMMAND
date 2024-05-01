@@ -2871,7 +2871,7 @@
     80                              <1> ;       after each char. If file not found during read, print needBat error.
     81                              <1> ;       If file not found before read, print badBat error.
     82                              <1> ;       Do any %ENVVAR% or %ARGUMENT replacements
-    83                              <1> ;       MAX LEN OF BATCH FILE LINE POST REPLACEMENT: 127 + CR or 128 chars raw
+    83                              <1> ;       MAX LEN OF BATCH FILE LINE: 127 + CR or 128 chars raw
     84                              <1> ;3) Close the batch file
     85                              <1> ;4) Check if we are at the end of the file. If so, turn off bat flag.
     86 00001B8F 488D1511000000      <1>     lea rdx, .l1
