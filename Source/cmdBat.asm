@@ -17,6 +17,7 @@ batLaunch:
     mov rdi, rbx            ;Point back to the head
     mov al, byte [echoFlg]
     mov byte [rbx + batBlockHdr.bEchoFlg], al
+    mov qword [rbx + batBlockHdr.dBatOffLo], 0 ;Write a qword of 0 for zoom
     mov eax, -1
     mov ecx, 5
     lea rdi, qword [rbx + batBlockHdr.wArgs]    ;Init the wArgs to no params!
@@ -63,7 +64,7 @@ batLaunch:
     call cleanRedirOut      ;Liquidates redirout if needed
     call cleanupRedirs      ;Now liquidate remaining redirs and pipes
     or byte [statFlg1], inBatch ;Fire up the batch processor!
-    jmp batNextLine         ;Now we start reading the batch file!
+    jmp commandMain         ;Now we start reading the batch file!
 
 .bbCheckEndOfCmdLine:
 ;Input: rsi -> Char to check 
@@ -73,6 +74,10 @@ batLaunch:
     cmp byte [rsi], CR
     return
 
+batFinish:
+;This is the procedure called after we've processed the last batch line
+    call batCleanup     ;Cleanup the batch and batch state vars etc etc
+    jmp commandMain     ;And start again :)
 batNextLine:
 ;This will:
 ;1) Open the batch file. If we are at the end of the file, exit batch mode!
@@ -83,12 +88,83 @@ batNextLine:
 ;       MAX LEN OF BATCH FILE LINE: 127 + CR or 128 chars raw
 ;3) Close the batch file
 ;4) Check if we are at the end of the file. If so, turn off bat flag.
-    lea rdx, .l1
-    mov eax, 0900h
+;    lea rdx, .l1
+;    mov eax, 0900h
+;    int 21h
+;    call batCleanup
+;    jmp commandMain
+;.l1 db "Batch mode... wait, what? How did you do that?",CR,LF,"$"
+    test byte [statFlg1], batchEOF ;Did we hit EOF?
+    jnz batFinish
+    lea rdx, batFile
+    mov eax, 3D00h  ;Open exclusively
     int 21h
-    call batCleanup
-    jmp commandMain
-.l1 db "Batch mode... wait, what? How did you do that?",CR,LF,"$"
+    jnc .batOpened
+    ;!!! BAT FILE OPEN ERROR HANDLING HERE !!!
+.batOpened:
+    mov ebx, eax            ;Move the handle into ebx
+    mov rsi, qword [bbPtr]  ;Get the batch block ptr
+    mov edx, dword [rsi + batBlockHdr.dBatOffLo]
+    mov ecx, dword [rsi + batBlockHdr.dBatOffHi]
+    mov eax, 4200h          ;LSEEK to where we left off previously
+    int 21h
+    mov byte [inBuffer + 1], 0  ;Reset the buffer count
+    lea rdx, inBuffer + 2   ;Start read pos
+    xor edi, edi            ;Use edi as the char counter
+.readlp:
+    call .readChar          ;Read the char
+    test eax, eax
+    jz .endOfBat
+    inc edi                 ;We read a char, woohoo!
+    cmp byte [rdx], EOF     ;Did we read a ^Z char?
+    je .endOfBat
+    cmp byte [rdx], CR      ;End of line?
+    je .endOfLineCr
+    inc byte [inBuffer + 1] ;Inc our char count
+    inc rdx                 ;Store the next char in the next position
+    cmp byte [inBuffer + 1], 128    ;Are we 128 chars w/o CR?
+    jne .readlp             ;Get next char if not
+    jmp short .endOfLine    ;The user typed too many chars on a line, EOL
+.endOfBat:
+    cmp byte [inBuffer + 1], 0  ;If we formally read 0 chars, exit immediately
+    je batFinish
+    jmp short .endOfLine
+.endOfLineCr:   ;Now get the next char, to eliminate the LF too.
+;Properly, I should check if this is LF or not. If not an LF, we move the 
+; file pointer back a char. 
+    breakpoint
+    call .readChar  ;Get the LF over the CR
+    mov byte [rdx], CR  ;Place the CR back 
+.endOfLine:
+;Close the file, update the batch block file pointer, then proceed.
+;rsi -> Batch block.
+    mov eax, 3E00h  ;Close the file pointer in ebx
+    int 21h         ;We ignore errors here... dont hurt me SHARE pls
+    ;Imagine someone gives us a 2+Gb Batch file... some server magik
+    add dword [rsi + batBlockHdr.dBatOffLo], edi    ;Add lo dword to chars 
+    adc dword [rsi + batBlockHdr.dBatOffHi], 0      ;Add CF if needed!
+;Now we echo the line to the console unless the first char is @ or 
+; the echo flag is off
+    lea rdx, inBuffer + 2
+    cmp byte [rdx], batNoEchoChar
+    je .noEcho       
+    test byte [echoFlg], -1         
+    jz .noEcho
+    movzx ecx, byte [inBuffer + 1]    ;Get the number of chars to print
+    mov ebx, 1  ;STDOUT
+    mov eax, 4000h  ;Write woo!
+    int 21h
+.noEcho:
+    jmp commandMain.batProceed
+.readChar:
+    mov ecx, 1
+    mov eax, 3F00h
+    int 21h  
+    test eax, eax
+    retnz   ;If a char read, return
+    or byte [statFlg1], batchEOF    ;Set the end of file reached flag!
+    return
+
 
 batExpandVar:
 ;Input: rsi -> Char after the % sign that triggered this call.
@@ -107,6 +183,10 @@ batCleanup:
     mov byte [echoFlg], al
 ;-----------------------------------------------------------------------
 ;===Now free the FOR and CALL blocks... oops havent implemented yet!!===
+; FOR blocks are generally cleaned up by the FOR command. CALL too. 
+; But since this is the routine called by the error handler too, it 
+; needs to check for these things. Not a big deal as normally we'll 
+; just have a null pointer.
 ;-----------------------------------------------------------------------
 ;Finally free this batch header
     push r8
@@ -118,4 +198,3 @@ batCleanup:
     mov qword [bbPtr], 0    
     and byte [statFlg1], ~inBatch   ;Oh bye bye batch mode!
     return
-    

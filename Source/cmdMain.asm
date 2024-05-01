@@ -23,10 +23,10 @@ commandMain:
     int 21h
 .inputGetAgain:
     call clearCommandLineState      ;Cleans all handles 5->MAX
-    test byte [statFlg1], inBatch   ;If batch on, get the next line to execute
-    jnz batNextLine
 .inputGetCmdlineAgain:
     call printPrompt    ;Ok we are gonna get more input, output prompt
+    test byte [statFlg1], inBatch   ;If batch on, get the next line to execute
+    jnz batNextLine
     lea rdx, inBuffer
     mov eax, 0A00h      ;Do Buffered input
     int 21h
@@ -35,8 +35,8 @@ commandMain:
     cmp byte [inBuffer + 1], 0  ;Check input length valid
     je .inputGetCmdlineAgain  ;If not, keep looping input
     ;Copy over the input text
+.batProceed:            ;Jump here to copy the batch input line 
     lea rsi, inBuffer   ;This buffer is used for all input so copy command line
-.batCopy:               ;Jump here to copy the batch input line 
     lea rdi, cpyBuffer
     mov ecx, cmdBufferL     ;Copy the buffer over to manipulate
     rep movsb

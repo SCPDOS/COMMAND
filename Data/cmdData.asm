@@ -19,6 +19,7 @@ inCritical  equ 1   ;Up if processing a command
 inCtrlC     equ 2   ;Up if we are processing int 23h
 inSingle    equ 4   ;Up if processing a single command (\C mode)
 inBatch     equ 8   ;Up if processing a batch file
+batchEOF    equ 10h ;Set to indicate we have reached the end of the batch file
 inLdrDT     equ 40h ;Up if in the Date / Time part of Loader
 inLdr       equ 80h ;Up if in loader
 echoFlg     db 1    ;Global Echo flag, starts up! 1 means on
