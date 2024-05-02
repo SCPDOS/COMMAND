@@ -77,6 +77,7 @@ int23h:
     jmp short .endBat   ;Now CRLF and exit!
 .nestKill:
     call batCleanup
+    and byte [statFlg1], ~inCtrlC   
     jmp .retFromDosCall ;Nested kill needs to be handled like other nestings
 .notBat:
     push rax        ;Save rax, ah contains call we are in that ^C'ed

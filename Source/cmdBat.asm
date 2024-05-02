@@ -170,8 +170,8 @@ batNextLine:
     je .endOfBat
     cmp byte [rdx], CR      ;End of line?
     je .endOfLineCr
-    cmp byte [rdx], LF      ;Always ignore a Line feed
-    je .readlp
+    cmp byte [rdx], LF      ;End of line UNIX?
+    je .endOfLineLf
     inc byte [inBuffer + 1] ;Inc our char count
     inc rdx                 ;Store the next char in the next position
     cmp byte [inBuffer + 1], 128    ;Are we 128 chars w/o CR?
@@ -179,18 +179,19 @@ batNextLine:
     jmp short .endOfLine    ;The user typed too many chars on a line, EOL
 .endOfBat:
     or byte [statFlg1], batchEOF    ;Set if we encounter a ^Z terminator
-    cmp byte [inBuffer + 1], 0      ;If we formally read 0 chars, exit immediately
+    cmp byte [inBuffer + 1], 0      ;If we formally read 0 chars, exit!
     jne .endOfLine
-    call .closeBat                  ;Close the handle!
+    call .closeBat                  ;Close the hdl! This is why this is here!
     jmp batFinish
-.endOfLineCr:   ;Now get the next char, to eliminate the LF too.
-;Properly, I should check if this is LF or not. If not an LF, we move the 
-; file pointer back a char. 
+.endOfLineCr:   ;Now get the next char, to possibly eliminate a trailing LF
     call .readChar  ;Get the LF over the CR
     test eax, eax   ;Did we read nothing?
-    jz .endOfBat    ;Check if the buffer is empty (just CR,LF)
-    mov byte [rdx], CR  ;Now place the CR back 
-    inc edi         ;Increment the raw char count
+    jz .endOfBat    ;That CR was last char, check if empty buffer, else exec
+    cmp byte [rdx], LF  ;Did we read a LF?
+    jne .endOfLineLf    ;Reread this char if not LF
+    inc edi             ;Else add to the count
+.endOfLineLf:
+    mov byte [rdx], CR  ;Now place the CR over the last char
 .endOfLine:
 ;Close the file, update the batch block file pointer, then proceed.
 ;rsi -> Batch block.
@@ -198,10 +199,6 @@ batNextLine:
     ;Imagine someone gives us a 2+Gb Batch file... some server magik lmao
     add dword [rsi + batBlockHdr.dBatOffLo], edi    ;Add lo dword to chars 
     adc dword [rsi + batBlockHdr.dBatOffHi], 0      ;Add CF if needed!
-;Now we've advanced the ptr, check if we've read effectively nothing.
-;If so, get next line!
-    cmp byte [inBuffer + 1], 0  ;If the line was empty, get next line
-    jz batNextLine
 ;Now we echo the line to the console unless the first char is @ or 
 ; the echo flag is off
     lea rdx, inBuffer + 2
@@ -214,7 +211,6 @@ batNextLine:
     mov eax, 4000h  ;Write woo!
     int 21h
 .noEcho:
-    call printCRLF  ;Note we have accepted input
     jmp commandMain.batProceed
 .noEchoPull:
     dec byte [inBuffer + 1]     ;Eliminate the @ char

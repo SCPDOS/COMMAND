@@ -38,12 +38,12 @@ commandMain:
     lea rdx, inBuffer
     mov eax, 0A00h      ;Do Buffered input
     int 21h
+.batProceed:            ;Jump here to copy the batch input line 
     call printCRLF  ;Note we have accepted input
 ;First check we had something typed in of length greater than 0
     cmp byte [inBuffer + 1], 0  ;Check input length valid
     je .inputGetCmdlineAgain  ;If not, keep looping input
     ;Copy over the input text
-.batProceed:            ;Jump here to copy the batch input line 
     lea rsi, inBuffer   ;This buffer is used for all input so copy command line
     lea rdi, cpyBuffer
     mov ecx, cmdBufferL     ;Copy the buffer over to manipulate
