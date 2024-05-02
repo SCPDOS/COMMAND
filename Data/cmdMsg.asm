@@ -145,7 +145,7 @@ errorMsgTbl:
 .11:    db "Sharing buffer error $" ;SHARE Error / Error 024h
 
 ;Anything above this is a generic network error.
-genNetErr   db "Generic network error $"    ;All DOS errors codes [32h, 58h]
+genNetErr   db "Generic Network Error $"    ;All NET errors codes [32h, 58h]
 
 ;Rest of the Int 24h error messages go here
 drvMsg      db "drive $"

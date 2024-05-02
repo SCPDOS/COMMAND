@@ -30,21 +30,46 @@ critErrorHandler:   ;Int 24h
     cld         ;Make String ops go forward
     mov bx, ax  ;Save ah in bh and al in bl (if needed)
     lea rdx, crlf
-    call printString
+    call printString    ;Trashes ax
 
     movzx edi, di                   ;Clear the upper word.
     cmp edi, errGF - drvErrShft     ;Is this a normal driver error?
-    jbe .notNetErr
+    jbe .driverErr
+
+    push rbx        ;Save the action bitfield
+    push rsi        ;Save the driver pointer
+    mov eax, 5900h  ;Get Extended Error
+    int 21h
+;DOS placed the following values in the following regs:
+;ax = word [errorExCde]
+;ch = byte [errorLocus]
+;bh = byte [errorClass]
+;bl = byte [errorAction]
+;rdi = qword [errorVolLbl]
+    lea rsi, errorMsgTbl.FVol
+    xchg rdi, rsi   ;Swap the pointers
+    movsq   ;Move over the 11 chars :)
+    movsw
+    movsb
+    movzx edi, ax  ;Move the error code into di
+    pop rsi
+    pop rbx
+
     cmp edi, errNoNet
     jb .shareErr
+;This will be replaced with a tie in to the redirector later...
+;Avoid finding the string through the table, print message directly!
     lea rdx, genNetErr  ;Print the generic network error
     jmp short .printMainMsg
 .shareErr:
-; Need to do Extended Error call to get the ptr to the volume label.
-; Disk driver doesnt currently update the volume label in the BPB and doesn't
-; place the volume label in the field in the driver block, but DOS assumes it 
-; does. Once that is implemented, I will activate this section of code!
-.notNetErr:
+;Now ensure our error code is in the table, set to GF error if not.
+    mov edx, errGF
+    cmp edi, errWpd     ;If we have an error below Driver Error 0, Gen. Err.
+    cmovb edi, edx
+    cmp edi, errShrFul
+    cmova edi, edx
+    sub edi, drvErrShft ;Now reduce the error code to be a table offset
+.driverErr:
     lea rdx, errMsgPtrTbl
     xchg rdi, rdx   ;Swap error code and table base
     movzx edx, word [rdi + 2*rdx]   ;Get the word offset in rdx
