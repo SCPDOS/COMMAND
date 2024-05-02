@@ -32,25 +32,25 @@ critErrorHandler:   ;Int 24h
     lea rdx, crlf
     call printString
 
-    and edi, 00FFh   ;Zero the upper bytes of DI just in case
-;    cmp edi, 0Fh     ;Is this special case error 15h?
-;    jne .notError15
+    movzx edi, di                   ;Clear the upper word.
+    cmp edi, errGF - drvErrShft     ;Is this a normal driver error?
+    jbe .notNetErr
+    cmp edi, errNoNet
+    jb .shareErr
+    lea rdx, genNetErr  ;Print the generic network error
+    jmp short .printMainMsg
+.shareErr:
 ; Need to do Extended Error call to get the ptr to the volume label.
 ; Disk driver doesnt currently update the volume label in the BPB and doesn't
 ; place the volume label in the field in the driver block, but DOS assumes it 
 ; does. Once that is implemented, I will activate this section of code!
-.notError15:
-    mov ecx, 0Ch
-    cmp edi, ecx  ;Check if the error number is erroniously above Gen Error
-    cmova edi, ecx  ;If it is, move Gen Error into edi
-    movzx rdi, di
-    mov rdx, rdi    ;Copy error code
-    shl rdi, 4  ;Multiply by 16
-    shl rdx, 1  ;Multiply by 2
-    add rdi, rdx    ;Add the resultant multiplications
-    lea rdx, errorMsgTable
-    lea rdx, qword [rdx+rdi]   ;Load EA to rdx
-    call printString     ;Call DOS to print first part of message
+.notNetErr:
+    lea rdx, errMsgPtrTbl
+    xchg rdi, rdx   ;Swap error code and table base
+    movzx edx, word [rdi + 2*rdx]   ;Get the word offset in rdx
+    add rdx, rdi            ;Now add the table base!
+.printMainMsg:
+    call printString        ;Call DOS to print first part of message
 
     lea rdx, readMsg
     lea rdi, writeMsg

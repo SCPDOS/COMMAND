@@ -103,36 +103,58 @@ conName db "CON",0
 autoSpec    db "_:\AUTOEXEC.BAT",0
 autoSpecL equ $ - autoSpec
 ;Int 24h strings
-errorMsgTable: ;Each table entry is 18 chars long
-            db "Write Protect $"            ;Driver Error 0 / DOS Error 013h
-            db "Unknown Unit $"             ;Driver Error 1 / DOS Error 014h
-            db "Not Ready $"                ;Driver Error 2 / DOS Error 015h
-            db "Unknown Command $"          ;Driver Error 3 / DOS Error 016h
-            db "Data $"                     ;Driver Error 4 / DOS Error 017h
-            db "Bad Request $"              ;Driver Error 5 / DOS Error 018h
-            db "Seek $"                     ;Driver Error 6 / DOS Error 019h
-            db "Unknown Media $"            ;Driver Error 7 / DOS Error 01Ah
-            db "Sector Not Found $"         ;Driver Error 8 / DOS Error 01Bh
-            db "Out Of Paper $"             ;Driver Error 9 / DOS Error 01Ch
-            db "Write Fault $"              ;Driver Error A / DOS Error 01Dh
-            db "Read Fault $"               ;Driver Error B / DOS Error 01Eh
-            db "General Failure $"          ;Driver Error C / DOS Error 01Fh
-            db "Sharing violation $"        ;SHARE Error    / DOS Error 020h
-            db "Lock violation $"           ;SHARE Error    / DOS Error 021h
-errMsg0Fh   db "Please Insert disk "        ;Driver Error F / DOS Error 022h
-vol0Fh      db 11 dup (" ")
-            db CR,LF,"$"
-            db "FCB unavailable $"          ;FCB Error      / DOS Error 023h
-            db "Sharing buffer error $"     ;Share buffer error / Error 024h
-;Anything above this is a generic network error
-genNetErr  db "Generic network error $"     ;All DOS errors codes [32h, 58h]
-drvMsg     db "drive $"
-readMsg    db "error reading $"
-writeMsg   db "error writing $"
-abortMsg   db "Abort$" 
-ignoreMsg  db "Ignore$"
-retryMsg   db "Retry$"
-failMsg    db "Fail$"
-betweenMsg db ", $"
-endMsg     db "? $"
-i24Resp    db "IRAF"   ;Abort Retry Ignore Fail
+errMsgPtrTbl:
+    dw errorMsgTbl.0 - errMsgPtrTbl
+    dw errorMsgTbl.1 - errMsgPtrTbl
+    dw errorMsgTbl.2 - errMsgPtrTbl
+    dw errorMsgTbl.3 - errMsgPtrTbl
+    dw errorMsgTbl.4 - errMsgPtrTbl
+    dw errorMsgTbl.5 - errMsgPtrTbl
+    dw errorMsgTbl.6 - errMsgPtrTbl
+    dw errorMsgTbl.7 - errMsgPtrTbl
+    dw errorMsgTbl.8 - errMsgPtrTbl
+    dw errorMsgTbl.9 - errMsgPtrTbl
+    dw errorMsgTbl.A - errMsgPtrTbl
+    dw errorMsgTbl.B - errMsgPtrTbl
+    dw errorMsgTbl.C - errMsgPtrTbl
+    dw errorMsgTbl.D - errMsgPtrTbl
+    dw errorMsgTbl.E - errMsgPtrTbl
+    dw errorMsgTbl.F - errMsgPtrTbl
+    dw errorMsgTbl.10 - errMsgPtrTbl
+    dw errorMsgTbl.11 - errMsgPtrTbl
+errorMsgTbl:
+.0: db "Write Proctect $"       ;Driver Error 0 / DOS Error 013h
+.1: db "Unknown Unit $"         ;Driver Error 1 / DOS Error 014h
+.2: db "Not Ready $"            ;Driver Error 2 / DOS Error 015h
+.3: db "Unknown Command $"      ;Driver Error 3 / DOS Error 016h
+.4: db "Data $"                 ;Driver Error 4 / DOS Error 017h
+.5: db "Bad Request $"          ;Driver Error 5 / DOS Error 018h
+.6: db "Seek $"                 ;Driver Error 6 / DOS Error 019h
+.7: db "Unknown Media $"        ;Driver Error 7 / DOS Error 01Ah
+.8: db "Sector Not Found $"     ;Driver Error 8 / DOS Error 01Bh
+.9: db "Out Of Paper $"         ;Driver Error 9 / DOS Error 01Ch
+.A: db "Write Fault $"          ;Driver Error A / DOS Error 01Dh
+.B: db "Read Fault $"           ;Driver Error B / DOS Error 01Eh
+.C: db "General Failure $"      ;Driver Error C / DOS Error 01Fh
+.D: db "Sharing violation $"    ;SHARE Error / DOS Error 020h
+.E: db "Lock violation $"       ;SHARE Error / DOS Error 021h
+.F: db "Please Insert disk "    ;Driver Error F / DOS Error 022h
+.FVol:  db 11 dup (" ")         ; Volume name for disk. Setup before print
+        db CR,LF,"$"
+.10:    db "FCB unavailable $"      ;FCB Error / DOS Error 023h - RESERVED
+.11:    db "Sharing buffer error $" ;SHARE Error / Error 024h
+
+;Anything above this is a generic network error.
+genNetErr   db "Generic network error $"    ;All DOS errors codes [32h, 58h]
+
+;Rest of the Int 24h error messages go here
+drvMsg      db "drive $"
+readMsg     db "error reading $"
+writeMsg    db "error writing $"
+abortMsg    db "Abort$" 
+ignoreMsg   db "Ignore$"
+retryMsg    db "Retry$"
+failMsg     db "Fail$"
+betweenMsg  db ", $"
+endMsg      db "? $"
+i24Resp     db "IRAF"   ;Abort Retry Ignore Fail
