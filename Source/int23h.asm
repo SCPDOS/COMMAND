@@ -56,10 +56,11 @@ int23h:
     lea rdx, batFail
     call printString
     lea rdx, batYNstr
+    mov word [rdx + 2], 0D20h   ;Space and a CR char
     mov eax, 0C0Ah      ;Get clean buffered input!
     int 21h
-    jc .killBat         ;If we CTRL+C during this call, kill batch!
-    mov al, byte [batYNstr + 3]
+    jc .nestKill         ;If we CTRL+C during this call, kill batch!
+    mov al, byte [rdx + 2]
     call ucChar         ;UC using DOS
     cmp al, "Y"
     je .killBat
@@ -74,6 +75,9 @@ int23h:
 .killBat:   ;Now we need to terminate the batch file too.
     call batCleanup
     jmp short .endBat   ;Now CRLF and exit!
+.nestKill:
+    call batCleanup
+    jmp .retFromDosCall ;Nested kill needs to be handled like other nestings
 .notBat:
     push rax        ;Save rax, ah contains call we are in that ^C'ed
     push rbx

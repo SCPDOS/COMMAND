@@ -53,8 +53,7 @@ cmdLineStateL equ $ - cmdLineStatePtr
 ;Batch state variables. Batch changes current dir to dir of batch file!
 bbPtr       dq 0    ;Ptr to the batch block
 batFile     db fileSpecZL dup (0)   ;Path to bat to execute. Qual with path!
-batCurDir   db fileSpecZL dup (0)   ;Get dir on bat drive and save here.
-batYNstr    db 4,1,"N",CR           ;String for buffered Y/N input
+batYNstr    db 2,1," ",CR           ;String for buffered Y/N input
 ;batCallPtr  dq 0    ;Ptr to the call state block
 
 ;Structs and strings
@@ -64,8 +63,14 @@ cmdFFBlock  db ffBlock_size dup (0) ;Internal Find First Block to use as default
 
 launchBlock db execProg_size dup (0)
 
+;Use the below figure for the buffer "length" (byte 0) as this will allow 
+; for us to type 127 characters plus a mandatory terminating 128th <CR>. 
+; This will always be ok for copying to the PSP as on the PSP we have space for
+; 127 chars. If we type 128 chars with terminating <CR>, the command name must be 
+; at least 1 character long. The tail is formed of the remaining chars, so there
+; will be at least 127 chars left. Thus we always have enough space.
+inBufferL   equ 128 
 inBuffer    db cmdBufferL dup (0)  ;Original input from user! 128 chars max! 
-inBufferL   equ 128 ;Will be enuf space for PSP copy to have terminating CR
 cpyBuffer   db cmdBufferL dup (0)   ;Copied input for processing
 cmdBuffer   db cmdBufferL dup (0)   ;Buffer with the command pipeline
 cmdPathSpec db fileSpecZL dup (0)   ;Space for full path to a ext cmd

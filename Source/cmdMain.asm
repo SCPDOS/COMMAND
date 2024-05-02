@@ -1,4 +1,5 @@
 commandStart:
+;Jumped to with edx=0 means no autoexec. edx=-1 means autoexec.
     ;Resize Allocation, jump here with endpointer in rbx
     ;Ideally would have this jettisoned too but cannot guarantee
     ; that the jump to safety won't be gobbled up when multitasking
@@ -8,12 +9,19 @@ commandStart:
     mov ah, 4Ah ;Realloc
     neg r8  ;Convert -r8 to r8
     int 21h
+    test edx, edx   ;If zero, no autoexec
+    jz commandMain
+    ;Only enter here if we are autoexec :)
+    call getSetMainState          
+    mov byte [inBuffer + 1], autoSpecL - 1  ;Drop one from the count for CR
+    lea rsi, autoSpec
+    lea rdi, inBuffer + 2
+    call strcpy
+    mov byte [rdi - 1], CR  ;Store a CR over the terminating null
+    jmp short commandMain.batProceed
 commandMain:
     mov rsp, qword [stackTop]    ;Reset internal stack pointer pos
-    cld ;Ensure stringops are done the right way
-    mov byte [inBuffer], inBufferL      ;Reset the buffer length
-    mov byte [cpyBuffer], inBufferL     ;Reset the buffer length
-    mov byte [cmdBuffer], inBufferL     ;Reset the buffer length
+    call getSetMainState
 .inputMain:         ;Only reset once per line!
     call printCRLF  ;Command complete, indicate with new line!
     mov eax, 5D09h  ;Flush network printers
@@ -264,8 +272,8 @@ analyseCmdline:
 ;Before returning, we copy the command name to cmdName 
     lea rdi, cmdPathSpec
     call findLastPathComponant  ;Point rdi to last path componant
-    call strlen ;Get the length of the final path componant
-    cmp ecx, 11 + 1 ;Extra char for the ext separator (dot)
+    call strlen ;Get the length of the null terminated final path componant
+    cmp ecx, fileNameZL ;11 chars + ext sep + null terminator
     ja .exitBad     ;Return error
     mov rsi, rdi
     lea rdi, cmdName
@@ -815,6 +823,15 @@ pullCommandline:
     jmp short .pctPullChars 
 .pctExit:
     mov byte [r8 + cmdLineCnt], cl  ;Save the count
+    return
+
+getSetMainState:
+;Resets the buffers lengths, sets stringops and gets the pspptr in r8
+    cld ;Ensure stringops are done the right way
+    mov byte [inBuffer], inBufferL      ;Reset the buffer length
+    mov byte [cpyBuffer], inBufferL     ;Reset the buffer length
+    mov byte [cmdBuffer], inBufferL     ;Reset the buffer length
+    mov r8, qword [pspPtr]              ;Reset the pspPtr
     return
 
 int2Eh:   ;Interrupt interface for parsing and executing command lines

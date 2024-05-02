@@ -1,7 +1,7 @@
 ;Main Batch processing routines go here!
 
 batLaunch:
-;Preps and launches a batch file!
+;Preps and launches a batch file! Called with rdx pointing to the filespec :)
     mov ebx, bbMaxAlloc << 4    ;Convert to paragraphs
     mov eax, 4800h
     int 21h
@@ -12,12 +12,12 @@ batLaunch:
     mov qword [bbPtr], rax  ;Save the ptr here!
     mov rbx, rax
     mov rdi, rbx
+    xor eax, eax
     mov ecx, bbMaxAlloc     
     rep stosb               ;Clean the arena
     mov rdi, rbx            ;Point back to the head
     mov al, byte [echoFlg]
     mov byte [rbx + batBlockHdr.bEchoFlg], al
-    mov qword [rbx + batBlockHdr.dBatOffLo], 0 ;Write a qword of 0 for zoom
     mov eax, -1
     mov ecx, 5
     lea rdi, qword [rbx + batBlockHdr.wArgs]    ;Init the wArgs to no params!
@@ -54,10 +54,69 @@ batLaunch:
     call .bbCheckEndOfCmdLine
     jne .bbFndLp2   ;If not end of cmdline, see if next char delim
 .bbArgsDone:
-    ;Now copy the batch name
+;Now copy the batch name, need to figure the full path to it.
     lea rsi, cmdPathSpec
     lea rdi, batFile
-    call strcpy             ;Copy the batch file name over
+    mov ax, word [rsi]  ;Get the first two chars
+    cmp ah, ":"
+    je .bbdrvGiven
+    cmp al, byte [pathSep]  ;Is the first char a pathsep?
+    je .bbCDrvAbs
+;Current drive relative
+    call getCurrentDrive    ;Gets the 0 based current drive in al
+    add al, "A"
+    mov ah, ":"
+    stosw   ;Store these two chars, adv rdi
+.bbRelPath:
+    mov al, byte [pathSep]  
+    stosb   ;Store the pathsep
+    mov al, byte [batFile]  ;Now get the drive letter into al
+    call ucChar             ;UC it
+    mov byte [batFile], al  ;and overwrite it :)
+    sub al, "@"             ;Convert into a 1 based drive number
+    mov dl, al
+    push rsi        ;Save remaining char source
+    mov rsi, rdi    ;rdi is where we want to store the file name
+    mov eax, 4700h  ;Get Current Directory
+    int 21h
+    pop rsi
+    jnc .bbRelPathOk
+    lea rdx, badBat
+    call printString
+    jmp batFinish   ;Now clean up the batch stuff we've setup
+.bbRelPathOk:
+;Now move rdi to the terminating null   
+    xor eax, eax
+    xor ecx, ecx
+    repne scasb ;Find the terminating null
+    dec rdi ;Now point to the terminating null
+    mov al, byte [pathSep]
+    stosb   ;Store this pathsep over the original null
+    ;Now we are ready to copy the command line passed to us by the user
+    ; to rdi. rsi points to where to source the rest of the chars
+    jmp short .bbCpName
+.bbCDrvAbs:
+;Current drive absolute. Get current drive into buffer
+    call getCurrentDrive    ;Gets the 0 based current drive in al
+    add al, "A"
+    mov ah, ":"
+    stosw   ;Store these two chars
+    ;Now we are ready to copy the command line passed to us by the user
+    ; to rdi. rsi points to where to source the rest of the chars
+    jmp short .bbCpName
+.bbdrvGiven:
+;Drive given X:
+    movsw   ;Move over the X:, point rsi to the first new char
+    lodsb
+    dec rsi ;Get the char and point back to it
+    cmp al, byte [pathSep]  ;Is char three a pathsep?
+    jne .bbRelPath
+.bbCpName:
+    call strcpy ;Copy the remaining portion
+    lea rsi, batFile
+    mov rdi, rsi
+    mov eax, 1211h  ;Normalise the path :)
+    int 2fh
 ;Now deactivate any redirs. Do redir out as cleanupRedirs somewhat ignores it.
 ;Do the handle close as deleting the file without closing the handle is asking 
 ; for SHARING trouble...
@@ -79,28 +138,19 @@ batFinish:
     call batCleanup     ;Cleanup the batch and batch state vars etc etc
     jmp commandMain     ;And start again :)
 batNextLine:
-;This will:
-;1) Open the batch file. If we are at the end of the file, exit batch mode!
-;2) Read a line from the batch file one char at a time. File is open/closed
-;       after each char. If file not found during read, print needBat error.
-;       If file not found before read, print badBat error.
-;       Do any %ENVVAR% or %ARGUMENT replacements
-;       MAX LEN OF BATCH FILE LINE: 127 + CR or 128 chars raw
-;3) Close the batch file
-;4) Check if we are at the end of the file. If so, turn off bat flag.
-;    lea rdx, .l1
-;    mov eax, 0900h
-;    int 21h
-;    call batCleanup
-;    jmp commandMain
-;.l1 db "Batch mode... wait, what? How did you do that?",CR,LF,"$"
+;Read the next line from the file and sets if we are done with copying
     test byte [statFlg1], batchEOF ;Did we hit EOF?
     jnz batFinish
     lea rdx, batFile
-    mov eax, 3D00h  ;Open exclusively
+.batOpen:
+    mov eax, 3D00h  ;Open for read only
     int 21h
     jnc .batOpened
-    ;!!! BAT FILE OPEN ERROR HANDLING HERE !!!
+    lea rdx, needBat
+    call printString
+    mov eax, 0800h  ;CON input w/o echo. Allows for triggering ^C
+    int 21h
+    jmp short .batOpen
 .batOpened:
     mov ebx, eax            ;Move the handle into ebx
     mov rsi, qword [bbPtr]  ;Get the batch block ptr
@@ -120,34 +170,43 @@ batNextLine:
     je .endOfBat
     cmp byte [rdx], CR      ;End of line?
     je .endOfLineCr
+    cmp byte [rdx], LF      ;Always ignore a Line feed
+    je .readlp
     inc byte [inBuffer + 1] ;Inc our char count
     inc rdx                 ;Store the next char in the next position
     cmp byte [inBuffer + 1], 128    ;Are we 128 chars w/o CR?
     jne .readlp             ;Get next char if not
     jmp short .endOfLine    ;The user typed too many chars on a line, EOL
 .endOfBat:
-    cmp byte [inBuffer + 1], 0  ;If we formally read 0 chars, exit immediately
-    je batFinish
-    jmp short .endOfLine
+    or byte [statFlg1], batchEOF    ;Set if we encounter a ^Z terminator
+    cmp byte [inBuffer + 1], 0      ;If we formally read 0 chars, exit immediately
+    jne .endOfLine
+    call .closeBat                  ;Close the handle!
+    jmp batFinish
 .endOfLineCr:   ;Now get the next char, to eliminate the LF too.
 ;Properly, I should check if this is LF or not. If not an LF, we move the 
 ; file pointer back a char. 
-    breakpoint
     call .readChar  ;Get the LF over the CR
-    mov byte [rdx], CR  ;Place the CR back 
+    test eax, eax   ;Did we read nothing?
+    jz .endOfBat    ;Check if the buffer is empty (just CR,LF)
+    mov byte [rdx], CR  ;Now place the CR back 
+    inc edi         ;Increment the raw char count
 .endOfLine:
 ;Close the file, update the batch block file pointer, then proceed.
 ;rsi -> Batch block.
-    mov eax, 3E00h  ;Close the file pointer in ebx
-    int 21h         ;We ignore errors here... dont hurt me SHARE pls
-    ;Imagine someone gives us a 2+Gb Batch file... some server magik
+    call .closeBat
+    ;Imagine someone gives us a 2+Gb Batch file... some server magik lmao
     add dword [rsi + batBlockHdr.dBatOffLo], edi    ;Add lo dword to chars 
     adc dword [rsi + batBlockHdr.dBatOffHi], 0      ;Add CF if needed!
+;Now we've advanced the ptr, check if we've read effectively nothing.
+;If so, get next line!
+    cmp byte [inBuffer + 1], 0  ;If the line was empty, get next line
+    jz batNextLine
 ;Now we echo the line to the console unless the first char is @ or 
 ; the echo flag is off
     lea rdx, inBuffer + 2
     cmp byte [rdx], batNoEchoChar
-    je .noEcho       
+    je .noEchoPull       
     test byte [echoFlg], -1         
     jz .noEcho
     movzx ecx, byte [inBuffer + 1]    ;Get the number of chars to print
@@ -155,8 +214,25 @@ batNextLine:
     mov eax, 4000h  ;Write woo!
     int 21h
 .noEcho:
+    call printCRLF  ;Note we have accepted input
     jmp commandMain.batProceed
+.noEchoPull:
+    dec byte [inBuffer + 1]     ;Eliminate the @ char
+    jz batNextLine    ;If this was just a @<CR><LF>, get next line
+    mov rdi, rdx
+    lea rsi, qword [rdx + 1]    ;Start from the char afterwards
+    movzx ecx, byte [inBuffer + 1]  ;Get the remaining count to copy
+    inc ecx                         ;Want to copy over the terminating CR too
+    rep movsb 
+    jmp short .noEcho   ;Now proceed normally
+    
+.closeBat:
+;Close the handle in rbx
+    mov eax, 3E00h  ;Close the file pointer in ebx
+    int 21h         ;We ignore errors here... dont hurt me SHARE pls
+    return
 .readChar:
+;Reads a char. If no chars read, sets the EOF flag!
     mov ecx, 1
     mov eax, 3F00h
     int 21h  
@@ -196,5 +272,5 @@ batCleanup:
     pop r8
     call cleanupRedirs  ;Clean up all redirections, close files etc
     mov qword [bbPtr], 0    
-    and byte [statFlg1], ~inBatch   ;Oh bye bye batch mode!
+    and byte [statFlg1], ~(inBatch|batchEOF)   ;Oh bye bye batch mode!
     return

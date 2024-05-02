@@ -107,6 +107,13 @@ functionTable:
     dw subst - startLbl
 ;TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP
 
+;BATCH ORIENTED COMMANDS HERE
     db 4, "ECHO"
     dw echo - startLbl
+
+    db 5, "PAUSE"
+    dw pauza - startLbl
+
+    db 3, "REM"
+    dw remark - startLbl
     db -1   ;End of table

@@ -9,7 +9,7 @@ fileNameZL  equ filenameL + 1   ;Add a space for a terminating null
 fullDirPathL equ driveSpecL + dirPathL
 fullDirPathZL equ fullDirPathL + 1   ;Add one for terminating null
 fileSpecZL  equ fullDirPathL + fileNameZL ;One full asciiz pathspec
-cmdNameL    equ filenameL + 1 + 1   ;1 for the count prefix,1 for end null
+cmdNameL    equ 1 + fileNameZL  ;1 for the count prefix
 
 ;Use PSP FCB's for switch buffers
 fcb1        equ psp.fcb1
@@ -45,18 +45,18 @@ batNoEchoChar   equ "@" ;If a line starts with this, no echo!
 
 
 struc drvHdr  ;Device Driver Header for character and block devices
-    .nxtPtr resq 1  ;Pointer to the next driver header, -1 if at the end
-    .attrib resw 1  ;Attribute Word
-    .strPtr resq 1  ;Strategy Entry Pointer
-    .intPtr resq 1  ;Interrupt Entry Pointer
-    .drvNam resb 8  ;Driver name (Char) or Number of units byte (Block)
+    .nxtPtr dq ?  ;Pointer to the next driver header, -1 if at the end
+    .attrib dw ?  ;Attribute Word
+    .strPtr dq ?  ;Strategy Entry Pointer
+    .intPtr dq ?  ;Interrupt Entry Pointer
+    .drvNam db 8 dup (?)  ;Driver name (Char) or Number of units byte (Block)
 endstruc
 
 struc execProg  ;For use with EXEC-ing a child task
-    .pEnv       resq 1  ;Ptr to environment block (or 0 => copy parent env)
-    .pCmdLine   resq 1  ;Ptr to the command line to be placed at PSP + 80h
-    .pfcb1      resq 1  ;Ptr to the first FCB (parsed argument 1)
-    .pfcb2      resq 1  ;Ptr to the second FCB  (parsed argument 2)
+    .pEnv       dq ?  ;Ptr to environment block (or 0 => copy parent env)
+    .pCmdLine   dq ?  ;Ptr to the command line to be placed at PSP + 80h
+    .pfcb1      dq ?  ;Ptr to the first FCB (parsed argument 1)
+    .pfcb2      dq ?  ;Ptr to the second FCB  (parsed argument 2)
 endstruc
 
 ;Directory attribute equates

@@ -1069,6 +1069,10 @@ copyMain:
     xor esi, esi                ;Flag if ASCII copy done after write!
     mov rdx, qword [cpBufPtr]   ;Get the buffer pointer
 .copyLoop:
+;!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+; CONSIDER MODIFYING THIS ROUTINE SO THAT ASCII READS ONLY WRITE AFTER       !
+; FINDING A ^Z, OR FILLING THE BUFFER. CURRENTLY, WRITES HAPPEN ON EACH LINE.!
+;!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     movzx ecx, word [wCpBufSz]
     movzx ebx, word [sourceHdl]
     mov eax, 3F00h ;Read
@@ -2840,3 +2844,26 @@ echo:
     mov dl, al
     call outChar
     jmp short .directEcho
+
+pauza:  ;Well... pause is an instruction in english 0:)
+;Thank you authors of MSDOS Encyclopedia for confusing an argument to this command
+; with just... the actual command tail being echoed with the command -_-
+    test byte [echoFlg], -1
+    jnz .echoTail
+;Since we havent echoed the command out, type the tail out manually
+    lea rsi, qword [r8 + cmdLine]  ;Goto command line
+    call skipDelimiters ;Skip leading delims
+    mov rdx, rsi
+    movzx ecx, byte [r8 + cmdLineCnt]  ;Get the count
+    mov ebx, 1  ;Echo to STDOUT 
+    mov eax, 4000h  ;Write
+    int 21h
+    call printCRLF
+.echoTail:
+    lea rdx, pauseMes
+    call printString
+    mov eax, 0800h  ;CON input w/o echo. Triggers ^C
+    int 21h
+    call printCRLF
+remark:
+    return

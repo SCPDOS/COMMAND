@@ -55,12 +55,12 @@ cmdLdr:
     int 21h
     add al, "A"
     mov byte [comspecEvar.cspec], al
+    mov byte [autoSpec], al 
 ;Set Int 2Eh up
     lea rdx, int2Eh
     mov eax, 252Eh ;Set this as Int 2Eh
     int 21h
-;Now, open and parse AUTOEXEC.BAT. Build new Master Environment here.
-;If no AUTOEXEC.BAT, request time and date from user
+;Now allocate the master environment!
     mov ebx, 10 ;Allocate 160 bytes
     mov eax, 4800h
     int 21h
@@ -71,7 +71,25 @@ cmdLdr:
     mov rdi, rax
     mov ecx, menv_len
     rep movsb   ;Copy the chars over!
-
+;Now, open AUTOEXEC.BAT. 
+    lea rdx, autoSpec
+    mov eax, 3D00h  ;Open file
+    int 21h
+    jc .noAutoexec
+    ;Ok, we know the file exists, close it and finish init through it, ignoring 
+    ; the normal hello there! string
+    mov ebx, eax
+    mov eax, 3E00h  ;Close file
+    int 21h
+;Now we do the same as at the end, prepping for jettisoning
+    call computeStackPtr    ;Returns the stack ptr in rbx and var
+    mov rsp, rbx        ;Move the stack pointer to this address
+    and byte [statFlg1], ~inLdr    ;Special work complete :-)
+    xor edx, edx
+    dec edx             ;Setup that we want to process Autoexec
+    jmp commandStart
+.noAutoexec:
+;If no AUTOEXEC.BAT, request time and date from user
     lea rdx, crlf
     mov ah, 09h
     int 21h
@@ -94,15 +112,13 @@ cmdLdr:
     movzx eax, byte [switchChar]
     repne scasb
     jecxz .printInit
-    movzx eax, byte [rdi]   ;RDI points to the char after the switch
+    movzx eax, byte [rdi]   ;rdi points to the char after the switch
     call ucChar
     cmp al, "P" ;Is it permanent switch?
     jne .printInit
     mov byte [permaSwitch], -1  ;Set the permanently resident switch on
 .printInit:
-    lea rbx, endOfAlloc ;Save the Master Environment
 ;Finish by printing INIT string.
-    push rbx
     lea rdx, initString
     mov ah, 09h
     int 21h ;Print init string
@@ -110,15 +126,10 @@ cmdLdr:
     lea rdx, initString2
     mov ah, 09h
     int 21h ;Print init string
-    pop rbx
-    ;Now we add the stack to the alloc and paragraph align
-    add rbx, stackSize
-    add rbx, 11h    ;Go one para up
-    shr rbx, 4      ;Round to this new para boundary
-    shl rbx, 4
-    mov rsp, rbx    ;Move the stack pointer to this address
-    mov qword [stackTop], rbx   ;Save this value of the stack ptr in var
+    call computeStackPtr    ;Returns the stack ptr in rbx and var
+    mov rsp, rbx        ;Move the stack pointer to this address
     and byte [statFlg1], ~inLdr    ;Special work complete :-)
+    xor edx, edx        ;Indicate we DONT want to do Autoexec processing
     jmp commandStart    ;We jump with rbx = base address to jettison
 ;Loader Data here
 initString: 
@@ -126,3 +137,13 @@ initString:
 initString2:
     db CR,LF, "          (C)Copyright Scientific Computer Research 2024.",CR,LF,"$"
 badVerStr: db "Incorrect DOS version",CR,LF,"$"
+
+computeStackPtr:
+    ;Now we add the stack to the alloc and paragraph align
+    lea rbx, endOfAlloc
+    add rbx, stackSize
+    add rbx, 11h    ;Go one para up
+    shr rbx, 4      ;Round to this new para boundary
+    shl rbx, 4
+    mov qword [stackTop], rbx   ;Save this value of the stack ptr in var
+    return

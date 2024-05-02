@@ -100,7 +100,8 @@ extStr  db "COMEXEBAT"  ;Used for extension searches
 ;If anything goes wrong with piping or redirecting just close first two 
 ; handles and reopen CON
 conName db "CON",0    
-  
+autoSpec    db "_:\AUTOEXEC.BAT",0
+autoSpecL equ $ - autoSpec
 ;Int 24h strings
 errorMsgTable: ;Each table entry is 18 chars long
             db "Write Protect $   "       ;Error 0
