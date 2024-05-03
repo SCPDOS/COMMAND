@@ -2166,7 +2166,8 @@ version:
 
 
 memory:
-    mov rbx, qword [sysVars]
+    mov eax, 5200h  ;Get Sysvars :)
+    int 21h
     test rbx, rbx
     jnz .sysvarsOK
     lea rdx, memBad0

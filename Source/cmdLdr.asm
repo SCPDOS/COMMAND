@@ -20,10 +20,6 @@ cmdLdr:
     mov rax, qword [r8 + psp.oldInt22h] ;Preserve the original addresses
     mov qword [parentInt22], rax
     call resetIDTentries
-;Get a pointer to DOS Sysvars
-    mov ah, 52h ;Get sysvars
-    int 21h
-    mov qword [sysVars], rbx    ;Save ptr to sysVars
 ;Call for simple internationalisation data
     mov eax, 3700h  ;Get switchchar in dl
     int 21h
