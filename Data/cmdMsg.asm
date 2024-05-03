@@ -141,11 +141,12 @@ errorMsgTbl:
 .F: db "Please Insert disk "    ;Driver Error F / DOS Error 022h
 .FVol:  db 11 dup (" ")         ; Volume name for disk. Setup before print
         db CR,LF,"$"
+;Next two strings dont print any more information, such as reading/writing etc
 .10:    db "FCB unavailable $"      ;FCB Error / DOS Error 023h - RESERVED
 .11:    db "Sharing buffer error $" ;SHARE Error / Error 024h
 
 ;Anything above this is a generic network error.
-genNetErr   db "Generic Network Error $"    ;All NET errors codes [32h, 58h]
+genNetErr   db "General Network Error $"    ;All NET errors codes [32h, 58h]
 
 ;Rest of the Int 24h error messages go here
 drvMsg      db "drive $"

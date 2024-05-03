@@ -31,11 +31,10 @@ critErrorHandler:   ;Int 24h
     mov bx, ax  ;Save ah in bh and al in bl (if needed)
     lea rdx, crlf
     call printString    ;Trashes ax
-
     movzx edi, di                   ;Clear the upper word.
     cmp edi, errGF - drvErrShft     ;Is this a normal driver error?
     jbe .driverErr
-
+;Here we have a networking or sharing error. Check it out!
     push rbx        ;Save the action bitfield
     push rsi        ;Save the driver pointer
     mov eax, 5900h  ;Get Extended Error
@@ -54,13 +53,44 @@ critErrorHandler:   ;Int 24h
     movzx edi, ax  ;Move the error code into di
     pop rsi
     pop rbx
-
-    cmp edi, errNoNet
-    jb .shareErr
-;This will be replaced with a tie in to the redirector later...
-;Avoid finding the string through the table, print message directly!
-    lea rdx, genNetErr  ;Print the generic network error
-    jmp short .printMainMsg
+;Now we split the sharing errors from networking. Sharing doesnt go thru
+; the redir
+    cmp edi, errShrFul
+    jbe .shareErr
+;Ok so this is a net error. Check to see if an installed message!
+;di has the error code still
+    mov eax, 0500h      ;Install check!
+    int 21h
+    cmp al, -1
+    jne .redirDefault   ;No redir, print default net error
+    mov eax, edi        ;Else, move the error code into 
+    mov ah, 05h         ;Get the string we need
+    int 21h
+    jc .redirDefault    ;If no message installed for this code, generic!
+    ;Returned if CF=NC:
+    ; al = 0 => Print rest of message
+    ; al = 1 => Immediately prompt ARIF
+    ; rdi -> ASCIIZ string to print
+    mov rdx, rdi        
+    push rax            
+    xor eax, eax
+    mov ecx, eax
+    dec ecx
+    repne scasb         ;Search for the terminating null
+    mov byte [rdi - 1], "$" ;Replace with dos string terminator
+    call printString 
+    mov byte [rdi - 1], 0   ;Replace with sane string terminator
+    pop rax
+    test al, al ;Is this zero?
+    jz .proceedNormalWrite  ;Now print reading/writing etc
+    jmp short .userInput    ;Else, print crlf and proceed to get input
+.redirDefault:
+;Always jumped to with rdi in the error code. Thus, this will print only
+; this line with no reading/writing etc. rdi is above errShrFul here
+; and also not a table offset so definitely wont accidentally try print
+; additional information
+    lea rdx, genNetErr  ;Set the generic network error message
+    jmp short .redirDefProceed
 .shareErr:
 ;Now ensure our error code is in the table, set to GF error if not.
     mov edx, errGF
@@ -70,13 +100,19 @@ critErrorHandler:   ;Int 24h
     cmova edi, edx
     sub edi, drvErrShft ;Now reduce the error code to be a table offset
 .driverErr:
+    push rdi    ;Save the error code for checking
     lea rdx, errMsgPtrTbl
     xchg rdi, rdx   ;Swap error code and table base
     movzx edx, word [rdi + 2*rdx]   ;Get the word offset in rdx
     add rdx, rdi            ;Now add the table base!
-.printMainMsg:
+    pop rdi
+.redirDefProceed:
     call printString        ;Call DOS to print first part of message
-
+    ;Now we handle any codes above errIDC - drvErrShft as 
+    ; to not print anything other than the string in the table!
+    cmp rdi, errIDC - drvErrShft
+    ja .userInput
+.proceedNormalWrite:
     lea rdx, readMsg
     lea rdi, writeMsg
     test bh, 1  ;Bit 0 is set if write operation

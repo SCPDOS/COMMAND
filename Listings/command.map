@@ -12,8 +12,8 @@ Output file:  ./Binaries/COMMAND.COM
 
 Vstart            Start             Stop              Length    Class     Name
                0                 0                 0  00000000  progbits  .text
-               0                 0              4BCB  00004BCB  progbits  .data
-            4BCB              4BCB              4E26  0000025B  progbits  transient
+               0                 0              4C10  00004C10  progbits  .data
+            4C10              4C10              4E6B  0000025B  progbits  transient
 
 -- Sections (detailed) --------------------------------------------------------
 
@@ -31,7 +31,7 @@ vfollows:  not defined
 ---- Section .data ------------------------------------------------------------
 
 class:     progbits
-length:                4BCB
+length:                4C10
 start:                    0
 align:                    1
 follows:   not defined
@@ -43,10 +43,10 @@ vfollows:  not defined
 
 class:     progbits
 length:                 25B
-start:                 4BCB
+start:                 4C10
 align:                    1
 follows:   .data
-vstart:                4BCB
+vstart:                4C10
 valign:    not defined
 vfollows:  not defined
 
@@ -1540,46 +1540,48 @@ Real              Virtual           Name
             49B9              49B9  int23h.exit
             49C0              49C0  int23h.exitIn
             49C4              49C4  critErrorHandler
-            4A17              4A17  critErrorHandler.shareErr
-            4A34              4A34  critErrorHandler.driverErr
-            4A45              4A45  critErrorHandler.printMainMsg
-            4A82              4A82  critErrorHandler.userInput
-            4A87              4A87  critErrorHandler.userAbort
-            4A93              4A93  critErrorHandler.userRetry
-            4AB0              4AB0  critErrorHandler.userIgnore
-            4ACD              4ACD  critErrorHandler.userFail
-            4AEA              4AEA  critErrorHandler.userMsgEnd
-            4B0C              4B0C  critErrorHandler.uip1
-            4B1E              4B1E  critErrorHandler.validInput
-            4B31              4B31  critErrorHandler.viFail
-            4B3C              4B3C  critErrorHandler.viIgnore
-            4B47              4B47  critErrorHandler.viRetry
-            4B50              4B50  critErrorHandler.cehExit
-            4B5C              4B5C  critErrorHandler.charError
-            4B68              4B68  critErrorHandler.ce1
-            4B76              4B76  errSwapHdls
-            4B92              4B92  ..@358._ret
-            4B93              4B93  errRetHdls
-            4BAF              4BAF  ..@359._ret
-            4BB0              4BB0  getJftPtr
-            4BC5              4BC5  ..@360._ret
-            4BC6              4BC6  getJftPtr.pspJftExit
-            4BCA              4BCA  ..@361._ret
-            4BCB              4BCB  endOfAlloc
+            4A48              4A48  critErrorHandler.redirDefault
+            4A51              4A51  critErrorHandler.shareErr
+            4A6E              4A6E  critErrorHandler.driverErr
+            4A81              4A81  critErrorHandler.redirDefProceed
+            4A8F              4A8F  critErrorHandler.proceedNormalWrite
+            4AC7              4AC7  critErrorHandler.userInput
+            4ACC              4ACC  critErrorHandler.userAbort
+            4AD8              4AD8  critErrorHandler.userRetry
+            4AF5              4AF5  critErrorHandler.userIgnore
+            4B12              4B12  critErrorHandler.userFail
+            4B2F              4B2F  critErrorHandler.userMsgEnd
+            4B51              4B51  critErrorHandler.uip1
+            4B63              4B63  critErrorHandler.validInput
+            4B76              4B76  critErrorHandler.viFail
+            4B81              4B81  critErrorHandler.viIgnore
+            4B8C              4B8C  critErrorHandler.viRetry
+            4B95              4B95  critErrorHandler.cehExit
+            4BA1              4BA1  critErrorHandler.charError
+            4BAD              4BAD  critErrorHandler.ce1
+            4BBB              4BBB  errSwapHdls
+            4BD7              4BD7  ..@359._ret
+            4BD8              4BD8  errRetHdls
+            4BF4              4BF4  ..@360._ret
+            4BF5              4BF5  getJftPtr
+            4C0A              4C0A  ..@361._ret
+            4C0B              4C0B  getJftPtr.pspJftExit
+            4C0F              4C0F  ..@362._ret
+            4C10              4C10  endOfAlloc
 
 ---- Section transient --------------------------------------------------------
 
 Real              Virtual           Name
-            4BCB              4BCB  cmdLdr
-            4BDE              4BDE  cmdLdr.exitBad
-            4BE0              4BE0  cmdLdr.okVersion
-            4C35              4C35  cmdLdr.skipSwitch
-            4CE6              4CE6  cmdLdr.noAutoexec
-            4D16              4D16  cmdLdr.skipMaster
-            4D44              4D44  cmdLdr.printInit
-            4D75              4D75  initString
-            4DAB              4DAB  initString2
-            4DE9              4DE9  badVerStr
-            4E01              4E01  computeStackPtr
-            4E25              4E25  ..@363._ret
+            4C10              4C10  cmdLdr
+            4C23              4C23  cmdLdr.exitBad
+            4C25              4C25  cmdLdr.okVersion
+            4C7A              4C7A  cmdLdr.skipSwitch
+            4D2B              4D2B  cmdLdr.noAutoexec
+            4D5B              4D5B  cmdLdr.skipMaster
+            4D89              4D89  cmdLdr.printInit
+            4DBA              4DBA  initString
+            4DF0              4DF0  initString2
+            4E2E              4E2E  badVerStr
+            4E46              4E46  computeStackPtr
+            4E6A              4E6A  ..@364._ret
 
