@@ -32,9 +32,7 @@ critErrorHandler:   ;Int 24h
     lea rdx, crlf
     call printString    ;Trashes ax
     movzx edi, di                   ;Clear the upper word.
-    cmp edi, errGF - drvErrShft     ;Is this a normal driver error?
-    jbe .driverErr
-;Here we have a networking or sharing error. Check it out!
+
     push rbx        ;Save the action bitfield
     push rsi        ;Save the driver pointer
     mov eax, 5900h  ;Get Extended Error
@@ -53,8 +51,10 @@ critErrorHandler:   ;Int 24h
     movzx edi, ax  ;Move the error code into di
     pop rsi
     pop rbx
-;Now we split the sharing errors from networking. Sharing doesnt go thru
-; the redir
+    cmp edi, errGF      ;Is this a normal driver error?
+    jbe .driverErr
+;Now we split the driver from sharing and networking errors. Sharing doesnt go 
+; thru the redir
     cmp edi, errShrFul
     jbe .shareErr
 ;Ok so this is a net error. Check to see if an installed message!
@@ -83,7 +83,7 @@ critErrorHandler:   ;Int 24h
     pop rax
     test al, al ;Is this zero?
     jz .proceedNormalWrite  ;Now print reading/writing etc
-    jmp short .userInput    ;Else, print crlf and proceed to get input
+    jmp .userInput    ;Else, print crlf and proceed to get input
 .redirDefault:
 ;Always jumped to with rdi in the error code. Thus, this will print only
 ; this line with no reading/writing etc. rdi is above errShrFul here
@@ -94,12 +94,13 @@ critErrorHandler:   ;Int 24h
 .shareErr:
 ;Now ensure our error code is in the table, set to GF error if not.
     mov edx, errGF
-    cmp edi, errWpd     ;If we have an error below Driver Error 0, Gen. Err.
-    cmovb edi, edx
     cmp edi, errShrFul
     cmova edi, edx
-    sub edi, drvErrShft ;Now reduce the error code to be a table offset
 .driverErr:
+    mov edx, errGF      ;If we have an error below Driver Error 0, Gen. Err.
+    cmp edi, drvErrShft
+    cmovb edi, edx
+    sub edi, drvErrShft ;Now reduce the error code to be a table offset
     push rdi    ;Save the error code for checking
     lea rdx, errMsgPtrTbl
     xchg rdi, rdx   ;Swap error code and table base
@@ -108,10 +109,11 @@ critErrorHandler:   ;Int 24h
     pop rdi
 .redirDefProceed:
     call printString        ;Call DOS to print first part of message
-    ;Now we handle any codes above errIDC - drvErrShft as 
+    ;Now we handle any codes above errNoFCB - drvErrShft as 
     ; to not print anything other than the string in the table!
-    cmp rdi, errIDC - drvErrShft
-    ja .userInput
+    ;cmp edi, errNoFCB - drvErrShft
+    cmp edi, errIDC - drvErrShft
+    jae .userInput  ;IDC also triggers this skip
 .proceedNormalWrite:
     lea rdx, readMsg
     lea rdi, writeMsg
