@@ -8363,7 +8363,7 @@
     51                              <1> ;CTRLC in a batch file will always abort the current command being 
     52                              <1> ; executed. CTRLC in a batch file is only for checking if we want to 
     53                              <1> ; terminate the whole batch procedure or not!
-    54 0000491D E899020000          <1>     call errSwapHdls    ;Swap STDIO back ONLY ON BATCH Error
+    54 0000491D E8B1020000          <1>     call errSwapHdls    ;Swap STDIO back ONLY ON BATCH Error
     55                              <1> .ynLp:
     56 00004922 488D15DDBFFFFF      <1>     lea rdx, batFail
     57 00004929 E800F9FFFF          <1>     call printString
@@ -8414,7 +8414,7 @@
    102 000049A9 66813DEDB6FFFFFFFF  <1>     cmp word [errHdls], -1  ;If these are not -1, return to normal!
    103 000049B2 7405                <1>     je .exit
    104                              <1> .exitBat:
-   105 000049B4 E81F020000          <1>     call errRetHdls 
+   105 000049B4 E837020000          <1>     call errRetHdls 
    106                              <1> .exit:
    107 000049B9 8025DDB6FFFFFD      <1>     and byte [statFlg1], ~inCtrlC
    108                              <1> .exitIn:
@@ -8452,251 +8452,260 @@
     26 000049C6 52                  <1>     push rdx
     27 000049C7 57                  <1>     push rdi
     28 000049C8 56                  <1>     push rsi
-    29 000049C9 E8ED010000          <1>     call errSwapHdls
+    29 000049C9 E805020000          <1>     call errSwapHdls
     30 000049CE FC                  <1>     cld         ;Make String ops go forward
     31 000049CF 6689C3              <1>     mov bx, ax  ;Save ah in bh and al in bl (if needed)
     32 000049D2 488D15D0BEFFFF      <1>     lea rdx, crlf
     33 000049D9 E850F8FFFF          <1>     call printString    ;Trashes ax
     34 000049DE 0FB7FF              <1>     movzx edi, di                   ;Clear the upper word.
-    35                              <1> 
-    36 000049E1 53                  <1>     push rbx        ;Save the action bitfield
-    37 000049E2 56                  <1>     push rsi        ;Save the driver pointer
-    38 000049E3 B800590000          <1>     mov eax, 5900h  ;Get Extended Error
-    39 000049E8 CD21                <1>     int 21h
+    35                              <1>     breakpoint
+    81 000049E1 6687DB              <2> xchg bx, bx
+    36 000049E4 53                  <1>     push rbx        ;Save the action bitfield
+    37 000049E5 56                  <1>     push rsi        ;Save the driver pointer
+    38 000049E6 B800590000          <1>     mov eax, 5900h  ;Get Extended Error
+    39 000049EB CD21                <1>     int 21h
     40                              <1> ;DOS placed the following values in the following regs:
     41                              <1> ;ax = word [errorExCde]
     42                              <1> ;ch = byte [errorLocus]
     43                              <1> ;bh = byte [errorClass]
     44                              <1> ;bl = byte [errorAction]
     45                              <1> ;rdi = qword [errorVolLbl]
-    46 000049EA 488D352AC6FFFF      <1>     lea rsi, errorMsgTbl.FVol
-    47 000049F1 4887FE              <1>     xchg rdi, rsi   ;Swap the pointers
-    48 000049F4 48A5                <1>     movsq   ;Move over the 11 chars :)
-    49 000049F6 66A5                <1>     movsw
-    50 000049F8 A4                  <1>     movsb
-    51 000049F9 0FB7F8              <1>     movzx edi, ax  ;Move the error code into di
-    52 000049FC 5E                  <1>     pop rsi
-    53 000049FD 5B                  <1>     pop rbx
-    54 000049FE 81FF1F000000        <1>     cmp edi, errGF      ;Is this a normal driver error?
-    55 00004A04 7655                <1>     jbe .driverErr
+    46 000049ED 488D3527C6FFFF      <1>     lea rsi, errorMsgTbl.FVol
+    47 000049F4 4887FE              <1>     xchg rdi, rsi   ;Swap the pointers
+    48 000049F7 48A5                <1>     movsq   ;Move over the 11 chars :)
+    49 000049F9 66A5                <1>     movsw
+    50 000049FB A4                  <1>     movsb
+    51 000049FC 0FB7F8              <1>     movzx edi, ax  ;Move the error code into di
+    52 000049FF 5E                  <1>     pop rsi
+    53 00004A00 5B                  <1>     pop rbx
+    54 00004A01 81FF1F000000        <1>     cmp edi, errGF      ;Is this a normal driver error?
+    55 00004A07 7655                <1>     jbe .driverErr
     56                              <1> ;Now we split the driver from sharing and networking errors. Sharing doesnt go 
     57                              <1> ; thru the redir
-    58 00004A06 81FF24000000        <1>     cmp edi, errShrFul
-    59 00004A0C 763F                <1>     jbe .shareErr
+    58 00004A09 81FF24000000        <1>     cmp edi, errShrFul
+    59 00004A0F 763F                <1>     jbe .shareErr
     60                              <1> ;Ok so this is a net error. Check to see if an installed message!
     61                              <1> ;di has the error code still
-    62 00004A0E B800050000          <1>     mov eax, 0500h      ;Install check!
-    63 00004A13 CD21                <1>     int 21h
-    64 00004A15 3CFF                <1>     cmp al, -1
-    65 00004A17 752B                <1>     jne .redirDefault   ;No redir, print default net error
-    66 00004A19 89F8                <1>     mov eax, edi        ;Else, move the error code into 
-    67 00004A1B B405                <1>     mov ah, 05h         ;Get the string we need
-    68 00004A1D CD21                <1>     int 21h
-    69 00004A1F 7223                <1>     jc .redirDefault    ;If no message installed for this code, generic!
+    62 00004A11 B800050000          <1>     mov eax, 0500h      ;Install check!
+    63 00004A16 CD21                <1>     int 21h
+    64 00004A18 3CFF                <1>     cmp al, -1
+    65 00004A1A 752B                <1>     jne .redirDefault   ;No redir, print default net error
+    66 00004A1C 89F8                <1>     mov eax, edi        ;Else, move the error code into 
+    67 00004A1E B405                <1>     mov ah, 05h         ;Get the string we need
+    68 00004A20 CD21                <1>     int 21h
+    69 00004A22 7223                <1>     jc .redirDefault    ;If no message installed for this code, generic!
     70                              <1>     ;Returned if CF=NC:
     71                              <1>     ; al = 0 => Print rest of message
     72                              <1>     ; al = 1 => Immediately prompt ARIF
     73                              <1>     ; rdi -> ASCIIZ string to print
-    74 00004A21 4889FA              <1>     mov rdx, rdi        
-    75 00004A24 50                  <1>     push rax            
-    76 00004A25 31C0                <1>     xor eax, eax
-    77 00004A27 89C1                <1>     mov ecx, eax
-    78 00004A29 FFC9                <1>     dec ecx
-    79 00004A2B F2AE                <1>     repne scasb         ;Search for the terminating null
-    80 00004A2D C647FF24            <1>     mov byte [rdi - 1], "$" ;Replace with dos string terminator
-    81 00004A31 E8F8F7FFFF          <1>     call printString 
-    82 00004A36 C647FF00            <1>     mov byte [rdi - 1], 0   ;Replace with sane string terminator
-    83 00004A3A 58                  <1>     pop rax
-    84 00004A3B 84C0                <1>     test al, al ;Is this zero?
-    85 00004A3D 7450                <1>     jz .proceedNormalWrite  ;Now print reading/writing etc
-    86 00004A3F E983000000          <1>     jmp .userInput    ;Else, print crlf and proceed to get input
+    74 00004A24 4889FA              <1>     mov rdx, rdi        
+    75 00004A27 50                  <1>     push rax            
+    76 00004A28 31C0                <1>     xor eax, eax
+    77 00004A2A 89C1                <1>     mov ecx, eax
+    78 00004A2C FFC9                <1>     dec ecx
+    79 00004A2E F2AE                <1>     repne scasb         ;Search for the terminating null
+    80 00004A30 C647FF24            <1>     mov byte [rdi - 1], "$" ;Replace with dos string terminator
+    81 00004A34 E8F5F7FFFF          <1>     call printString 
+    82 00004A39 C647FF00            <1>     mov byte [rdi - 1], 0   ;Replace with sane string terminator
+    83 00004A3D 58                  <1>     pop rax
+    84 00004A3E 84C0                <1>     test al, al ;Is this zero?
+    85 00004A40 7450                <1>     jz .proceedNormalWrite  ;Now print reading/writing etc
+    86 00004A42 E998000000          <1>     jmp .userInput    ;Else, print crlf and proceed to get input
     87                              <1> .redirDefault:
     88                              <1> ;Always jumped to with rdi in the error code. Thus, this will print only
     89                              <1> ; this line with no reading/writing etc. rdi is above errShrFul here
     90                              <1> ; and also not a table offset so definitely wont accidentally try print
     91                              <1> ; additional information
-    92 00004A44 488D1505C6FFFF      <1>     lea rdx, genNetErr  ;Set the generic network error message
-    93 00004A4B EB35                <1>     jmp short .redirDefProceed
+    92 00004A47 488D1502C6FFFF      <1>     lea rdx, genNetErr  ;Set the generic network error message
+    93 00004A4E EB35                <1>     jmp short .redirDefProceed
     94                              <1> .shareErr:
     95                              <1> ;Now ensure our error code is in the table, set to GF error if not.
-    96 00004A4D BA1F000000          <1>     mov edx, errGF
-    97 00004A52 81FF24000000        <1>     cmp edi, errShrFul
-    98 00004A58 0F47FA              <1>     cmova edi, edx
+    96 00004A50 BA1F000000          <1>     mov edx, errGF
+    97 00004A55 81FF24000000        <1>     cmp edi, errShrFul
+    98 00004A5B 0F47FA              <1>     cmova edi, edx
     99                              <1> .driverErr:
-   100 00004A5B BA1F000000          <1>     mov edx, errGF      ;If we have an error below Driver Error 0, Gen. Err.
-   101 00004A60 81FF13000000        <1>     cmp edi, drvErrShft
-   102 00004A66 0F42FA              <1>     cmovb edi, edx
-   103 00004A69 81EF13000000        <1>     sub edi, drvErrShft ;Now reduce the error code to be a table offset
-   104 00004A6F 57                  <1>     push rdi    ;Save the error code for checking
-   105 00004A70 488D159EC4FFFF      <1>     lea rdx, errMsgPtrTbl
-   106 00004A77 4887FA              <1>     xchg rdi, rdx   ;Swap error code and table base
-   107 00004A7A 0FB71457            <1>     movzx edx, word [rdi + 2*rdx]   ;Get the word offset in rdx
-   108 00004A7E 4801FA              <1>     add rdx, rdi            ;Now add the table base!
-   109 00004A81 5F                  <1>     pop rdi
+   100 00004A5E BA1F000000          <1>     mov edx, errGF      ;If we have an error below Driver Error 0, Gen. Err.
+   101 00004A63 81FF13000000        <1>     cmp edi, drvErrShft
+   102 00004A69 0F42FA              <1>     cmovb edi, edx
+   103 00004A6C 81EF13000000        <1>     sub edi, drvErrShft ;Now reduce the error code to be a table offset
+   104 00004A72 57                  <1>     push rdi    ;Save the error code for checking
+   105 00004A73 488D159BC4FFFF      <1>     lea rdx, errMsgPtrTbl
+   106 00004A7A 4887FA              <1>     xchg rdi, rdx   ;Swap error code and table base
+   107 00004A7D 0FB71457            <1>     movzx edx, word [rdi + 2*rdx]   ;Get the word offset in rdx
+   108 00004A81 4801FA              <1>     add rdx, rdi            ;Now add the table base!
+   109 00004A84 5F                  <1>     pop rdi
    110                              <1> .redirDefProceed:
-   111 00004A82 E8A7F7FFFF          <1>     call printString        ;Call DOS to print first part of message
+   111 00004A85 E8A4F7FFFF          <1>     call printString        ;Call DOS to print first part of message
    112                              <1>     ;Now we handle any codes above errNoFCB - drvErrShft as 
    113                              <1>     ; to not print anything other than the string in the table!
    114                              <1>     ;cmp edi, errNoFCB - drvErrShft
-   115 00004A87 81FF0F000000        <1>     cmp edi, errIDC - drvErrShft
-   116 00004A8D 7338                <1>     jae .userInput  ;IDC also triggers this skip
+   115 00004A8A 81FF0F000000        <1>     cmp edi, errIDC - drvErrShft
+   116 00004A90 734D                <1>     jae .userInput  ;IDC also triggers this skip
    117                              <1> .proceedNormalWrite:
-   118 00004A8F 488D15D8C5FFFF      <1>     lea rdx, readMsg
-   119 00004A96 488D3DE0C5FFFF      <1>     lea rdi, writeMsg
-   120 00004A9D F6C701              <1>     test bh, 1  ;Bit 0 is set if write operation
-   121 00004AA0 480F45D7            <1>     cmovnz rdx, rdi ;Move the correct r/w part of the message to rdx
-   122 00004AA4 E885F7FFFF          <1>     call printString     ;Call DOS to print error reading/writing portion
+   118 00004A92 488D15D5C5FFFF      <1>     lea rdx, readMsg
+   119 00004A99 488D3DDDC5FFFF      <1>     lea rdi, writeMsg
+   120 00004AA0 F6C701              <1>     test bh, 1  ;Bit 0 is set if write operation
+   121 00004AA3 480F45D7            <1>     cmovnz rdx, rdi ;Move the correct r/w part of the message to rdx
+   122 00004AA7 E882F7FFFF          <1>     call printString     ;Call DOS to print error reading/writing portion
    123                              <1> 
-   124 00004AA9 F6C780              <1>     test bh, 80h    ;Test bit 7 for char/Disk assertation
-   125 00004AAC 0F85EF000000        <1>     jnz .charError
+   124 00004AAC F6C780              <1>     test bh, 80h    ;Test bit 7 for char/Disk assertation
+   125 00004AAF 0F8504010000        <1>     jnz .charError
    126                              <1> ;Disk error continues here
-   127 00004AB2 488D15AEC5FFFF      <1>     lea rdx, drvMsg ;Drive message
-   128 00004AB9 E870F7FFFF          <1>     call printString
-   129 00004ABE 88DA                <1>     mov dl, bl  ;Get zero based drive number into dl
-   130 00004AC0 80C241              <1>     add dl, "A" ;Add ASCII code
-   131 00004AC3 B402                <1>     mov ah, 02h ;Print char in dl
-   132 00004AC5 CD21                <1>     int 21h
-   133                              <1> .userInput:
-   134 00004AC7 E85BF7FFFF          <1>     call printCRLF  ;Print new line
-   135                              <1> ;Abort, Retry, Ignore, Fail is word order
-   136                              <1> ;Last message gets a ?, otherwise a comma followed by a 20h (space)
-   137                              <1> .userAbort:
-   138                              <1> ;Abort is always an option
-   139 00004ACC 488D15B9C5FFFF      <1>     lea rdx, abortMsg
-   140 00004AD3 E856F7FFFF          <1>     call printString ;Call DOS to prompt user for ABORT option
-   141                              <1> .userRetry:
-   142 00004AD8 F6C710              <1>     test bh, 10h  ;Bit 4 is retry bit
-   143 00004ADB 7418                <1>     jz .userIgnore    ;If clear, dont print message
-   144 00004ADD 488D15C0C5FFFF      <1>     lea rdx, betweenMsg
-   145 00004AE4 E845F7FFFF          <1>     call printString
-   146 00004AE9 488D15A9C5FFFF      <1>     lea rdx, retryMsg
-   147 00004AF0 E839F7FFFF          <1>     call printString
-   148                              <1> .userIgnore:
-   149 00004AF5 F6C720              <1>     test bh, 20h    ;Bit 5 is ignore bit
-   150 00004AF8 7418                <1>     jz .userFail
-   151 00004AFA 488D15A3C5FFFF      <1>     lea rdx, betweenMsg
-   152 00004B01 E828F7FFFF          <1>     call printString
-   153 00004B06 488D1585C5FFFF      <1>     lea rdx, ignoreMsg
-   154 00004B0D E81CF7FFFF          <1>     call printString
-   155                              <1> .userFail:
-   156 00004B12 F6C708              <1>     test bh, 08h    ;Bit 3 is Fail bit
-   157 00004B15 7418                <1>     jz .userMsgEnd
-   158 00004B17 488D1586C5FFFF      <1>     lea rdx, betweenMsg
-   159 00004B1E E80BF7FFFF          <1>     call printString
-   160 00004B23 488D1575C5FFFF      <1>     lea rdx, failMsg
-   161 00004B2A E8FFF6FFFF          <1>     call printString
-   162                              <1> .userMsgEnd:
-   163 00004B2F 488D1571C5FFFF      <1>     lea rdx, endMsg
-   164 00004B36 E8F3F6FFFF          <1>     call printString
-   165                              <1> ;Get user input now 
-   166 00004B3B 31C9                <1>     xor ecx, ecx  ;4 Possible Responses
-   167 00004B3D 488D3D66C5FFFF      <1>     lea rdi, i24Resp ;Go to start of string
-   168 00004B44 B8010C0000          <1>     mov eax, 0C01h ;Flush and get STDIN without Console Echo
-   169 00004B49 CD21                <1>     int 21h ;Get char in al
-   170 00004B4B 3C61                <1>     cmp al, "a" ;Chack if lowercase, consider using UC char DOS multiplex
-   171 00004B4D 7202                <1>     jb .uip1    ;If the value is below, ignore subtraction
-   172 00004B4F 2C20                <1>     sub al, "a"-"A"  ;Turn the char into uppercase
-   173                              <1> .uip1:
-   174 00004B51 AE                  <1>     scasb   ;Compare char to list, offset gives return code
-   175 00004B52 740F                <1>     je .validInput  ;If they are equal, ecx has return code
-   176 00004B54 FFC1                <1>     inc ecx
-   177 00004B56 81F904000000        <1>     cmp ecx, 4
-   178 00004B5C 75F3                <1>     jne .uip1
-   179 00004B5E E964FFFFFF          <1>     jmp .userInput ;If valid char not found, keep waiting 
-   180                              <1> .validInput:
-   181 00004B63 E8BFF6FFFF          <1>     call printCRLF   ;Note the input was accepted
-   182 00004B68 88C8                <1>     mov al, cl  ;Move the offset into .responses into al
-   183                              <1> ;Now check if the input is permitted
-   184 00004B6A 3C02                <1>     cmp al, 2   ;Check if abort, abort always permitted
-   185 00004B6C 7427                <1>     je .cehExit
-   186 00004B6E 84C0                <1>     test al, al ;Check if 0 => Ignore
-   187 00004B70 740F                <1>     je .viIgnore
-   188 00004B72 3C01                <1>     cmp al, 1   ;Check if 1 => Retry
-   189 00004B74 7416                <1>     je .viRetry
-   190                              <1> .viFail:    ;Fallthrough for fail (al = 3)
-   191 00004B76 F6C708              <1>     test bh, 8  ;Bit 3 is Fail bit
-   192 00004B79 0F8448FFFFFF        <1>     jz .userInput  ;If bit 3 is zero, prompt and get input again
-   193 00004B7F EB14                <1>     jmp short .cehExit
-   194                              <1> .viIgnore:
-   195 00004B81 F6C720              <1>     test bh, 20h    ;Bit 5 is Ignore bit
-   196 00004B84 0F843DFFFFFF        <1>     jz .userInput
-   197 00004B8A EB09                <1>     jmp short .cehExit
-   198                              <1> .viRetry:
-   199 00004B8C F6C710              <1>     test bh, 10h    ;Bit 4 is Retry bit
-   200 00004B8F 0F8432FFFFFF        <1>     jz .userInput
-   201                              <1> .cehExit:
-   202 00004B95 E83E000000          <1>     call errRetHdls
-   203 00004B9A 5E                  <1>     pop rsi
-   204 00004B9B 5F                  <1>     pop rdi
-   205 00004B9C 5A                  <1>     pop rdx
-   206 00004B9D 59                  <1>     pop rcx
-   207 00004B9E 5B                  <1>     pop rbx
-   208 00004B9F 48CF                <1>     iretq
-   209                              <1> .charError:
-   210 00004BA1 B908000000          <1>     mov ecx, 8  ;8 chars in device name
-   211 00004BA6 4881C61A000000      <1>     add rsi, drvHdr.drvNam  ;Get the address of the Drive name
-   212                              <1> .ce1:
-   213 00004BAD AC                  <1>     lodsb   ;Get a string char into al and inc rsi
-   214 00004BAE 88C2                <1>     mov dl, al  ;Move char into dl
-   215 00004BB0 B402                <1>     mov ah, 02h
-   216 00004BB2 CD21                <1>     int 21h ;Print char
-   217 00004BB4 E2F7                <1>     loop .ce1   ;Keep looping until all 8 char device chars have been printed
-   218 00004BB6 E90CFFFFFF          <1>     jmp .userInput
-   219                              <1> 
-   220                              <1> 
-   221                              <1> errSwapHdls:
-   222                              <1> ;Swaps STDIO to STDERR
-   223                              <1> ;Start by tmporarily moving the stderr handler into stdio
-   224                              <1> ;In principle dangerous, but since we cannot exit our routine, its oki.
-   225 00004BBB 50                  <1>     push rax
-   226 00004BBC 53                  <1>     push rbx
-   227 00004BBD E833000000          <1>     call getJftPtr  ;Get the jft pointer into rbx. Saves rax
-   228 00004BC2 0FB703              <1>     movzx eax, word [rbx]       ;Get STDIO into ax
-   229 00004BC5 668905D3B4FFFF      <1>     mov word [errHdls], ax      ;Save em
-   230 00004BCC 0FB64302            <1>     movzx eax, byte [rbx + 2]   ;Now get the STDERR SFTndx in al
-   231 00004BD0 88C4                <1>     mov ah, al                  ;Move STDERR hdl into ah too 
-   232 00004BD2 668903              <1>     mov word [rbx], ax          ;And set STDIO to STDERR
-   233 00004BD5 5B                  <1>     pop rbx
-   234 00004BD6 58                  <1>     pop rax
-   235                              <1>     return
+   127 00004AB5 488D15ABC5FFFF      <1>     lea rdx, drvMsg ;Drive message
+   128 00004ABC E86DF7FFFF          <1>     call printString
+   129 00004AC1 88DA                <1>     mov dl, bl  ;Get zero based drive number into dl
+   130 00004AC3 80C241              <1>     add dl, "A" ;Add ASCII code
+   131 00004AC6 B402                <1>     mov ah, 02h ;Print char in dl
+   132 00004AC8 CD21                <1>     int 21h
+   133                              <1>     
+   134 00004ACA 89D8                <1>     mov eax, ebx    ;Get bh into ah
+   135 00004ACC 2500060000          <1>     and eax, 600h   ;Mask off bits 1 and 2 of bh
+   136 00004AD1 3D00020000          <1>     cmp eax, 200h   ;Was this a FAT buffer?
+   137 00004AD6 7507                <1>     jne .userInput  ;If not proceed as normal.
+   138                              <1>     ;Else, abort! Application cannot proceed if FAT is breaking apart...
+   139 00004AD8 B002                <1>     mov al, 2   ;Abort! Lose that FAT buffer
+   140 00004ADA E9CE000000          <1>     jmp .cehExit
+   141                              <1> .userInput:
+   142 00004ADF E843F7FFFF          <1>     call printCRLF  ;Print new line
+   143                              <1> ;Abort, Retry, Ignore, Fail is word order
+   144                              <1> ;Last message gets a ?, otherwise a comma followed by a 20h (space)
+   145                              <1> .userAbort:
+   146                              <1> ;Abort is always an option
+   147 00004AE4 488D15A1C5FFFF      <1>     lea rdx, abortMsg
+   148 00004AEB E83EF7FFFF          <1>     call printString ;Call DOS to prompt user for ABORT option
+   149                              <1> .userRetry:
+   150 00004AF0 F6C710              <1>     test bh, 10h  ;Bit 4 is retry bit
+   151 00004AF3 7418                <1>     jz .userIgnore    ;If clear, dont print message
+   152 00004AF5 488D15A8C5FFFF      <1>     lea rdx, betweenMsg
+   153 00004AFC E82DF7FFFF          <1>     call printString
+   154 00004B01 488D1591C5FFFF      <1>     lea rdx, retryMsg
+   155 00004B08 E821F7FFFF          <1>     call printString
+   156                              <1> .userIgnore:
+   157 00004B0D F6C720              <1>     test bh, 20h    ;Bit 5 is ignore bit
+   158 00004B10 7418                <1>     jz .userFail
+   159 00004B12 488D158BC5FFFF      <1>     lea rdx, betweenMsg
+   160 00004B19 E810F7FFFF          <1>     call printString
+   161 00004B1E 488D156DC5FFFF      <1>     lea rdx, ignoreMsg
+   162 00004B25 E804F7FFFF          <1>     call printString
+   163                              <1> .userFail:
+   164 00004B2A F6C708              <1>     test bh, 08h    ;Bit 3 is Fail bit
+   165 00004B2D 7418                <1>     jz .userMsgEnd
+   166 00004B2F 488D156EC5FFFF      <1>     lea rdx, betweenMsg
+   167 00004B36 E8F3F6FFFF          <1>     call printString
+   168 00004B3B 488D155DC5FFFF      <1>     lea rdx, failMsg
+   169 00004B42 E8E7F6FFFF          <1>     call printString
+   170                              <1> .userMsgEnd:
+   171 00004B47 488D1559C5FFFF      <1>     lea rdx, endMsg
+   172 00004B4E E8DBF6FFFF          <1>     call printString
+   173                              <1> ;Get user input now 
+   174 00004B53 31C9                <1>     xor ecx, ecx  ;4 Possible Responses
+   175 00004B55 488D3D4EC5FFFF      <1>     lea rdi, i24Resp ;Go to start of string
+   176 00004B5C B8010C0000          <1>     mov eax, 0C01h ;Flush and get STDIN without Console Echo
+   177 00004B61 CD21                <1>     int 21h ;Get char in al
+   178 00004B63 3C61                <1>     cmp al, "a" ;Chack if lowercase, consider using UC char DOS multiplex
+   179 00004B65 7202                <1>     jb .uip1    ;If the value is below, ignore subtraction
+   180 00004B67 2C20                <1>     sub al, "a"-"A"  ;Turn the char into uppercase
+   181                              <1> .uip1:
+   182 00004B69 AE                  <1>     scasb   ;Compare char to list, offset gives return code
+   183 00004B6A 740F                <1>     je .validInput  ;If they are equal, ecx has return code
+   184 00004B6C FFC1                <1>     inc ecx
+   185 00004B6E 81F904000000        <1>     cmp ecx, 4
+   186 00004B74 75F3                <1>     jne .uip1
+   187 00004B76 E964FFFFFF          <1>     jmp .userInput ;If valid char not found, keep waiting 
+   188                              <1> .validInput:
+   189 00004B7B E8A7F6FFFF          <1>     call printCRLF   ;Note the input was accepted
+   190 00004B80 88C8                <1>     mov al, cl  ;Move the offset into .responses into al
+   191                              <1> ;Now check if the input is permitted
+   192 00004B82 3C02                <1>     cmp al, 2   ;Check if abort, abort always permitted
+   193 00004B84 7427                <1>     je .cehExit
+   194 00004B86 84C0                <1>     test al, al ;Check if 0 => Ignore
+   195 00004B88 740F                <1>     je .viIgnore
+   196 00004B8A 3C01                <1>     cmp al, 1   ;Check if 1 => Retry
+   197 00004B8C 7416                <1>     je .viRetry
+   198                              <1> .viFail:    ;Fallthrough for fail (al = 3)
+   199 00004B8E F6C708              <1>     test bh, 8  ;Bit 3 is Fail bit
+   200 00004B91 0F8448FFFFFF        <1>     jz .userInput  ;If bit 3 is zero, prompt and get input again
+   201 00004B97 EB14                <1>     jmp short .cehExit
+   202                              <1> .viIgnore:
+   203 00004B99 F6C720              <1>     test bh, 20h    ;Bit 5 is Ignore bit
+   204 00004B9C 0F843DFFFFFF        <1>     jz .userInput
+   205 00004BA2 EB09                <1>     jmp short .cehExit
+   206                              <1> .viRetry:
+   207 00004BA4 F6C710              <1>     test bh, 10h    ;Bit 4 is Retry bit
+   208 00004BA7 0F8432FFFFFF        <1>     jz .userInput
+   209                              <1> .cehExit:
+   210 00004BAD E83E000000          <1>     call errRetHdls
+   211 00004BB2 5E                  <1>     pop rsi
+   212 00004BB3 5F                  <1>     pop rdi
+   213 00004BB4 5A                  <1>     pop rdx
+   214 00004BB5 59                  <1>     pop rcx
+   215 00004BB6 5B                  <1>     pop rbx
+   216 00004BB7 48CF                <1>     iretq
+   217                              <1> .charError:
+   218 00004BB9 B908000000          <1>     mov ecx, 8  ;8 chars in device name
+   219 00004BBE 4881C61A000000      <1>     add rsi, drvHdr.drvNam  ;Get the address of the Drive name
+   220                              <1> .ce1:
+   221 00004BC5 AC                  <1>     lodsb   ;Get a string char into al and inc rsi
+   222 00004BC6 88C2                <1>     mov dl, al  ;Move char into dl
+   223 00004BC8 B402                <1>     mov ah, 02h
+   224 00004BCA CD21                <1>     int 21h ;Print char
+   225 00004BCC E2F7                <1>     loop .ce1   ;Keep looping until all 8 char device chars have been printed
+   226 00004BCE E90CFFFFFF          <1>     jmp .userInput
+   227                              <1> 
+   228                              <1> 
+   229                              <1> errSwapHdls:
+   230                              <1> ;Swaps STDIO to STDERR
+   231                              <1> ;Start by tmporarily moving the stderr handler into stdio
+   232                              <1> ;In principle dangerous, but since we cannot exit our routine, its oki.
+   233 00004BD3 50                  <1>     push rax
+   234 00004BD4 53                  <1>     push rbx
+   235 00004BD5 E833000000          <1>     call getJftPtr  ;Get the jft pointer into rbx. Saves rax
+   236 00004BDA 0FB703              <1>     movzx eax, word [rbx]       ;Get STDIO into ax
+   237 00004BDD 668905BBB4FFFF      <1>     mov word [errHdls], ax      ;Save em
+   238 00004BE4 0FB64302            <1>     movzx eax, byte [rbx + 2]   ;Now get the STDERR SFTndx in al
+   239 00004BE8 88C4                <1>     mov ah, al                  ;Move STDERR hdl into ah too 
+   240 00004BEA 668903              <1>     mov word [rbx], ax          ;And set STDIO to STDERR
+   241 00004BED 5B                  <1>     pop rbx
+   242 00004BEE 58                  <1>     pop rax
+   243                              <1>     return
     13                              <2> %%_ret:
-    14 00004BD7 C3                  <2>  ret
+    14 00004BEF C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-   236                              <1> 
-   237                              <1> errRetHdls:
-   238                              <1> ;Returns STDIO from STDERR.
-   239 00004BD8 50                  <1>     push rax
-   240 00004BD9 53                  <1>     push rbx
-   241 00004BDA E816000000          <1>     call getJftPtr  ;Get ptr in rbx. Preserves rax.
-   242 00004BDF 0FB705B9B4FFFF      <1>     movzx eax, word [errHdls]
-   243 00004BE6 66C705B0B4FFFFFFFF  <1>     mov word [errHdls], -1  ;Reset values
-   244 00004BEF 668903              <1>     mov word [rbx], ax      ;Store the handle word back
-   245 00004BF2 5B                  <1>     pop rbx
-   246 00004BF3 58                  <1>     pop rax
-   247                              <1>     return
+   244                              <1> 
+   245                              <1> errRetHdls:
+   246                              <1> ;Returns STDIO from STDERR.
+   247 00004BF0 50                  <1>     push rax
+   248 00004BF1 53                  <1>     push rbx
+   249 00004BF2 E816000000          <1>     call getJftPtr  ;Get ptr in rbx. Preserves rax.
+   250 00004BF7 0FB705A1B4FFFF      <1>     movzx eax, word [errHdls]
+   251 00004BFE 66C70598B4FFFFFFFF  <1>     mov word [errHdls], -1  ;Reset values
+   252 00004C07 668903              <1>     mov word [rbx], ax      ;Store the handle word back
+   253 00004C0A 5B                  <1>     pop rbx
+   254 00004C0B 58                  <1>     pop rax
+   255                              <1>     return
     13                              <2> %%_ret:
-    14 00004BF4 C3                  <2>  ret
+    14 00004C0C C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-   248                              <1> 
-   249                              <1> getJftPtr:
-   250                              <1> ;Preserves all registers except rbx.
-   251                              <1> ;Output: rbx -> JFT of current task
-   252 00004BF5 50                  <1>     push rax        ;Save rax
-   253 00004BF6 B800510000          <1>     mov eax, 5100h  ;Get current PSP in rbx
-   254 00004BFB CD21                <1>     int 21h
-   255 00004BFD 58                  <1>     pop rax
-   256 00004BFE 66817B4E1400        <1>     cmp word [rbx + psp.jftSize], 20    ;If >20, pspjft is ptr to real jft
-   257 00004C04 7605                <1>     jbe .pspJftExit
-   258 00004C06 488B5B2A            <1>     mov rbx, qword [rbx + psp.externalJFTPtr]   ;Get ptr to jft from the psp
-   259                              <1>     return
+   256                              <1> 
+   257                              <1> getJftPtr:
+   258                              <1> ;Preserves all registers except rbx.
+   259                              <1> ;Output: rbx -> JFT of current task
+   260 00004C0D 50                  <1>     push rax        ;Save rax
+   261 00004C0E B800510000          <1>     mov eax, 5100h  ;Get current PSP in rbx
+   262 00004C13 CD21                <1>     int 21h
+   263 00004C15 58                  <1>     pop rax
+   264 00004C16 66817B4E1400        <1>     cmp word [rbx + psp.jftSize], 20    ;If >20, pspjft is ptr to real jft
+   265 00004C1C 7605                <1>     jbe .pspJftExit
+   266 00004C1E 488B5B2A            <1>     mov rbx, qword [rbx + psp.externalJFTPtr]   ;Get ptr to jft from the psp
+   267                              <1>     return
     13                              <2> %%_ret:
-    14 00004C0A C3                  <2>  ret
+    14 00004C22 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-   260                              <1> .pspJftExit:
-   261 00004C0B 488D5B2A            <1>     lea rbx, qword [rbx + psp.jobFileTbl]       ;Make into a ptr to jft in psp
-   262                              <1>     return
+   268                              <1> .pspJftExit:
+   269 00004C23 488D5B2A            <1>     lea rbx, qword [rbx + psp.jobFileTbl]       ;Make into a ptr to jft in psp
+   270                              <1>     return
     13                              <2> %%_ret:
-    14 00004C0F C3                  <2>  ret
+    14 00004C27 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
     22                                  endOfAlloc: ;End of alloc
     23                                  ;The stack is always setup one stackSize away from the endOfAlloc, aligned to
@@ -8858,7 +8867,7 @@
    140                              <1> 
    141                              <1> computeStackPtr:
    142                              <1>     ;Now we add the stack to the alloc and paragraph align
-   143 00000236 488D1D(104C0000)    <1>     lea rbx, endOfAlloc
+   143 00000236 488D1D(284C0000)    <1>     lea rbx, endOfAlloc
    144 0000023D 4881C340060000      <1>     add rbx, stackSize
    145 00000244 4881C311000000      <1>     add rbx, 11h    ;Go one para up
    146 0000024B 48C1EB04            <1>     shr rbx, 4      ;Round to this new para boundary
