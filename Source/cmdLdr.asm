@@ -33,8 +33,26 @@ cmdLdr:
     mov eax, 3800h  ;Get current country data
     lea rdx, ctryData
     int 21h ;Write the data to the internal country table
-;Now determine if this is the master copy of COMMAND.COM
-;Check if Int 2Eh has the same address as Int 2Dh. If so, we are master.
+
+;Now parse the command tail. 
+;COMMAND [drive:][path][device][/E:n][/P][/C string]
+;[drive:] gives the default drive for COMSPEC. Default is default drive.
+;[path] gives the search path to search for when searching for COMSPEC.
+;   Default is root directory. Hence default COMSPEC is _:\COMMAND.COM
+;[device] gives the default device to set STDIO to and reset to if we error
+;           MAX 8 chars long name ([device] can be colon terminated).
+;           Default is CON
+;[/C string] means execute the string as a command and terminate immediately
+;   This is single command mode, sets inSingle bit. Similar to int 2Eh.
+;[/P] means make the instance of COMMAND.COM permanent.
+;[/E:n] where n is a base 10 value between 160-32768, 
+; giving the size of the environment to allocate in bytes. Only works if
+; COMMAND.COM is to be permanent. Needs a colon after E. First digit 
+; immediately after the colon, no space.
+
+;If permanent not set, determine if this is the initial/master copy of 
+; COMMAND.COM by check if Int 2Eh has the same address as Int 2Dh. 
+;If so, we are master.
     mov eax, 352Eh  ;Get int 2Eh address
     int 21h
     mov rdx, rbx    ;Save the pointer in rdx

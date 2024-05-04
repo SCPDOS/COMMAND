@@ -1737,6 +1737,21 @@ rename:
     pop rdi
     cmp byte [rdi + 1], ":"  ;Is this a drive sep?
     je badArgError  ;Cannot pass a path as the second argument
+;Check if a drive specifier has been given
+    movzx eax, byte [arg1Off]
+    lea rsi, qword [r8 + cmdLine]
+    add rsi, rax    ;Point to the path componant
+    lodsw   ;Get the first two chars
+    cmp ah, ":" ;If not, current drive
+    jne .curDrvSrc
+;Else, copy over the drive letter from the source path, if one exists!
+    mov rsi, qword [srcPtr]
+    mov word [rsi], ax
+    add qword [srcPtr], 2   
+    mov rsi, qword [destPtr]
+    mov word [rsi], ax
+    add qword [destPtr], 2  ;Advance the pointer, to copy to after this ptr
+.curDrvSrc:
     mov rsi, rdi
 .destScan:
     lodsb   ;Get the char
@@ -1767,13 +1782,15 @@ rename:
     mov ah, cl
     test ax, ax ;If neither path has wildcards, go straight to renaming
     jz .noWC
+    cmp al, -1  ;Is the source drive bad?
+    je badArgError
     lea rsi, searchSpec ;Are we are the head of the buffer?
     ;Now we check if we have a path to actually handle
     cmp rbx, rsi
     je .noPath
     mov byte [rbx - 1], 0   ;The previous char is a pathsep, overwrite it!
     lea rsi, searchSpec
-    lea rdi, srcSpec
+    mov rdi, qword [srcSpec]
     push rsi
     call strcpy ;Copy the string, leave the ptrs past the null
     pop rsi
@@ -1781,7 +1798,7 @@ rename:
     mov al, byte [pathSep]
     stosb       ;Store the pathsep and advance the pointer
     mov qword [srcPtr], rdi ;Store this ptr here
-    lea rdi, destSpec
+    mov rdi, qword [destPtr]    ;Get the ptr (if it was advanced)
     call strcpy ;Copy the string, leave the ptrs past the null
     dec rdi     ;Point rdi to the null
     stosb       ;Store the pathsep and adv the ptr
@@ -1829,9 +1846,7 @@ rename:
     mov rdi, qword [destPtr]
     call FCBToAsciiz
     lea rdx, srcSpec
-    lea rdi, destSpec
-    mov eax, 5600h
-    int 21h     ;Fail silently on wildcard rename
+    call .ren   ;Fail silently on wildcard rename
     mov eax, 4F00h  ;Find next
     int 21h
     jnc .wcLoop     ;And process it too!
@@ -1841,16 +1856,17 @@ rename:
     movzx eax, byte [arg2Off]
     lea rsi, qword [r8 + cmdLine]
     add rsi, rax    ;Go to the start of the command to source chars
-    lea rdi, destSpec
-    push rdi
+    mov rdi, qword [destPtr]    
     call cpDelimPathToBufz
-    pop rdi
     lea rdx, searchSpec
-    mov eax, 5600h
-    int 21h
+    call .ren
     retnc   ;Return if all oki!
     jmp badDupFnf   ;Always just return this
-
+.ren:
+    lea rdi, destSpec
+    mov eax, 5600h
+    int 21h
+    return
 
 touch:
 ;Temporarily used to create files
@@ -2534,6 +2550,10 @@ launchChild:
     lea rdi, cmdPathSpec 
     mov rdx, rdi    ;Save the path ptr in rdx
     call findLastPathComponant  ;Point rdi to the final path componant 
+    cmp byte [rdi + 1], ":"
+    jne .notdriveRel
+    add rdi, 2  ;Go past the drive specifier, but keep it!
+.notdriveRel:
     lea rsi, qword [cmdFcb + fcb.filename]
     call FCBToAsciiz    ;Get an asciiz suffix
     mov eax, 4E00h  ;Find first
