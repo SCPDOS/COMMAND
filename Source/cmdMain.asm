@@ -9,10 +9,13 @@ commandStart:
     mov ah, 4Ah ;Realloc
     neg r8  ;Convert -r8 to r8
     int 21h
-    test edx, edx   ;If zero, no autoexec
+    test edx, edx   ;If zero, no autoexec or single command
     jz commandMain
+    call getSetMainState    ;Ensure the buffers are ready to be used 
+;If inSingle is set, cmd already in buffer and ready for processing  
+    test byte [statFlg1], inSingle
+    jnz commandMain.goSingle 
     ;Only enter here if we are autoexec :)
-    call getSetMainState          
     mov byte [inBuffer + 1], autoSpecL - 1  ;Drop one from the count for CR
     lea rsi, autoSpec
     lea rdi, inBuffer + 2
@@ -23,6 +26,8 @@ commandMain:
     mov rsp, qword [stackTop]    ;Reset internal stack pointer pos
     call getSetMainState
 .inputMain:         ;Only reset once per line!
+    test byte [statFlg1], inSingle   ;If we here in single mode, time to exit
+    jnz exit
     call printCRLF  ;Command complete, indicate with new line!
     mov eax, 5D09h  ;Flush network printers
     int 21h
@@ -44,6 +49,7 @@ commandMain:
     cmp byte [inBuffer + 1], 0  ;Check input length valid
     je .inputGetCmdlineAgain  ;If not, keep looping input
     ;Copy over the input text
+.goSingle:
     lea rsi, inBuffer   ;This buffer is used for all input so copy command line
     lea rdi, cpyBuffer
     mov ecx, cmdBufferL     ;Copy the buffer over to manipulate
@@ -511,10 +517,10 @@ cleanupRedirs:
     int 21h
     pop rbx
     retnc   ;If this succeeds, return
-    ;Else we now try to force con to open!
+    ;Else we now try to force default device to open!
     call .closeHandle   ;Try close bx again!
     mov eax, 3D02h  ;Open read/write
-    lea rdx, conName
+    lea rdx, devName
     int 21h
     return
 

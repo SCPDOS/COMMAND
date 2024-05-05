@@ -901,8 +901,12 @@ getNum:
 ;Input: rsi -> String to get number from
 ;Output: rsi -> Char which terminated the accumulation
 ;        eax = Value of the string. May overflow if we read more than 9 chars...
+;If an overflow, CF=CY. eax=Undefined. rsi-> Char 9
     push rcx
+    push rbx
+    xor ebx, ebx
     xor ecx, ecx    ;Start with a value of zero
+    xor eax, eax    
 .lp:
     lodsb
     cmp al, "0"
@@ -913,11 +917,18 @@ getNum:
     lea ecx, qword [4*ecx + ecx]    ;5*rcx
     shl ecx, 1                      ;2*(5*rcx)
     add ecx, eax
-    jmp short .lp   ;Get next digit
+    inc ebx
+    cmp ebx, 9
+    jne short .lp   ;Get next digit
+    stc             ;Yikesaroony
+    jmp short .exitBad
 .exit:
+    clc             ;Clear CF
+.exitBad:
     mov eax, ecx
+    pop rbx
     pop rcx
-    dec rsi
+    dec rsi         ;dec doesnt affect CF 
     return
 
 
@@ -949,17 +960,14 @@ getDTA:
     return
 
 resetIDTentries:
-;Resets the IDT entries
+;Resets the IDT entries if they were changed by dead child process
     lea rdx, critErrorHandler
-    mov qword [r8 + psp.oldInt24h], rdx
     mov eax, 2524h
     int 21h
-    lea rdx, int23h
-    mov qword [r8 + psp.oldInt23h], rdx
+    lea rdx, ctrlCHandler
     mov eax, 2523h
     int 21h
     lea rdx, appRet
-    mov qword [r8 + psp.oldInt22h], rdx
     mov eax, 2522h
     int 21h
     return

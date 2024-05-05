@@ -1,4 +1,4 @@
-int23h:
+ctrlCHandler:
     test byte [statFlg1], inLdr     ;Are we loading?
     jz .notLoading
     test byte [statFlg1], inLdrDT   ;Are we in date/time?
@@ -80,25 +80,6 @@ int23h:
     and byte [statFlg1], ~inCtrlC   
     jmp .retFromDosCall ;Nested kill needs to be handled like other nestings
 .notBat:
-    push rax        ;Save rax, ah contains call we are in that ^C'ed
-    push rbx
-    mov eax, 5100h  ;Get current PSP in rbx
-    int 21h
-    pop rax
-    cmp rbx, qword [pspPtr] ;Was the task us?
-    pop rbx
-    jne .exit       ;If not, then immediately abort it!
-    test byte [permaSwitch], -1 ;If not permanent, skip parent PSP swap
-    jnz .noJuggle   ;Avoid setting "real parent"
-    ;Else, we juggle parent PSP's. This is done when /P is not specified
-    push rax
-    push rbx
-    mov rax, qword [realParent]
-    mov rbx, qword [pspPtr]
-    mov qword [rbx + psp.parentPtr], rax    ;Store the parent there
-    pop rbx
-    pop rax
-.noJuggle:
     cmp word [errHdls], -1  ;If these are not -1, return to normal!
     je .exit
 .exitBat:

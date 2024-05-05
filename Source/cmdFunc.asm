@@ -615,7 +615,7 @@ copy:
     xor edx, edx    ;Use edx as a counter for number of destination switches
     std ;Go in reverse
 .sd:    ;At this point, any switch chars affect destination!
-    call skipDelimiters ;SkipDelimiters in reverse!
+    call skipDelimiters ;skipDelimiters in reverse!
     mov al, byte [switchChar]
     cmp byte [rsi + 1], al  ;Did we hit a switch?
     jne .noSwitch
@@ -1531,6 +1531,7 @@ ctty:
     ;Now we open the provided file
     call copyArgumentToSearchSpec
     lea rdx, searchSpec
+.loadSwap:
     mov eax, 3D02h  ;Open in read/write mode
     int 21h
     jc badFileError
@@ -1546,15 +1547,15 @@ ctty:
     int 21h
     ;Now we DUP2 for STDIN/OUT/ERR
     xor ecx, ecx    ;STDIN
-    mov ah, 46h
+    mov eax, 4600h
     int 21h
     inc ecx         ;STDOUT
-    mov ah, 46h
+    mov eax, 4600h
     int 21h
     inc ecx         ;STDERR
-    mov ah, 46h
+    mov eax, 4600h
     int 21h
-    mov ah, 3Eh ;Now we close the original handle
+    mov eax, 3E00h ;Now we close the original handle
     int 21h
     return
 .badCharDev:
@@ -2359,18 +2360,9 @@ type:
     jmp badDiskFull
 
 exit:
-    test byte [permaSwitch], -1
+    test byte [statFlg1], permaShell
     retnz   ;Return if the flag is set
-    mov rax, qword [realParent] ;Get actual parent...
-    cmp rax, -1
-    rete    ;If the real parent is -1 => Original Command Interpreter.
-    mov qword [r8 + psp.parentPtr], rax ;and restore parent pointer
-
-    mov rdx, qword [parentInt22]
-    mov qword [r8 + psp.oldInt22h], rdx
-    mov eax, 2522h
-    int 21h
-
+.ouch:
     mov eax, 4C00h  ;Exit now okay
     int 21h
     return  ;If the exit wasn't successful for some reason, return as normal

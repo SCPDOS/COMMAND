@@ -4,21 +4,19 @@ startLbl:   ;Start symbol, this is the entry point
 stackTop    dq 0    ;Pointer to the top of the stack as allocated by DOS
 returnCode  dw 0    ;Return Code from a child process
 pspPtr      dq 0    ;Internal pointer to the task PSP
-realParent  dq -1   ;Only the first Copy of COMMAND.COM sets itself here
 numHdls     dw 20   ;Get number of handles permitted
 pathSep     db "\"  ;Default path sep
 switchChar  db "/"  ;Default switch char
-permaSwitch db 0    ;If -1, EXIT should just return. If 0, EXIT kills
-parentInt22 dq 0    ;Stores the parent values to restore upon exiting if it can
 ;Static strings, not used in command line parsing
 ctryData    db countryStruc_size dup (0)  ;Length of the country table
 currDirStr  db fullDirPathZL dup (0) ;Current Directory String
 statFlg1    db 0    ;Flags 1 for the command interpreter
-inCritical  equ 1   ;Up if processing a command
+permaShell  equ 1   ;Up if we are a permanent command interpreter
 inCtrlC     equ 2   ;Up if we are processing int 23h
 inSingle    equ 4   ;Up if processing a single command (\C mode)
 inBatch     equ 8   ;Up if processing a batch file
 batchEOF    equ 10h ;Set to indicate we have reached the end of the batch file
+inCritical  equ 20h   ;Up if processing a command
 inLdrDT     equ 40h ;Up if in the Date / Time part of Loader
 inLdr       equ 80h ;Up if in loader
 echoFlg     db 1    ;Global Echo flag, starts up! 1 means on
@@ -121,6 +119,7 @@ td4 db 0    ;Seconds/Month
 
 ;Rename/Copy/Delete Buffers
 delPath:
+comspecDir:    ;Used to store the directory passed during startup
 srcSpec     db cmdBufferL dup (0)
 destSpec    db cmdBufferL dup (0)
 srcPtr      dq 0    ;Where to copy pattern to in src path

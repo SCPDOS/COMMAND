@@ -98,10 +98,14 @@ badOnOff db "Must specify ON or OFF",CR,LF,"$"
 promptEVar  db "PROMPT=",CR     ;Must be CR terminated!
 extStr  db "COMEXEBAT"  ;Used for extension searches
 ;If anything goes wrong with piping or redirecting just close first two 
-; handles and reopen CON
-conName db "CON",0    
+; handles and reopen this device. Defaults to CON
+devName db "CON", 6 dup (0) ;8 chars + space for null terminator
 autoSpec    db "_:\AUTOEXEC.BAT",0
 autoSpecL equ $ - autoSpec
+pathEVar    db "PATH=",0
+comspecEVar db "COMSPEC=",0
+cspec   db "COMMAND.COM", 0
+
 ;Int 24h strings
 errMsgPtrTbl:
     dw errorMsgTbl.0 - errMsgPtrTbl
