@@ -839,15 +839,6 @@ getSetMainState:
     return
 
 
-int2ERet:
-    mov rsp, qword [int2Ersp]
-    mov rbx, qword [int2Epsp] ;Get Old current PSP in rbx
-    mov eax, 5000h ;Set Current PSP
-    int 21h
-    movzx eax, word [returnCode]    ;Get the return code in eax
-    and byte [statFlg1], ~inSingle  ;Clear that we are in single mode
-    iretq
-
 int2Eh: 
 ;Very sucky interface for passing command lines to be processed by the 
 ; current top level command interpreter. Will slowly try to patch to make it
@@ -864,7 +855,7 @@ int2Eh:
 ;       CF=CY: Command was not processed.
     and byte [rsp + 2*8], ~1    ;Clear CF on entry
     test byte [statFlg1], inSingle
-    jnz .checkReentry 
+    jnz int2EcheckReentry 
 .multiJoin:
     or byte [statFlg1], inSingle ;Set the bits! Gets the lock!
     mov qword [int2Ersp], rsp   ;Save the far stack pointer 
@@ -883,9 +874,18 @@ int2Eh:
     cld
     rep movsq   ;Zoom zoom copy command line over
     call getSetMainState    ;Ensure the buffers have their lengths set
-    jmp commandMain.goSingle 
+    cmp byte [inBuffer + 1], 0
+    jne commandMain.goSingle    ;Proceed if we have anything to execute
+int2ERet:
+    mov rsp, qword [int2Ersp]
+    mov rbx, qword [int2Epsp] ;Get Old current PSP in rbx
+    mov eax, 5000h ;Set Current PSP
+    int 21h
+    movzx eax, word [returnCode]    ;Get the return code in eax
+    and byte [statFlg1], ~inSingle  ;Clear that we are in single mode
+    iretq
 
-.checkReentry:
+int2EcheckReentry:
 ;Now we check if we DOSMGR is installed. If so, put task on ice
 ; else, return with CF=CY.
     mov eax, 5200h  ;Get sysvars
@@ -898,10 +898,9 @@ int2Eh:
     jnz .multifnd
     or byte [rsp + 2*8], 1  ;Else return with CF=CY, already processing
     iretq   
-
 .multifnd:
 ;Recognised multitasker present, we now spinlock until flag is clear!
     pause
     test byte [statFlg1], inSingle   ;Is this bit set?
     jnz .multifnd
-    jmp short .multiJoin            ;Rejoin the norm now
+    jmp int2Eh.multiJoin            ;Rejoin the norm now
