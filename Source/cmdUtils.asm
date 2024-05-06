@@ -337,6 +337,9 @@ outChar:
     return
 putCWDInPrompt:
     call getCurrentDrive
+    cmp byte [failDrv], al  ;If these are equal, badDrive
+    mov byte [failDrv], -1  ;Reset on read
+    je .badDrive 
     mov dl, al  ;Get drive letter in dl for path
     inc dl
     add al, "A" ;Convert to letter
@@ -345,7 +348,7 @@ putCWDInPrompt:
     stosw   ;Store X:, rdi+=2
     mov al, byte [pathSep]
     stosb   ;Store pathSep, inc rdi
-    mov ah, 47h ;Get Current Working Directory
+    mov eax, 4700h  ;Get Current Working Directory
     mov rsi, rdi    ;rsi points to buffer to write to
     int 21h
     jc .badDrive

@@ -2854,12 +2854,18 @@ echo:
     mov byte [echoFlg], 0
     return
 .directEcho: 
-    lodsb
-    cmp al, CR
-    je printCRLF    ;Prints a crlf and returns
-    mov dl, al
-    call outChar
-    jmp short .directEcho
+    lea rdx, qword [r8 + cmdLine]
+    mov rbx, rsi    
+    sub rbx, rdx
+    movzx ecx, byte [r8 + cmdLineCnt]   ;Get original char count
+    sub ecx, ebx    ;Get the remaining chars
+    jc printCRLF    ;If something weird, echo nothing
+    mov rdx, rsi
+    mov ebx, 1
+    mov eax, 4000h
+    int 21h
+    jmp printCRLF
+
 
 pauza:  ;Well... pause is an instruction in english 0:)
 ;Thank you authors of MSDOS Encyclopedia for confusing an argument to this command

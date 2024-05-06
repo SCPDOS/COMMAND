@@ -164,10 +164,10 @@ batNextLine:
 .readlp:
     call .readChar          ;Read the char
     test eax, eax
-    jz .endOfBat
+    jz .endOfBatAddCr
     inc edi                 ;We read a char, woohoo!
     cmp byte [rdx], EOF     ;Did we read a ^Z char?
-    je .endOfBat
+    je .endOfBatAddCr
     cmp byte [rdx], CR      ;End of line?
     je .endOfLineCr
     cmp byte [rdx], LF      ;End of line UNIX?
@@ -177,6 +177,8 @@ batNextLine:
     cmp byte [inBuffer + 1], 128    ;Are we 128 chars w/o CR?
     jne .readlp             ;Get next char if not
     jmp short .endOfLine    ;The user typed too many chars on a line, EOL
+.endOfBatAddCr:
+    mov byte [rdx], CR  ;Store a terminating CR on the line!
 .endOfBat:
     or byte [statFlg1], batchEOF    ;Set if we encounter a ^Z terminator
     cmp byte [inBuffer + 1], 0      ;If we formally read 0 chars, exit!

@@ -127,17 +127,18 @@ critErrorHandler:   ;Int 24h
     lea rdx, drvMsg ;Drive message
     call printString
     mov dl, bl  ;Get zero based drive number into dl
+    mov byte [failDrv], dl  ;Setup the failing drive
     add dl, "A" ;Add ASCII code
     mov ah, 02h ;Print char in dl
     int 21h
     
-    ;mov eax, ebx    ;Get bh into ah
-    ;and eax, 600h   ;Mask off bits 1 and 2 of bh
-    ;cmp eax, 200h   ;Was this a FAT buffer?
-    ;jne .userInput  ;If not proceed as normal.
-    ;;Else, abort! Application cannot proceed if FAT is breaking apart...
-    ;mov al, 2   ;Abort! Lose that FAT buffer
-    ;jmp .cehExit
+    mov eax, ebx    ;Get bh into ah
+    and eax, 600h   ;Mask off bits 1 and 2 of bh
+    cmp eax, 200h   ;Was this a FAT buffer?
+    jne .userInput  ;If not proceed as normal.
+    ;Else, abort! Application cannot proceed if FAT is breaking apart...
+    mov al, 2   ;Abort! Lose that FAT buffer
+    jmp .cehExit
 .userInput:
     call printCRLF  ;Print new line
 ;Abort, Retry, Ignore, Fail is word order
