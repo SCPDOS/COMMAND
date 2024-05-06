@@ -862,7 +862,7 @@ int2Eh:
     mov rsp, qword [stackTop]    ;Set to use the internal stack
     mov eax, 5100h ;Get Current PSP in rdx
     int 21h
-    mov qword [int2Epsp], rdx
+    mov qword [int2Epsp], rbx
     push rdx    ;Save on the stack
     mov rbx, qword [pspPtr] ;Get the psp for this COMMAND.COM
     mov eax, 5000h ;Set this version of COMMAND.COM as the current PSP
@@ -877,6 +877,7 @@ int2Eh:
     cmp byte [inBuffer + 1], 0
     jne commandMain.goSingle    ;Proceed if we have anything to execute
 int2ERet:
+    call clearCommandLineState  ;Be a good citizen, leave it as we found it!
     mov rsp, qword [int2Ersp]
     mov rbx, qword [int2Epsp] ;Get Old current PSP in rbx
     mov eax, 5000h ;Set Current PSP
