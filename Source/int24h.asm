@@ -29,6 +29,7 @@ critErrorHandler:   ;Int 24h
     call errSwapHdls
     cld         ;Make String ops go forward
     mov bx, ax  ;Save ah in bh and al in bl (if needed)
+    mov byte [failDrv], al  ;Setup the failing drive (even on char as we reset)
     lea rdx, crlf
     call printString    ;Trashes ax
     movzx edi, di                   ;Clear the upper word.
@@ -127,7 +128,6 @@ critErrorHandler:   ;Int 24h
     lea rdx, drvMsg ;Drive message
     call printString
     mov dl, bl  ;Get zero based drive number into dl
-    mov byte [failDrv], dl  ;Setup the failing drive
     add dl, "A" ;Add ASCII code
     mov ah, 02h ;Print char in dl
     int 21h
@@ -216,6 +216,7 @@ critErrorHandler:   ;Int 24h
     pop rbx
     iretq
 .charError:
+    mov byte [failDrv], -1  ;Clear the failing drive 
     mov ecx, 8  ;8 chars in device name
     add rsi, drvHdr.drvNam  ;Get the address of the Drive name
 .ce1:
