@@ -174,8 +174,12 @@ batNextLine:
     je .endOfLineLf
     inc byte [inBuffer + 1] ;Inc our char count
     inc rdx                 ;Store the next char in the next position
-    cmp byte [inBuffer + 1], 128    ;Are we 128 chars w/o CR?
+    cmp byte [inBuffer + 1], inLen    ;Are we 128 chars w/o CR?
     jne .readlp             ;Get next char if not
+    dec rdx                 ;Go back to the char we just read
+    mov byte [rdx], CR      ;Overwrite with a terminating CR instead!!
+    dec byte [inBuffer + 1] ;Reduce the valid char count by one
+    dec edi                 ;Ignore the 128th char that we read!
     jmp short .endOfLine    ;The user typed too many chars on a line, EOL
 .endOfBatAddCr:
     mov byte [rdx], CR  ;Store a terminating CR on the line!

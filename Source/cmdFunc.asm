@@ -1318,7 +1318,7 @@ date:
     int 21h
 
     lea rdx, cpyBuffer
-    mov byte [rdx], inBufferL ;Enter a string of up to 126 chars in length
+    mov byte [rdx], inLen ;Enter a string of up to 128 chars in length
     mov ah, 0Ah
     int 21h
     push rdx
@@ -1433,7 +1433,7 @@ time:
     int 21h
 
     lea rdx, inBuffer
-    mov byte [rdx], inBufferL ;Enter a string of up to 126 chars in length
+    mov byte [rdx], inLen ;Enter a string of up to 128 chars in length
     mov ah, 0Ah
     int 21h
     push rdx
@@ -2859,12 +2859,12 @@ echo:
     sub rbx, rdx
     movzx ecx, byte [r8 + cmdLineCnt]   ;Get original char count
     sub ecx, ebx    ;Get the remaining chars
-    jc printCRLF    ;If something weird, echo nothing
+    jc printCRLFecho    ;If something weird, echo nothing
     mov rdx, rsi
     mov ebx, 1
     mov eax, 4000h
     int 21h
-    jmp printCRLF
+    jmp printCRLF   ;Needs to be a proper CRLF to insert a CRLF at the end!
 
 
 pauza:  ;Well... pause is an instruction in english 0:)

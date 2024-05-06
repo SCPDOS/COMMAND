@@ -271,6 +271,9 @@ printPrompt:
     dw putMoneyInPrompt - .pTbl    ;Dollar sign
 pTblL equ $ - .pTbl
 
+printCRLFecho:
+    test byte [echoFlg], -1
+    retz    ;If Echo off, don't do a CRLF!
 printCRLF:
     lea rdx, crlf
 printString:

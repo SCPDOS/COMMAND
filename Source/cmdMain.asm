@@ -44,7 +44,7 @@ commandMain:
     mov eax, 0A00h      ;Do Buffered input
     int 21h
 .batProceed:            ;Jump here to copy the batch input line 
-    call printCRLF  ;Note we have accepted input
+    call printCRLFecho  ;Note we have accepted input
 ;First check we had something typed in of length greater than 0
     cmp byte [inBuffer + 1], 0  ;Check input length valid
     je .inputGetCmdlineAgain  ;If not, keep looping input
@@ -832,9 +832,9 @@ pullCommandline:
 getSetMainState:
 ;Resets the buffers lengths, sets stringops and gets the pspptr in r8
     cld ;Ensure stringops are done the right way
-    mov byte [inBuffer], inBufferL      ;Reset the buffer length
-    mov byte [cpyBuffer], inBufferL     ;Reset the buffer length
-    mov byte [cmdBuffer], inBufferL     ;Reset the buffer length
+    mov byte [inBuffer], inLen      ;Reset the buffer length
+    mov byte [cpyBuffer], inLen     ;Reset the buffer length
+    mov byte [cmdBuffer], inLen     ;Reset the buffer length
     mov r8, qword [pspPtr]              ;Reset the pspPtr
     return
 
