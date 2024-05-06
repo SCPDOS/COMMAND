@@ -12,7 +12,7 @@ Output file:  ./Binaries/COMMAND.COM
 
 Vstart            Start             Stop              Length    Class     Name
                0                 0                 0  00000000  progbits  .text
-               0                 0              5215  00005215  progbits  cmd
+               0                 0              5214  00005214  progbits  cmd
             5220              5220              8420  00003200  nobits    stack1
 
 -- Sections (detailed) --------------------------------------------------------
@@ -31,7 +31,7 @@ vfollows:  not defined
 ---- Section cmd --------------------------------------------------------------
 
 class:     progbits
-length:                5215
+length:                5214
 start:                    0
 align:                    1
 follows:   not defined
@@ -1614,37 +1614,36 @@ Real              Virtual           Name
             4FE7              4FE7  ..@370._ret
             4FE8              4FE8  parseCmdLine.replacestdio
             4FEF              4FEF  ..@372._base
-            4FFD              4FFD  ..@373._ret
-            4FFE              4FFE  doEnv
-            5010              5010  ..@375._base
-            5038              5038  ..@376._ret
-            5039              5039  doEnv.freeCurrentEnv
-            5048              5048  ..@377._ret
-            5049              5049  doEnv.prepNewEnv
-            504E              504E  doEnv.noInitEnv
-            5086              5086  ..@378._ret
-            5087              5087  doEnv.allocEnv
-            509E              509E  doEnv.goAlloc
-            50AE              50AE  ..@380._base
-            50C1              50C1  doEnv.cpEnv
-            50C8              50C8  doEnv.lp
-            50D7              50D7  ..@381._ret
-            50D8              50D8  doEnv.notNul
-            50DC              50DC  doEnv.err
-            50F3              50F3  ..@382._ret
-            50F4              50F4  getMasterEnv
-            50F6              50F6  getMasterEnv.lp
-            5104              5104  getMasterEnv.exit
-            510A              510A  ..@383._ret
-            510B              510B  initString
-            5141              5141  initString2
-            517F              517F  badVerStr
-            5197              5197  badCmdDir
-            51C0              51C0  badCombo
-            51F6              51F6  badEnvSz
-            5211              5211  initNewSpec
-            5212              5212  initNewDev
-            5213              5213  initEnvSz
+            4FFD              4FFD  doEnv
+            500F              500F  ..@374._base
+            5037              5037  ..@375._ret
+            5038              5038  doEnv.freeCurrentEnv
+            5047              5047  ..@376._ret
+            5048              5048  doEnv.prepNewEnv
+            504D              504D  doEnv.noInitEnv
+            5085              5085  ..@377._ret
+            5086              5086  doEnv.allocEnv
+            509D              509D  doEnv.goAlloc
+            50AD              50AD  ..@379._base
+            50C0              50C0  doEnv.cpEnv
+            50C7              50C7  doEnv.lp
+            50D6              50D6  ..@380._ret
+            50D7              50D7  doEnv.notNul
+            50DB              50DB  doEnv.err
+            50F2              50F2  ..@381._ret
+            50F3              50F3  getMasterEnv
+            50F5              50F5  getMasterEnv.lp
+            5103              5103  getMasterEnv.exit
+            5109              5109  ..@382._ret
+            510A              510A  initString
+            5140              5140  initString2
+            517E              517E  badVerStr
+            5196              5196  badCmdDir
+            51BF              51BF  badCombo
+            51F5              51F5  badEnvSz
+            5210              5210  initNewSpec
+            5211              5211  initNewDev
+            5212              5212  initEnvSz
 
 ---- Section stack1 -----------------------------------------------------------
 

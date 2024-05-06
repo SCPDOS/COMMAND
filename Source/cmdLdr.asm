@@ -329,8 +329,7 @@ parseCmdLine:
     test byte [initNewDev], -1
     retz    ;Return if not set
     lea rdx, devName
-    call ctty.loadSwap
-    return
+    jmp ctty.loadSwap  ;Return through the return instruction in ctty
 
 doEnv:
 ;Will do the environment adjustments as needed
