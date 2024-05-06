@@ -2361,7 +2361,10 @@ type:
 
 exit:
     test byte [statFlg1], permaShell
-    retnz   ;Return if the flag is set
+    jz .ouch        ;If not permashell, time to EXIT
+    test byte [statFlg1], inSingle  ;If perma and single command
+    jnz int2ERet    ;We are Int 2Eh, exit through the handler
+    return  ;Else, permashell just returns
 .ouch:
     mov eax, 4C00h  ;Exit now okay
     int 21h

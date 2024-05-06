@@ -4,21 +4,26 @@ startLbl:   ;Start symbol, this is the entry point
 stackTop    dq 0    ;Pointer to the top of the stack as allocated by DOS
 returnCode  dw 0    ;Return Code from a child process
 pspPtr      dq 0    ;Internal pointer to the task PSP
+int2Epsp    dq 0    ;
+int2Ersp    dq 0    ;Save the far Int 2E entry stack pointer!
 numHdls     dw 20   ;Get number of handles permitted
 pathSep     db "\"  ;Default path sep
 switchChar  db "/"  ;Default switch char
 ;Static strings, not used in command line parsing
 ctryData    db countryStruc_size dup (0)  ;Length of the country table
 currDirStr  db fullDirPathZL dup (0) ;Current Directory String
+;=============================================================
 statFlg1    db 0    ;Flags 1 for the command interpreter
+;=============================================================
 permaShell  equ 1   ;Up if we are a permanent command interpreter
 inCtrlC     equ 2   ;Up if we are processing int 23h
-inSingle    equ 4   ;Up if processing a single command (\C mode)
+inSingle    equ 4   ;Up if processing a single command (/C mode)
 inBatch     equ 8   ;Up if processing a batch file
 batchEOF    equ 10h ;Set to indicate we have reached the end of the batch file
-inCritical  equ 20h   ;Up if processing a command
+inCritical  equ 20h ;Up if processing a command.
 inLdrDT     equ 40h ;Up if in the Date / Time part of Loader
 inLdr       equ 80h ;Up if in loader
+
 echoFlg     db 1    ;Global Echo flag, starts up! 1 means on
 errHdls     dw -1   ;Set to the STDIO handles. Non -1 => Handles swapped
 

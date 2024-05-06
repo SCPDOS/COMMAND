@@ -416,13 +416,11 @@ appRet:  ;Return point from a task, jumped to from internal functions
     jz commandMain.okRet
     cmp ah, 3       ;TSR exit
     je commandMain.okRet
-    ;Here we ask if we want to stop any batch processing, ret to 2Eh etc.
-    ;For now, just clean redirs and fully reset!
+    ;Clean redirs and fully reset! This allows for safe returning if an error
+    ; occured when invoked on Int 2Eh! Doesnt matter for normal single command
+    ; as we always close the COMMAND.COM instance at this point.
     call cleanupRedirs
     jmp commandMain
-    ;cmp ah, 1       ;Was this Ctrl^C?
-    ;je commandMain
-    ;jmp commandMain  ;If we aborted, fully reset!
 
 hardSynErr:
 ;Hard syntax error in cmd line. Delete pipe files and reset completely!
@@ -840,25 +838,70 @@ getSetMainState:
     mov r8, qword [pspPtr]              ;Reset the pspPtr
     return
 
-int2Eh:   ;Interrupt interface for parsing and executing command lines
-;Input: rsi points to the count byte of a command line
-    push r8
-    push r9
-    mov ah, 51h ;Get Current PSP in rdx
+
+int2ERet:
+    mov rsp, qword [int2Ersp]
+    mov rbx, qword [int2Epsp] ;Get Old current PSP in rbx
+    mov eax, 5000h ;Set Current PSP
     int 21h
+    movzx eax, word [returnCode]    ;Get the return code in eax
+    and byte [statFlg1], ~inSingle  ;Clear that we are in single mode
+    iretq
+
+int2Eh: 
+;Very sucky interface for passing command lines to be processed by the 
+; current top level command interpreter. Will slowly try to patch to make it
+; more reliable with a critical section flag. Currently, if we are already
+; processing an Int 2Eh request, this will not process the command.
+;
+;Need to add further safeguards for when pipes are also setup and
+; batchmode is on!
+;
+;Input: rsi points to the count byte of a command line.
+;       Max number of chars is 128 (127 + count byte)
+;Output:
+;       CF=NC: Command was processed. ax = Retcode
+;       CF=CY: Command was not processed.
+    and byte [rsp + 2*8], ~1    ;Clear CF on entry
+    test byte [statFlg1], inSingle
+    jnz .checkReentry 
+.multiJoin:
+    or byte [statFlg1], inSingle ;Set the bits! Gets the lock!
+    mov qword [int2Ersp], rsp   ;Save the far stack pointer 
+    mov rsp, qword [stackTop]    ;Set to use the internal stack
+    mov eax, 5100h ;Get Current PSP in rdx
+    int 21h
+    mov qword [int2Epsp], rdx
     push rdx    ;Save on the stack
-    lea rbx, qword [startLbl - psp_size]    ;Get a psp ptr for this COMMAND.COM
-    mov ah, 50h ;Set this version of COMMAND.COM as the current PSP
+    mov rbx, qword [pspPtr] ;Get the psp for this COMMAND.COM
+    mov eax, 5000h ;Set this version of COMMAND.COM as the current PSP
     int 21h
     mov r8, rbx ;Set to point to the command.com psp
     mov r9, rbx
-    lea rdi, qword [r8 + cmdLine]
-    mov ecx, 10h    ;7Fh chars + 1 count byte / 8
-    rep movsq   ;Copy command line over
-    ;call doCommandLine
-    pop rbx ;Get Old current PSP in rbx
-    mov ah, 50h ;Set Current PSP
+    lea rdi, inBuffer + 1
+    mov ecx, 10h    ;80h/8
+    cld
+    rep movsq   ;Zoom zoom copy command line over
+    call getSetMainState    ;Ensure the buffers have their lengths set
+    jmp commandMain.goSingle 
+
+.checkReentry:
+;Now we check if we DOSMGR is installed. If so, put task on ice
+; else, return with CF=CY.
+    mov eax, 5200h  ;Get sysvars
     int 21h
-    pop r9
-    pop r8
-    iretq
+    test byte [rbx + 63h], -1   ;check the sysVars.dosMgrPresent byte
+    jnz short .multifnd
+    mov eax, 0300h   ;Are we here check on Int 2Fh
+    int 2Fh
+    test al, al ;This must still be zero, else something installed
+    jnz .multifnd
+    or byte [rsp + 2*8], 1  ;Else return with CF=CY, already processing
+    iretq   
+
+.multifnd:
+;Recognised multitasker present, we now spinlock until flag is clear!
+    pause
+    test byte [statFlg1], inSingle   ;Is this bit set?
+    jnz .multifnd
+    jmp short .multiJoin            ;Rejoin the norm now
