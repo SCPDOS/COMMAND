@@ -240,6 +240,7 @@ analyseCmdline:
 ; after the command, whether a delimiter or not.
     mov rcx, rsi
     sub rcx, rbx    ;Get the number of chars in the command ONLY
+    jz .exitBad     ;If this is zero, exit fail!
     xchg rbx, rsi   ;Swap the start and end of the commands!!!
     lea rdi, cmdPathSpec
     rep movsb
