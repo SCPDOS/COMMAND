@@ -263,6 +263,8 @@ parseCmdLine:
     dec rsi ;Point back at it
     cmp al, CR
     je .spEmbCr ;Allow CR after the P
+    cmp al, byte [switchChar]
+    je .spEmbCr ;Allow switch char after P
     call isALdelimiter
     jne .badparm
 .spEmbCr:
