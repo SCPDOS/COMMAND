@@ -181,6 +181,11 @@ parseCmdLine:
     mov ecx, dirDirectory   ;Return Normal, RO, Dir or Char
     int 21h
     jnc .charOrDir
+;Just double check if the spec was the root dir. If so, proceed ok.
+    mov eax, dword [rdx]    ;Get the first four chars
+    xor al, al
+    cmp eax, 005C3A00h  ;Was this a <NUL>:\<NUL>?
+    je .dir ;If so, root dir specified, all oki!
 .badSpec:
 ;rsi has been moved past the argument so we can keep proceeding with processing
     lea rdx, badCmdDir
@@ -197,6 +202,7 @@ parseCmdLine:
     test al, dirCharDev
     jnz .charDev
 ;Here if a directory. Save it null terminated in comspecDir.
+.dir:
     push rsi
     lea rsi, searchSpec 
     lea rdi, comspecDir
@@ -297,33 +303,12 @@ parseCmdLine:
 .esSkipPathsep:
     lea rsi, cspec
     call strcpy ;Now copy over the name of our beloved shell
-;Now ensure the user hasnt specified /C on the master shell!
-    call .masterCheck
     call .replacestdio
 ;Ensure that on exit, if both inSingle bit and permaShell are set, inSingle 
 ; wins. Unless this is the first boot, in which case, we ignore it
     test byte [statFlg1], inSingle
     retz    ;Return if not set
     and byte [statFlg1], ~permaShell ;Else, ensure perma is deactivated
-    return
-.masterCheck:
-;Before exiting, determine if this is the initial/master copy of
-; COMMAND.COM by checking if Int 2Eh has the same address as Int 2Dh. 
-;If so, we are master, set the permanent bit.
-    mov eax, 352Eh  ;Get int 2Eh address
-    int 21h
-    mov rdx, rbx    ;Save the pointer in rdx
-    mov eax, 352Dh  ;Get int 2Dh address
-    int 21h
-    cmp rdx, rbx    ;If these are equal then this is first boot!
-    retne   ;Else, we are done. Return
-    or byte [statFlg1], permaShell
-    mov al, byte [statFlg1]
-    and byte [statFlg1], ~inSingle  ;Ensure this bit is off
-    test al, inSingle   ;Was the bit initially set?
-    retz                ;Return if not
-    lea rdx, badCombo   ;Else, sorry buddy, please type in your command manually!
-    call printString
     return
 .replacestdio:
     test byte [initNewDev], -1
@@ -453,7 +438,6 @@ initString2:
     db CR,LF,"$"
 badVerStr:  db "Incorrect DOS version",CR,LF,"$"
 badCmdDir:  db "Specified COMMAND search directory bad",CR,LF,"$"
-badCombo:   db "Cannot specify /C on top level process. Ignoring...",CR,LF,"$"
 badEnvSz:   db "Invalid Environment Size",CR,LF,"$"
 initNewSpec db 0    ;Set if a new comspec found and copied
 initNewDev  db 0    ;Set if a new device found and copied
