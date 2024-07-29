@@ -1299,6 +1299,7 @@ date:
     call skipDelimiters
     cmp byte [rsi], CR  ;If nothing, get input
     jne .goDate  ;Else rsi is pointing to something possibly a date. Try it!
+.init:
     ;Else, we do interactive mode!
     lea rdx, curDate
     mov ah, 09h
@@ -1423,6 +1424,7 @@ time:
     call skipDelimiters
     cmp byte [rsi], CR  ;If nothing, get input
     jne .goTime  ;Else rsi is pointing to something possibly a time. Try it!
+.init:
     lea rdx, curTime
     mov ah, 09h
     int 21h

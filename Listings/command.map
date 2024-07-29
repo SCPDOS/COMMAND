@@ -1119,6 +1119,7 @@ Real              Virtual           Name
             2DD7              2DD7  ..@183._base
             2DE6              2DE6  ..@184._ret
             2DE7              2DE7  date
+            2DF8              2DF8  date.init
             2E08              2E08  date.noCur
             2E54              2E54  ..@186._base
             2E5A              2E5A  date.goDate
@@ -1140,6 +1141,7 @@ Real              Virtual           Name
             2F90              2F90  ..@197._base
             2F94              2F94  ..@198._ret
             2F95              2F95  time
+            2FA6              2FA6  time.init
             2FB6              2FB6  time.noCur
             2FE0              2FE0  ..@200._base
             2FE6              2FE6  time.goTime

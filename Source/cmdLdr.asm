@@ -80,8 +80,8 @@ cmdLdr:
     mov ah, 09h
     int 21h
     or byte [statFlg1], inLdrDT
-    call time
-    call date
+    call time.init
+    call date.init
     and byte [statFlg1], ~inLdrDT
     lea rdx, crlf
     mov ah, 09h
