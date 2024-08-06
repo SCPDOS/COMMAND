@@ -76,9 +76,6 @@ functionTable:
     db 4, "TYPE"
     dw type - startLbl
 
-    db 5, "LABEL"
-    dw label - startLbl
-
     db 4, "PATH"
     dw pathEdit - startLbl
 
@@ -88,14 +85,6 @@ functionTable:
     db 6, "PROMPT"
     dw prompt - startLbl
 ;TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP
-    db 5, "MKLBL"
-    dw mklbl - startLbl
-
-    db 5, "RMLBL"
-    dw rmlbl - startLbl
-
-    db 5, "RNLBL"
-    dw rnlbl - startLbl
 
     db 5, "TOUCH"
     dw touch - startLbl

@@ -2035,69 +2035,6 @@ truename:
     call printCRLF
     return
 
-label:
-;Displays/Changes/Deletes the file label
-    lea rdx, .l1
-    mov eax, 0900h
-    int 21h
-    return
-.l1: db CR,LF,"Function unimplemented",CR,LF,"$"
-
-mklbl:
-    ;lea rdx, .l1
-    ;mov cx, 08h ;Make a label
-    ;mov eax, 3C00h
-    ;int 21h
-
-    ;mov ebx, eax
-    ;mov eax, 3E00h  ;Close the handle
-    ;int 21h
-    ;return
-
-;.l1: db "TESTLABEL",0
-    lea rdx, .l1
-    mov eax, 1600h  ;Create FCB
-    int 21h
-    return
-.l1:
-    istruc exFcb
-    at exFcb.extSig,    db -1   ;Indicate extended FCB
-    at exFcb.attribute, db dirVolumeID
-    at exFcb.driveNum,  db 0    ;Current drive
-    at exFcb.filename,  db "TESTLABE"
-    at exFcb.fileext,   db "L  "
-    at exFcb.curBlock,  dd 0
-    iend 
-rmlbl:
-    lea rdx, .l1
-    mov eax, 1300h  ;FCB delete (nice test to see if it works)
-    int 21h
-    return
-.l1:    ;FCB to volume label
-    istruc exFcb
-    at exFcb.extSig,    db -1   ;Indicate extended FCB
-    at exFcb.attribute, db dirVolumeID
-    at exFcb.driveNum,  db 0    ;Current drive
-    at exFcb.filename,  db "????????"
-    at exFcb.fileext,   db "???"
-    at exFcb.curBlock,  dd 0
-    iend 
-
-rnlbl:
-    lea rdx, .l1
-    mov eax, 1700h
-    int 21h
-    return
-.l1:
-    istruc exRenFcb
-    at exRenFcb.extSig,     db -1
-    at exRenFcb.attribute,  db dirVolumeID
-    at exRenFcb.driveNum,   db 0    ;Current drive
-    at exRenFcb.filename,   db "????????"
-    at exRenFcb.fileext,    db "???"
-    at exRenFcb.newName,    db "TESTLABE"
-    at exRenFcb.newExt,     db "L2 "
-    iend
 volume:
 ;Only one argument. VOL X: (you can have more trash after the colon)
     test byte [arg2Flg], -1
