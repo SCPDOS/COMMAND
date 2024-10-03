@@ -5278,305 +5278,306 @@
   1595 0000317F CD30                <1>     int 30h
   1596 00003181 B40F                <1>     mov ah, 0Fh ;Get screen mode
   1597 00003183 CD30                <1>     int 30h
-  1598 00003185 0FB6D4              <1>     movzx edx, ah   ;Get number of columns in dl
-  1599 00003188 FECA                <1>     dec dl
-  1600 0000318A B619                <1>     mov dh, 25  ;Number of rows is standard
-  1601 0000318C 31C0                <1>     xor eax, eax
-  1602 0000318E 89C1                <1>     mov ecx, eax
-  1603 00003190 B707                <1>     mov bh, 7   ;Screen attributes
-  1604 00003192 B406                <1>     mov ah, 6   ;Scroll
-  1605 00003194 CD30                <1>     int 30h
-  1606 00003196 31D2                <1>     xor edx, edx    ;Set cursor coordinates to top left of screen
-  1607 00003198 B700                <1>     mov bh, 0   ;Page 0
-  1608 0000319A B402                <1>     mov ah, 2
-  1609 0000319C CD30                <1>     int 30h
-  1610                              <1>     return
+  1598 00003185 53                  <1>     push rbx
+  1599 00003186 0FB6D4              <1>     movzx edx, ah   ;Get number of columns in dl
+  1600 00003189 FECA                <1>     dec dl
+  1601 0000318B B619                <1>     mov dh, 25  ;Number of rows is standard
+  1602 0000318D 31C0                <1>     xor eax, eax
+  1603 0000318F 89C1                <1>     mov ecx, eax
+  1604 00003191 B707                <1>     mov bh, 7   ;Screen attributes
+  1605 00003193 B406                <1>     mov ah, 6   ;Scroll
+  1606 00003195 CD30                <1>     int 30h
+  1607 00003197 31D2                <1>     xor edx, edx    ;Set cursor coordinates to top left of screen
+  1608 00003199 5B                  <1>     pop rbx
+  1609 0000319A B402                <1>     mov ah, 2
+  1610 0000319C CD30                <1>     int 30h
+  1611                              <1>     return
     13                              <2> %%_ret:
     14 0000319E C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-  1611                              <1> .doAnsi:
-  1612                              <1> ;4 chars in the ansi routine
-  1613                              <1> ;Will just put the ANSI escape sequence on the screen if it doesn't 
-  1614                              <1> ; understand ANSI codes
-  1615 0000319F 488D35F9DCFFFF      <1>     lea rsi, ansiCls
-  1616 000031A6 B904000000          <1>     mov ecx, 4
-  1617 000031AB B406                <1>     mov ah, 06h ;Raw char output
-  1618                              <1> .ansiLp:
-  1619 000031AD AC                  <1>     lodsb   ;Get the char in 
-  1620 000031AE 88C2                <1>     mov dl, al
-  1621 000031B0 CD21                <1>     int 21h
-  1622 000031B2 FFC9                <1>     dec ecx
-  1623 000031B4 75F7                <1>     jnz .ansiLp
-  1624                              <1>     return
+  1612                              <1> .doAnsi:
+  1613                              <1> ;4 chars in the ansi routine
+  1614                              <1> ;Will just put the ANSI escape sequence on the screen if it doesn't 
+  1615                              <1> ; understand ANSI codes
+  1616 0000319F 488D35F9DCFFFF      <1>     lea rsi, ansiCls
+  1617 000031A6 B904000000          <1>     mov ecx, 4
+  1618 000031AB B406                <1>     mov ah, 06h ;Raw char output
+  1619                              <1> .ansiLp:
+  1620 000031AD AC                  <1>     lodsb   ;Get the char in 
+  1621 000031AE 88C2                <1>     mov dl, al
+  1622 000031B0 CD21                <1>     int 21h
+  1623 000031B2 FFC9                <1>     dec ecx
+  1624 000031B4 75F7                <1>     jnz .ansiLp
+  1625                              <1>     return
     13                              <2> %%_ret:
     14 000031B6 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-  1625                              <1> 
-  1626                              <1> break:
-  1627 000031B7 F605E6CEFFFFFF      <1>     test byte [arg1Flg], -1
-  1628 000031BE 752D                <1>     jnz .argumentProvided
-  1629                              <1>     ;Here we just get the status of break
-  1630 000031C0 B800330000          <1>     mov eax, 3300h  ;Get break status in dl
-  1631 000031C5 CD21                <1>     int 21h
-  1632 000031C7 88D3                <1>     mov bl, dl
-  1633 000031C9 488D15EADAFFFF      <1>     lea rdx, breakIs
-  1634 000031D0 B409                <1>     mov ah, 09h
-  1635 000031D2 CD21                <1>     int 21h
-  1636 000031D4 488D15DADAFFFF      <1>     lea rdx, onMes
-  1637 000031DB 488D0DCDDAFFFF      <1>     lea rcx, offMes
-  1638 000031E2 84DB                <1>     test bl, bl ;IF bl = 0, break is off
-  1639 000031E4 480F44D1            <1>     cmovz rdx, rcx
-  1640 000031E8 B409                <1>     mov ah, 09h
-  1641 000031EA CD21                <1>     int 21h
-  1642                              <1>     return
+  1626                              <1> 
+  1627                              <1> break:
+  1628 000031B7 F605E6CEFFFFFF      <1>     test byte [arg1Flg], -1
+  1629 000031BE 752D                <1>     jnz .argumentProvided
+  1630                              <1>     ;Here we just get the status of break
+  1631 000031C0 B800330000          <1>     mov eax, 3300h  ;Get break status in dl
+  1632 000031C5 CD21                <1>     int 21h
+  1633 000031C7 88D3                <1>     mov bl, dl
+  1634 000031C9 488D15EADAFFFF      <1>     lea rdx, breakIs
+  1635 000031D0 B409                <1>     mov ah, 09h
+  1636 000031D2 CD21                <1>     int 21h
+  1637 000031D4 488D15DADAFFFF      <1>     lea rdx, onMes
+  1638 000031DB 488D0DCDDAFFFF      <1>     lea rcx, offMes
+  1639 000031E2 84DB                <1>     test bl, bl ;IF bl = 0, break is off
+  1640 000031E4 480F44D1            <1>     cmovz rdx, rcx
+  1641 000031E8 B409                <1>     mov ah, 09h
+  1642 000031EA CD21                <1>     int 21h
+  1643                              <1>     return
     13                              <2> %%_ret:
     14 000031EC C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-  1643                              <1> .argumentProvided:
-  1644 000031ED 498D705D            <1>     lea rsi, qword [r8 + fcb1 + fcb.filename]  ;Point to the first fcb name
-  1645 000031F1 AD                  <1>     lodsd   ;Read the word
-  1646 000031F2 89C3                <1>     mov ebx, eax
-  1647 000031F4 25DFDF0000          <1>     and eax, 0DFDFh  ;Convert first two chars to uppercase
-  1648 000031F9 C1EB10              <1>     shr ebx, 10h     ;Get high word low
-  1649 000031FC 6681FB2020          <1>     cmp bx, "  " ;Two spaces is a possible ON 
-  1650 00003201 7416                <1>     je .maybeOn
-  1651 00003203 663D4F46            <1>     cmp ax, "OF"
-  1652 00003207 7523                <1>     jne .badOnOff
-  1653 00003209 6681E3DFFF          <1>     and bx, 0FFDFh ;Convert only the third char to UC. Fourth char MUST BE SPACE
-  1654 0000320E 6681FB4620          <1>     cmp bx, "F "
-  1655 00003213 7517                <1>     jne .badOnOff
-  1656                              <1>     ;Set off
-  1657 00003215 31D2                <1>     xor edx, edx    ;DL=0 => BREAK is off
-  1658 00003217 EB0B                <1>     jmp short .setBreak
-  1659                              <1> .maybeOn:
-  1660 00003219 663D4F4E            <1>     cmp ax, "ON"
-  1661 0000321D 750D                <1>     jne .badOnOff
-  1662                              <1>     ;Set on
-  1663 0000321F BA01000000          <1>     mov edx, 1
-  1664                              <1> .setBreak:
-  1665 00003224 B801330000          <1>     mov eax, 3301h  ;Set break
-  1666 00003229 CD21                <1>     int 21h
-  1667                              <1>     return
+  1644                              <1> .argumentProvided:
+  1645 000031ED 498D705D            <1>     lea rsi, qword [r8 + fcb1 + fcb.filename]  ;Point to the first fcb name
+  1646 000031F1 AD                  <1>     lodsd   ;Read the word
+  1647 000031F2 89C3                <1>     mov ebx, eax
+  1648 000031F4 25DFDF0000          <1>     and eax, 0DFDFh  ;Convert first two chars to uppercase
+  1649 000031F9 C1EB10              <1>     shr ebx, 10h     ;Get high word low
+  1650 000031FC 6681FB2020          <1>     cmp bx, "  " ;Two spaces is a possible ON 
+  1651 00003201 7416                <1>     je .maybeOn
+  1652 00003203 663D4F46            <1>     cmp ax, "OF"
+  1653 00003207 7523                <1>     jne .badOnOff
+  1654 00003209 6681E3DFFF          <1>     and bx, 0FFDFh ;Convert only the third char to UC. Fourth char MUST BE SPACE
+  1655 0000320E 6681FB4620          <1>     cmp bx, "F "
+  1656 00003213 7517                <1>     jne .badOnOff
+  1657                              <1>     ;Set off
+  1658 00003215 31D2                <1>     xor edx, edx    ;DL=0 => BREAK is off
+  1659 00003217 EB0B                <1>     jmp short .setBreak
+  1660                              <1> .maybeOn:
+  1661 00003219 663D4F4E            <1>     cmp ax, "ON"
+  1662 0000321D 750D                <1>     jne .badOnOff
+  1663                              <1>     ;Set on
+  1664 0000321F BA01000000          <1>     mov edx, 1
+  1665                              <1> .setBreak:
+  1666 00003224 B801330000          <1>     mov eax, 3301h  ;Set break
+  1667 00003229 CD21                <1>     int 21h
+  1668                              <1>     return
     13                              <2> %%_ret:
     14 0000322B C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-  1668                              <1> .badOnOff:
-  1669 0000322C 488D157CDCFFFF      <1>     lea rdx, badOnOff
-  1670 00003233 B409                <1>     mov ah, 09h
-  1671 00003235 CD21                <1>     int 21h
-  1672                              <1>     return
+  1669                              <1> .badOnOff:
+  1670 0000322C 488D157CDCFFFF      <1>     lea rdx, badOnOff
+  1671 00003233 B409                <1>     mov ah, 09h
+  1672 00003235 CD21                <1>     int 21h
+  1673                              <1>     return
     13                              <2> %%_ret:
     14 00003237 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-  1673                              <1> 
-  1674                              <1> verify:
-  1675 00003238 F60565CEFFFFFF      <1>     test byte [arg1Flg], -1
-  1676 0000323F 752D                <1>     jnz .argumentProvided
-  1677                              <1>     ;Here we just get the status of break
-  1678 00003241 B800540000          <1>     mov eax, 5400h  ;Get verify status in al
-  1679 00003246 CD21                <1>     int 21h
-  1680 00003248 88C3                <1>     mov bl, al
-  1681 0000324A 488D1573DAFFFF      <1>     lea rdx, verifyIs
-  1682 00003251 B409                <1>     mov ah, 09h
-  1683 00003253 CD21                <1>     int 21h
-  1684 00003255 488D1559DAFFFF      <1>     lea rdx, onMes
-  1685 0000325C 488D0D4CDAFFFF      <1>     lea rcx, offMes
-  1686 00003263 84DB                <1>     test bl, bl ;IF bl = 0, break is off
-  1687 00003265 480F44D1            <1>     cmovz rdx, rcx
-  1688 00003269 B409                <1>     mov ah, 09h
-  1689 0000326B CD21                <1>     int 21h
-  1690                              <1>     return
+  1674                              <1> 
+  1675                              <1> verify:
+  1676 00003238 F60565CEFFFFFF      <1>     test byte [arg1Flg], -1
+  1677 0000323F 752D                <1>     jnz .argumentProvided
+  1678                              <1>     ;Here we just get the status of break
+  1679 00003241 B800540000          <1>     mov eax, 5400h  ;Get verify status in al
+  1680 00003246 CD21                <1>     int 21h
+  1681 00003248 88C3                <1>     mov bl, al
+  1682 0000324A 488D1573DAFFFF      <1>     lea rdx, verifyIs
+  1683 00003251 B409                <1>     mov ah, 09h
+  1684 00003253 CD21                <1>     int 21h
+  1685 00003255 488D1559DAFFFF      <1>     lea rdx, onMes
+  1686 0000325C 488D0D4CDAFFFF      <1>     lea rcx, offMes
+  1687 00003263 84DB                <1>     test bl, bl ;IF bl = 0, break is off
+  1688 00003265 480F44D1            <1>     cmovz rdx, rcx
+  1689 00003269 B409                <1>     mov ah, 09h
+  1690 0000326B CD21                <1>     int 21h
+  1691                              <1>     return
     13                              <2> %%_ret:
     14 0000326D C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-  1691                              <1> .argumentProvided:
-  1692 0000326E 498D705D            <1>     lea rsi, qword [r8 + fcb1 + fcb.filename]  ;Point to the first fcb name
-  1693 00003272 AD                  <1>     lodsd   ;Read the word
-  1694 00003273 89C3                <1>     mov ebx, eax
-  1695 00003275 25DFDF0000          <1>     and eax, 0DFDFh  ;Convert first two chars to uppercase
-  1696 0000327A C1EB10              <1>     shr ebx, 10h     ;Get high word low
-  1697 0000327D 6681FB2020          <1>     cmp bx, "  " ;Two spaces is a possible ON 
-  1698 00003282 7416                <1>     je .maybeOn
-  1699 00003284 663D4F46            <1>     cmp ax, "OF"
-  1700 00003288 751F                <1>     jne .badOnOff
-  1701 0000328A 6681E3DFFF          <1>     and bx, 0FFDFh ;Convert only the third char to UC. Fourth char MUST BE SPACE
-  1702 0000328F 6681FB4620          <1>     cmp bx, "F "
-  1703 00003294 7513                <1>     jne .badOnOff
-  1704                              <1>     ;Set off
-  1705 00003296 31C0                <1>     xor eax, eax    ;AL=0 => VERIFY is off
-  1706 00003298 EB0A                <1>     jmp short .setVerify
-  1707                              <1> .maybeOn:
-  1708 0000329A 663D4F4E            <1>     cmp ax, "ON"
-  1709 0000329E 7509                <1>     jne .badOnOff
-  1710                              <1>     ;Set on
-  1711 000032A0 31C0                <1>     xor eax, eax
-  1712 000032A2 FFC0                <1>     inc eax ;AL=1 => VERIFY is on
-  1713                              <1> .setVerify:
-  1714 000032A4 B42E                <1>     mov ah, 2Eh  ;Set Verify
-  1715 000032A6 CD21                <1>     int 21h
-  1716                              <1>     return
+  1692                              <1> .argumentProvided:
+  1693 0000326E 498D705D            <1>     lea rsi, qword [r8 + fcb1 + fcb.filename]  ;Point to the first fcb name
+  1694 00003272 AD                  <1>     lodsd   ;Read the word
+  1695 00003273 89C3                <1>     mov ebx, eax
+  1696 00003275 25DFDF0000          <1>     and eax, 0DFDFh  ;Convert first two chars to uppercase
+  1697 0000327A C1EB10              <1>     shr ebx, 10h     ;Get high word low
+  1698 0000327D 6681FB2020          <1>     cmp bx, "  " ;Two spaces is a possible ON 
+  1699 00003282 7416                <1>     je .maybeOn
+  1700 00003284 663D4F46            <1>     cmp ax, "OF"
+  1701 00003288 751F                <1>     jne .badOnOff
+  1702 0000328A 6681E3DFFF          <1>     and bx, 0FFDFh ;Convert only the third char to UC. Fourth char MUST BE SPACE
+  1703 0000328F 6681FB4620          <1>     cmp bx, "F "
+  1704 00003294 7513                <1>     jne .badOnOff
+  1705                              <1>     ;Set off
+  1706 00003296 31C0                <1>     xor eax, eax    ;AL=0 => VERIFY is off
+  1707 00003298 EB0A                <1>     jmp short .setVerify
+  1708                              <1> .maybeOn:
+  1709 0000329A 663D4F4E            <1>     cmp ax, "ON"
+  1710 0000329E 7509                <1>     jne .badOnOff
+  1711                              <1>     ;Set on
+  1712 000032A0 31C0                <1>     xor eax, eax
+  1713 000032A2 FFC0                <1>     inc eax ;AL=1 => VERIFY is on
+  1714                              <1> .setVerify:
+  1715 000032A4 B42E                <1>     mov ah, 2Eh  ;Set Verify
+  1716 000032A6 CD21                <1>     int 21h
+  1717                              <1>     return
     13                              <2> %%_ret:
     14 000032A8 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-  1717                              <1> .badOnOff:
-  1718 000032A9 488D15FFDBFFFF      <1>     lea rdx, badOnOff
-  1719 000032B0 B409                <1>     mov ah, 09h
-  1720 000032B2 CD21                <1>     int 21h
-  1721                              <1>     return
+  1718                              <1> .badOnOff:
+  1719 000032A9 488D15FFDBFFFF      <1>     lea rdx, badOnOff
+  1720 000032B0 B409                <1>     mov ah, 09h
+  1721 000032B2 CD21                <1>     int 21h
+  1722                              <1>     return
     13                              <2> %%_ret:
     14 000032B4 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-  1722                              <1> 
-  1723                              <1> rename:
-  1724 000032B5 F605E8CDFFFFFF      <1>     test byte [arg1Flg], -1
-  1725 000032BC 0F8412ECFFFF        <1>     jz badArgError
-  1726 000032C2 F605DECDFFFFFF      <1>     test byte [arg2Flg], -1
-  1727 000032C9 0F8405ECFFFF        <1>     jz badArgError    
-  1728                              <1>     ;Initialise the variables!
-  1729 000032CF 488D3587D3FFFF      <1>     lea rsi, srcSpec
-  1730 000032D6 48893584D4FFFF      <1>     mov qword [srcPtr], rsi
-  1731 000032DD 488D35FBD3FFFF      <1>     lea rsi, destSpec
-  1732 000032E4 4889357ED4FFFF      <1>     mov qword [destPtr], rsi
-  1733                              <1>     ;Check the second path is just a filename!
-  1734 000032EB 0FB605B6CDFFFF      <1>     movzx eax, byte [arg2Off]
-  1735 000032F2 498DB081000000      <1>     lea rsi, qword [r8 + cmdLine]
-  1736 000032F9 4801C6              <1>     add rsi, rax    ;Point to the path componant
-  1737 000032FC 488D3D8DD1FFFF      <1>     lea rdi, searchSpec
-  1738 00003303 57                  <1>     push rdi
-  1739 00003304 E8DE120000          <1>     call cpDelimPathToBufz  ;Copy the path to rdi
-  1740 00003309 5F                  <1>     pop rdi
-  1741 0000330A 807F013A            <1>     cmp byte [rdi + 1], ":"  ;Is this a drive sep?
-  1742 0000330E 0F84C0EBFFFF        <1>     je badArgError  ;Cannot pass a path as the second argument
-  1743                              <1> ;Check if a drive specifier has been given
-  1744 00003314 0FB6058ACDFFFF      <1>     movzx eax, byte [arg1Off]
-  1745 0000331B 498DB081000000      <1>     lea rsi, qword [r8 + cmdLine]
-  1746 00003322 4801C6              <1>     add rsi, rax    ;Point to the path componant
-  1747 00003325 66AD                <1>     lodsw   ;Get the first two chars
-  1748 00003327 80FC3A              <1>     cmp ah, ":" ;If not, current drive
-  1749 0000332A 752A                <1>     jne .curDrvSrc
-  1750                              <1> ;Else, copy over the drive letter from the source path, if one exists!
-  1751 0000332C 488B352ED4FFFF      <1>     mov rsi, qword [srcPtr]
-  1752 00003333 668906              <1>     mov word [rsi], ax
-  1753 00003336 48810520D4FFFF0200- <1>     add qword [srcPtr], 2   
-  1753 0000333F 0000                <1>
-  1754 00003341 488B3521D4FFFF      <1>     mov rsi, qword [destPtr]
-  1755 00003348 668906              <1>     mov word [rsi], ax
-  1756 0000334B 48810513D4FFFF0200- <1>     add qword [destPtr], 2  ;Advance the pointer, to copy to after this ptr
-  1756 00003354 0000                <1>
-  1757                              <1> .curDrvSrc:
-  1758 00003356 4889FE              <1>     mov rsi, rdi
-  1759                              <1> .destScan:
-  1760 00003359 AC                  <1>     lodsb   ;Get the char
-  1761 0000335A 3A05C9CCFFFF        <1>     cmp al, byte [pathSep]  ;Ensure no path seps
-  1762 00003360 0F846EEBFFFF        <1>     je badArgError
-  1763 00003366 84C0                <1>     test al, al
-  1764 00003368 75EF                <1>     jnz .destScan
-  1765                              <1> ;Now store question marks over all of fcb1 and fcb2's name and drive specifier
-  1766 0000336A 498D785C            <1>     lea rdi, qword [r8 + fcb1]  ;Use FCB1 for searchpath res
-  1767 0000336E 48B83F3F3F3F3F3F3F- <1>     mov rax, "????????"
-  1767 00003377 3F                  <1>
-  1768 00003378 B903000000          <1>     mov ecx, 3  ;24 bytes
-  1769 0000337D F348AB              <1>     rep stosq
-  1770 00003380 AB                  <1>     stosd   ;Plus 4 to get 28 = 16 + 1 + 11
-  1771 00003381 488D3508D1FFFF      <1>     lea rsi, searchSpec
-  1772 00003388 498D786C            <1>     lea rdi, qword [r8 + fcb2]  ;Place destination pattern here
-  1773 0000338C B80D290000          <1>     mov eax, 290Dh
-  1774 00003391 CD21                <1>     int 21h     
-  1775 00003393 50                  <1>     push rax    ;Save the WC signature
-  1776 00003394 E891120000          <1>     call buildCommandPath   ;Copy the source path+searchspec to searchSpec
-  1777 00003399 488D3DF0D0FFFF      <1>     lea rdi, searchSpec
-  1778 000033A0 E8C8110000          <1>     call findLastPathComponant  ;Go to the end of the path in rdi
-  1779 000033A5 4889FE              <1>     mov rsi, rdi
-  1780 000033A8 4889FB              <1>     mov rbx, rdi    ;Save the componant in rbx
-  1781 000033AB 498D785C            <1>     lea rdi, qword [r8 + fcb1]  ;Now copy source pattern over!
-  1782 000033AF B80D290000          <1>     mov eax, 290Dh
-  1783 000033B4 CD21                <1>     int 21h
-  1784 000033B6 59                  <1>     pop rcx ;Get back the WC signature from the destination path!
-  1785 000033B7 88CC                <1>     mov ah, cl
-  1786 000033B9 6685C0              <1>     test ax, ax ;If neither path has wildcards, go straight to renaming
-  1787 000033BC 0F84EB000000        <1>     jz .noWC
-  1788 000033C2 3CFF                <1>     cmp al, -1  ;Is the source drive bad?
-  1789 000033C4 0F840AEBFFFF        <1>     je badArgError
-  1790 000033CA 488D35BFD0FFFF      <1>     lea rsi, searchSpec ;Are we are the head of the buffer?
-  1791                              <1>     ;Now we check if we have a path to actually handle
-  1792 000033D1 4839F3              <1>     cmp rbx, rsi
-  1793 000033D4 7444                <1>     je .noPath
-  1794 000033D6 C643FF00            <1>     mov byte [rbx - 1], 0   ;The previous char is a pathsep, overwrite it!
-  1795 000033DA 488D35AFD0FFFF      <1>     lea rsi, searchSpec
-  1796 000033E1 488B3D75D2FFFF      <1>     mov rdi, qword [srcSpec]
-  1797 000033E8 56                  <1>     push rsi
-  1798 000033E9 E88A100000          <1>     call strcpy ;Copy the string, leave the ptrs past the null
-  1799 000033EE 5E                  <1>     pop rsi
-  1800 000033EF 48FFCF              <1>     dec rdi     ;Point rdi to the null
-  1801 000033F2 8A0531CCFFFF        <1>     mov al, byte [pathSep]
-  1802 000033F8 AA                  <1>     stosb       ;Store the pathsep and advance the pointer
-  1803 000033F9 48893D61D3FFFF      <1>     mov qword [srcPtr], rdi ;Store this ptr here
-  1804 00003400 488B3D62D3FFFF      <1>     mov rdi, qword [destPtr]    ;Get the ptr (if it was advanced)
-  1805 00003407 E86C100000          <1>     call strcpy ;Copy the string, leave the ptrs past the null
-  1806 0000340C 48FFCF              <1>     dec rdi     ;Point rdi to the null
-  1807 0000340F AA                  <1>     stosb       ;Store the pathsep and adv the ptr
-  1808 00003410 48893D52D3FFFF      <1>     mov qword [destPtr], rdi
-  1809 00003417 8843FF              <1>     mov byte [rbx - 1], al  ;Now replace the null with a pathsep again!
-  1810                              <1> .noPath:
-  1811                              <1>     ;Now we have where to copy the files to, we can start our work!
-  1812 0000341A E834130000          <1>     call setDTA
-  1813 0000341F 488D156AD0FFFF      <1>     lea rdx, searchSpec
-  1814 00003426 31C9                <1>     xor ecx, ecx    ;Rename works on normal and read only files only!
-  1815 00003428 B8004E0000          <1>     mov eax, 4E00h  ;Find first!
-  1816 0000342D CD21                <1>     int 21h
-  1817 0000342F 0F82B1EAFFFF        <1>     jc badDupFnf    ;If no file was found!
-  1818                              <1> .wcLoop:
-  1819                              <1>     ;Now build an FCB form of the name of the file we found in fcb1
-  1820 00003435 488D35F8CCFFFF      <1>     lea rsi, cmdFFBlock + ffBlock.asciizName
-  1821 0000343C 498D785C            <1>     lea rdi, qword [r8 + fcb1]
-  1822 00003440 B801290000          <1>     mov eax, 2901h  ;Now we copy the name over, cleaning the FCB name
-  1823 00003445 CD21                <1>     int 21h 
-  1824                              <1>     ;Now depending on source and dest chars, we build a filename in renName
-  1825 00003447 498D706D            <1>     lea rsi, qword [r8 + fcb2 + fcb.filename]    
-  1826 0000344B 488D3D1FD3FFFF      <1>     lea rdi, renName    ;Start by copying the destination pattern
-  1827 00003452 57                  <1>     push rdi
-  1828 00003453 48A5                <1>     movsq
-  1829 00003455 66A5                <1>     movsw
-  1830 00003457 A4                  <1>     movsb
-  1831 00003458 5F                  <1>     pop rdi
-  1832 00003459 498D705D            <1>     lea rsi, qword [r8 + fcb1 + fcb.filename] ;Now start sourcing chars!
-  1833 0000345D B90B000000          <1>     mov ecx, 11 ;11 chars to copy!
-  1834                              <1> .wcNameMake:
-  1835 00003462 AC                  <1>     lodsb   ;Get the char from the source string
-  1836 00003463 803F3F              <1>     cmp byte [rdi], "?" ;Are we over a WC?
-  1837 00003466 7502                <1>     jne .noStore    ;Dont store the char there
-  1838 00003468 8807                <1>     mov byte [rdi], al  ;If we are over a wc, store the char there!
-  1839                              <1> .noStore:
-  1840 0000346A 48FFC7              <1>     inc rdi ;Goto next char position
-  1841 0000346D FFC9                <1>     dec ecx
-  1842 0000346F 75F1                <1>     jnz .wcNameMake
-  1843                              <1> ;renName now has the FCB name for the file we wish to make!
-  1844                              <1> ;Now make the two paths!
-  1845 00003471 488D35BCCCFFFF      <1>     lea rsi, cmdFFBlock + ffBlock.asciizName
-  1846 00003478 488B3DE2D2FFFF      <1>     mov rdi, qword [srcPtr]
-  1847 0000347F E8F40F0000          <1>     call strcpy ;Doesn't matter that we preserve the pointers
-  1848 00003484 488D35E6D2FFFF      <1>     lea rsi, renName
-  1849 0000348B 488B3DD7D2FFFF      <1>     mov rdi, qword [destPtr]
-  1850 00003492 E8FA100000          <1>     call FCBToAsciiz
-  1851 00003497 488D15BFD1FFFF      <1>     lea rdx, srcSpec
-  1852 0000349E E83F000000          <1>     call .ren   ;Fail silently on wildcard rename
-  1853 000034A3 B8004F0000          <1>     mov eax, 4F00h  ;Find next
-  1854 000034A8 CD21                <1>     int 21h
-  1855 000034AA 7389                <1>     jnc .wcLoop     ;And process it too!
-  1856                              <1>     return          ;Else just return!
+  1723                              <1> 
+  1724                              <1> rename:
+  1725 000032B5 F605E8CDFFFFFF      <1>     test byte [arg1Flg], -1
+  1726 000032BC 0F8412ECFFFF        <1>     jz badArgError
+  1727 000032C2 F605DECDFFFFFF      <1>     test byte [arg2Flg], -1
+  1728 000032C9 0F8405ECFFFF        <1>     jz badArgError    
+  1729                              <1>     ;Initialise the variables!
+  1730 000032CF 488D3587D3FFFF      <1>     lea rsi, srcSpec
+  1731 000032D6 48893584D4FFFF      <1>     mov qword [srcPtr], rsi
+  1732 000032DD 488D35FBD3FFFF      <1>     lea rsi, destSpec
+  1733 000032E4 4889357ED4FFFF      <1>     mov qword [destPtr], rsi
+  1734                              <1>     ;Check the second path is just a filename!
+  1735 000032EB 0FB605B6CDFFFF      <1>     movzx eax, byte [arg2Off]
+  1736 000032F2 498DB081000000      <1>     lea rsi, qword [r8 + cmdLine]
+  1737 000032F9 4801C6              <1>     add rsi, rax    ;Point to the path componant
+  1738 000032FC 488D3D8DD1FFFF      <1>     lea rdi, searchSpec
+  1739 00003303 57                  <1>     push rdi
+  1740 00003304 E8DE120000          <1>     call cpDelimPathToBufz  ;Copy the path to rdi
+  1741 00003309 5F                  <1>     pop rdi
+  1742 0000330A 807F013A            <1>     cmp byte [rdi + 1], ":"  ;Is this a drive sep?
+  1743 0000330E 0F84C0EBFFFF        <1>     je badArgError  ;Cannot pass a path as the second argument
+  1744                              <1> ;Check if a drive specifier has been given
+  1745 00003314 0FB6058ACDFFFF      <1>     movzx eax, byte [arg1Off]
+  1746 0000331B 498DB081000000      <1>     lea rsi, qword [r8 + cmdLine]
+  1747 00003322 4801C6              <1>     add rsi, rax    ;Point to the path componant
+  1748 00003325 66AD                <1>     lodsw   ;Get the first two chars
+  1749 00003327 80FC3A              <1>     cmp ah, ":" ;If not, current drive
+  1750 0000332A 752A                <1>     jne .curDrvSrc
+  1751                              <1> ;Else, copy over the drive letter from the source path, if one exists!
+  1752 0000332C 488B352ED4FFFF      <1>     mov rsi, qword [srcPtr]
+  1753 00003333 668906              <1>     mov word [rsi], ax
+  1754 00003336 48810520D4FFFF0200- <1>     add qword [srcPtr], 2   
+  1754 0000333F 0000                <1>
+  1755 00003341 488B3521D4FFFF      <1>     mov rsi, qword [destPtr]
+  1756 00003348 668906              <1>     mov word [rsi], ax
+  1757 0000334B 48810513D4FFFF0200- <1>     add qword [destPtr], 2  ;Advance the pointer, to copy to after this ptr
+  1757 00003354 0000                <1>
+  1758                              <1> .curDrvSrc:
+  1759 00003356 4889FE              <1>     mov rsi, rdi
+  1760                              <1> .destScan:
+  1761 00003359 AC                  <1>     lodsb   ;Get the char
+  1762 0000335A 3A05C9CCFFFF        <1>     cmp al, byte [pathSep]  ;Ensure no path seps
+  1763 00003360 0F846EEBFFFF        <1>     je badArgError
+  1764 00003366 84C0                <1>     test al, al
+  1765 00003368 75EF                <1>     jnz .destScan
+  1766                              <1> ;Now store question marks over all of fcb1 and fcb2's name and drive specifier
+  1767 0000336A 498D785C            <1>     lea rdi, qword [r8 + fcb1]  ;Use FCB1 for searchpath res
+  1768 0000336E 48B83F3F3F3F3F3F3F- <1>     mov rax, "????????"
+  1768 00003377 3F                  <1>
+  1769 00003378 B903000000          <1>     mov ecx, 3  ;24 bytes
+  1770 0000337D F348AB              <1>     rep stosq
+  1771 00003380 AB                  <1>     stosd   ;Plus 4 to get 28 = 16 + 1 + 11
+  1772 00003381 488D3508D1FFFF      <1>     lea rsi, searchSpec
+  1773 00003388 498D786C            <1>     lea rdi, qword [r8 + fcb2]  ;Place destination pattern here
+  1774 0000338C B80D290000          <1>     mov eax, 290Dh
+  1775 00003391 CD21                <1>     int 21h     
+  1776 00003393 50                  <1>     push rax    ;Save the WC signature
+  1777 00003394 E891120000          <1>     call buildCommandPath   ;Copy the source path+searchspec to searchSpec
+  1778 00003399 488D3DF0D0FFFF      <1>     lea rdi, searchSpec
+  1779 000033A0 E8C8110000          <1>     call findLastPathComponant  ;Go to the end of the path in rdi
+  1780 000033A5 4889FE              <1>     mov rsi, rdi
+  1781 000033A8 4889FB              <1>     mov rbx, rdi    ;Save the componant in rbx
+  1782 000033AB 498D785C            <1>     lea rdi, qword [r8 + fcb1]  ;Now copy source pattern over!
+  1783 000033AF B80D290000          <1>     mov eax, 290Dh
+  1784 000033B4 CD21                <1>     int 21h
+  1785 000033B6 59                  <1>     pop rcx ;Get back the WC signature from the destination path!
+  1786 000033B7 88CC                <1>     mov ah, cl
+  1787 000033B9 6685C0              <1>     test ax, ax ;If neither path has wildcards, go straight to renaming
+  1788 000033BC 0F84EB000000        <1>     jz .noWC
+  1789 000033C2 3CFF                <1>     cmp al, -1  ;Is the source drive bad?
+  1790 000033C4 0F840AEBFFFF        <1>     je badArgError
+  1791 000033CA 488D35BFD0FFFF      <1>     lea rsi, searchSpec ;Are we are the head of the buffer?
+  1792                              <1>     ;Now we check if we have a path to actually handle
+  1793 000033D1 4839F3              <1>     cmp rbx, rsi
+  1794 000033D4 7444                <1>     je .noPath
+  1795 000033D6 C643FF00            <1>     mov byte [rbx - 1], 0   ;The previous char is a pathsep, overwrite it!
+  1796 000033DA 488D35AFD0FFFF      <1>     lea rsi, searchSpec
+  1797 000033E1 488B3D75D2FFFF      <1>     mov rdi, qword [srcSpec]
+  1798 000033E8 56                  <1>     push rsi
+  1799 000033E9 E88A100000          <1>     call strcpy ;Copy the string, leave the ptrs past the null
+  1800 000033EE 5E                  <1>     pop rsi
+  1801 000033EF 48FFCF              <1>     dec rdi     ;Point rdi to the null
+  1802 000033F2 8A0531CCFFFF        <1>     mov al, byte [pathSep]
+  1803 000033F8 AA                  <1>     stosb       ;Store the pathsep and advance the pointer
+  1804 000033F9 48893D61D3FFFF      <1>     mov qword [srcPtr], rdi ;Store this ptr here
+  1805 00003400 488B3D62D3FFFF      <1>     mov rdi, qword [destPtr]    ;Get the ptr (if it was advanced)
+  1806 00003407 E86C100000          <1>     call strcpy ;Copy the string, leave the ptrs past the null
+  1807 0000340C 48FFCF              <1>     dec rdi     ;Point rdi to the null
+  1808 0000340F AA                  <1>     stosb       ;Store the pathsep and adv the ptr
+  1809 00003410 48893D52D3FFFF      <1>     mov qword [destPtr], rdi
+  1810 00003417 8843FF              <1>     mov byte [rbx - 1], al  ;Now replace the null with a pathsep again!
+  1811                              <1> .noPath:
+  1812                              <1>     ;Now we have where to copy the files to, we can start our work!
+  1813 0000341A E834130000          <1>     call setDTA
+  1814 0000341F 488D156AD0FFFF      <1>     lea rdx, searchSpec
+  1815 00003426 31C9                <1>     xor ecx, ecx    ;Rename works on normal and read only files only!
+  1816 00003428 B8004E0000          <1>     mov eax, 4E00h  ;Find first!
+  1817 0000342D CD21                <1>     int 21h
+  1818 0000342F 0F82B1EAFFFF        <1>     jc badDupFnf    ;If no file was found!
+  1819                              <1> .wcLoop:
+  1820                              <1>     ;Now build an FCB form of the name of the file we found in fcb1
+  1821 00003435 488D35F8CCFFFF      <1>     lea rsi, cmdFFBlock + ffBlock.asciizName
+  1822 0000343C 498D785C            <1>     lea rdi, qword [r8 + fcb1]
+  1823 00003440 B801290000          <1>     mov eax, 2901h  ;Now we copy the name over, cleaning the FCB name
+  1824 00003445 CD21                <1>     int 21h 
+  1825                              <1>     ;Now depending on source and dest chars, we build a filename in renName
+  1826 00003447 498D706D            <1>     lea rsi, qword [r8 + fcb2 + fcb.filename]    
+  1827 0000344B 488D3D1FD3FFFF      <1>     lea rdi, renName    ;Start by copying the destination pattern
+  1828 00003452 57                  <1>     push rdi
+  1829 00003453 48A5                <1>     movsq
+  1830 00003455 66A5                <1>     movsw
+  1831 00003457 A4                  <1>     movsb
+  1832 00003458 5F                  <1>     pop rdi
+  1833 00003459 498D705D            <1>     lea rsi, qword [r8 + fcb1 + fcb.filename] ;Now start sourcing chars!
+  1834 0000345D B90B000000          <1>     mov ecx, 11 ;11 chars to copy!
+  1835                              <1> .wcNameMake:
+  1836 00003462 AC                  <1>     lodsb   ;Get the char from the source string
+  1837 00003463 803F3F              <1>     cmp byte [rdi], "?" ;Are we over a WC?
+  1838 00003466 7502                <1>     jne .noStore    ;Dont store the char there
+  1839 00003468 8807                <1>     mov byte [rdi], al  ;If we are over a wc, store the char there!
+  1840                              <1> .noStore:
+  1841 0000346A 48FFC7              <1>     inc rdi ;Goto next char position
+  1842 0000346D FFC9                <1>     dec ecx
+  1843 0000346F 75F1                <1>     jnz .wcNameMake
+  1844                              <1> ;renName now has the FCB name for the file we wish to make!
+  1845                              <1> ;Now make the two paths!
+  1846 00003471 488D35BCCCFFFF      <1>     lea rsi, cmdFFBlock + ffBlock.asciizName
+  1847 00003478 488B3DE2D2FFFF      <1>     mov rdi, qword [srcPtr]
+  1848 0000347F E8F40F0000          <1>     call strcpy ;Doesn't matter that we preserve the pointers
+  1849 00003484 488D35E6D2FFFF      <1>     lea rsi, renName
+  1850 0000348B 488B3DD7D2FFFF      <1>     mov rdi, qword [destPtr]
+  1851 00003492 E8FA100000          <1>     call FCBToAsciiz
+  1852 00003497 488D15BFD1FFFF      <1>     lea rdx, srcSpec
+  1853 0000349E E83F000000          <1>     call .ren   ;Fail silently on wildcard rename
+  1854 000034A3 B8004F0000          <1>     mov eax, 4F00h  ;Find next
+  1855 000034A8 CD21                <1>     int 21h
+  1856 000034AA 7389                <1>     jnc .wcLoop     ;And process it too!
+  1857                              <1>     return          ;Else just return!
     13                              <2> %%_ret:
     14 000034AC C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-  1857                              <1> .noWC:
-  1858 000034AD E878110000          <1>     call buildCommandPath   ;Copy the source arg into searchspec
-  1859 000034B2 0FB605EFCBFFFF      <1>     movzx eax, byte [arg2Off]
-  1860 000034B9 498DB081000000      <1>     lea rsi, qword [r8 + cmdLine]
-  1861 000034C0 4801C6              <1>     add rsi, rax    ;Go to the start of the command to source chars
-  1862 000034C3 488B3D9FD2FFFF      <1>     mov rdi, qword [destPtr]    
-  1863 000034CA E818110000          <1>     call cpDelimPathToBufz
-  1864 000034CF 488D15BACFFFFF      <1>     lea rdx, searchSpec
-  1865 000034D6 E807000000          <1>     call .ren
-  1866                              <1>     retnc   ;Return if all oki!
+  1858                              <1> .noWC:
+  1859 000034AD E878110000          <1>     call buildCommandPath   ;Copy the source arg into searchspec
+  1860 000034B2 0FB605EFCBFFFF      <1>     movzx eax, byte [arg2Off]
+  1861 000034B9 498DB081000000      <1>     lea rsi, qword [r8 + cmdLine]
+  1862 000034C0 4801C6              <1>     add rsi, rax    ;Go to the start of the command to source chars
+  1863 000034C3 488B3D9FD2FFFF      <1>     mov rdi, qword [destPtr]    
+  1864 000034CA E818110000          <1>     call cpDelimPathToBufz
+  1865 000034CF 488D15BACFFFFF      <1>     lea rdx, searchSpec
+  1866 000034D6 E807000000          <1>     call .ren
+  1867                              <1>     retnc   ;Return if all oki!
     61                              <2> cret nc
     19                              <3> %%_base:
     20                              <3> %assign baseVar %%_base-$$
@@ -5597,478 +5598,478 @@
     35                              <3>  return
     36                              <3> %%a:
     37                              <3>  %endif
-  1867 000034DD E904EAFFFF          <1>     jmp badDupFnf   ;Always just return this
-  1868                              <1> .ren:
-  1869 000034E2 488D3DF6D1FFFF      <1>     lea rdi, destSpec
-  1870 000034E9 B800560000          <1>     mov eax, 5600h
-  1871 000034EE CD21                <1>     int 21h
-  1872                              <1>     return
+  1868 000034DD E904EAFFFF          <1>     jmp badDupFnf   ;Always just return this
+  1869                              <1> .ren:
+  1870 000034E2 488D3DF6D1FFFF      <1>     lea rdi, destSpec
+  1871 000034E9 B800560000          <1>     mov eax, 5600h
+  1872 000034EE CD21                <1>     int 21h
+  1873                              <1>     return
     13                              <2> %%_ret:
     14 000034F0 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-  1873                              <1> 
-  1874                              <1> touch:
-  1875                              <1> ;Temporarily used to create files
-  1876 000034F1 F605ACCBFFFFFF      <1>     test byte [arg1Flg], -1
-  1877 000034F8 0F84D6E9FFFF        <1>     jz badArgError
-  1878 000034FE E827110000          <1>     call buildCommandPath
-  1879 00003503 488D1586CFFFFF      <1>     lea rdx, searchSpec
-  1880 0000350A B8005B0000          <1>     mov eax, 5B00h  ;Create unique file 
-  1881 0000350F 31C9                <1>     xor ecx, ecx
-  1882 00003511 CD21                <1>     int 21h
-  1883 00003513 721D                <1>     jc .touch1
-  1884                              <1> .touchClose:
-  1885 00003515 0FB7D8              <1>     movzx ebx, ax   ;Save the handle here
-  1886 00003518 B80D120000          <1>     mov eax, 120Dh  ;Get date/time words from the DOS
-  1887 0000351D CD2F                <1>     int 2fh
-  1888 0000351F 89C1                <1>     mov ecx, eax    ;Move the time here
-  1889 00003521 87D1                <1>     xchg edx, ecx   ;Get them in the right place
-  1890 00003523 B801570000          <1>     mov eax, 5701h  ;Set the date/time for bx
-  1891 00003528 CD21                <1>     int 21h
-  1892 0000352A B8003E0000          <1>     mov eax, 3e00h  ;Close file immediately
-  1893 0000352F CD21                <1>     int 21h
-  1894                              <1>     return
+  1874                              <1> 
+  1875                              <1> touch:
+  1876                              <1> ;Temporarily used to create files
+  1877 000034F1 F605ACCBFFFFFF      <1>     test byte [arg1Flg], -1
+  1878 000034F8 0F84D6E9FFFF        <1>     jz badArgError
+  1879 000034FE E827110000          <1>     call buildCommandPath
+  1880 00003503 488D1586CFFFFF      <1>     lea rdx, searchSpec
+  1881 0000350A B8005B0000          <1>     mov eax, 5B00h  ;Create unique file 
+  1882 0000350F 31C9                <1>     xor ecx, ecx
+  1883 00003511 CD21                <1>     int 21h
+  1884 00003513 721D                <1>     jc .touch1
+  1885                              <1> .touchClose:
+  1886 00003515 0FB7D8              <1>     movzx ebx, ax   ;Save the handle here
+  1887 00003518 B80D120000          <1>     mov eax, 120Dh  ;Get date/time words from the DOS
+  1888 0000351D CD2F                <1>     int 2fh
+  1889 0000351F 89C1                <1>     mov ecx, eax    ;Move the time here
+  1890 00003521 87D1                <1>     xchg edx, ecx   ;Get them in the right place
+  1891 00003523 B801570000          <1>     mov eax, 5701h  ;Set the date/time for bx
+  1892 00003528 CD21                <1>     int 21h
+  1893 0000352A B8003E0000          <1>     mov eax, 3e00h  ;Close file immediately
+  1894 0000352F CD21                <1>     int 21h
+  1895                              <1>     return
     13                              <2> %%_ret:
     14 00003531 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-  1895                              <1> .touch1:
-  1896 00003532 3C50                <1>     cmp al, errFilExist ;Does the file exist?
-  1897 00003534 7509                <1>     jne .touchError ;If not, this is a proper error!
-  1898 00003536 B8003D0000          <1>     mov eax, 3D00h  ;R/O open instead to update the access time!!
-  1899 0000353B CD21                <1>     int 21h
-  1900 0000353D 73D6                <1>     jnc .touchClose ;If this worked, close the handle immediately
-  1901                              <1> .touchError:
-  1902 0000353F 3C03                <1>     cmp al, errPnf
-  1903 00003541 0F848DE9FFFF        <1>     je badArgError
-  1904 00003547 3C02                <1>     cmp al, errFnf
-  1905 00003549 0F84A0E9FFFF        <1>     je badFnf
-  1906 0000354F E965E9FFFF          <1>     jmp badAccError
-  1907                              <1>     
-  1908                              <1> 
-  1909                              <1> join:
-  1910                              <1> ;Mock join command, to test join. Make an external command.
-  1911                              <1> ;Mounts the A drive on C:\JOINTEST,0
-  1912 00003554 F605AF000000FF      <1>     test byte [.joinOn], -1
-  1913 0000355B 743D                <1>     jz .okJoin
-  1914                              <1> .joindisable:
-  1915 0000355D B800520000          <1>     mov eax, 5200h  
-  1916 00003562 CD21                <1>     int 21h
-  1917                              <1>     ;Set the join flag on A and make CDS path C:\JOINTEST,0
-  1918 00003564 B801800000          <1>     mov eax, 8001h  ;Enter crit 1
-  1919 00003569 CD2A                <1>     int 2Ah
-  1920 0000356B 488D6B61            <1>     lea rbp, qword [rbx + 61h]  ;Get ptr to join byte
-  1921 0000356F 488B5B2A            <1>     mov rbx, qword [rbx + 2Ah]  ;Get CDS ptr
-  1922 00003573 66816343FFDF        <1>     and word [rbx + cds.wFlags], ~cdsJoinDrive    ;Clear that we are join
-  1923 00003579 C60341              <1>     mov byte [rbx], "A"     ;Set back to A
-  1924 0000357C C6430300            <1>     mov byte [rbx + 3], 0   ;Terminating Nul
-  1925 00003580 FE4D00              <1>     dec byte [rbp]          ;Decrement DOS counter
-  1926 00003583 B801810000          <1>     mov eax, 8101h  ;Exit crit 1
-  1927 00003588 CD2A                <1>     int 2Ah
-  1928 0000358A C6057900000000      <1>     mov byte [.joinOn], 0
-  1929 00003591 488D1560000000      <1>     lea rdx, .joinDisableMsg
-  1930 00003598 EB45                <1>     jmp short .joinExit
-  1931                              <1> .okJoin:
-  1932 0000359A C60569000000FF      <1>     mov byte [.joinOn], -1
-  1933 000035A1 B800520000          <1>     mov eax, 5200h  
-  1934 000035A6 CD21                <1>     int 21h
-  1935 000035A8 488D6B61            <1>     lea rbp, qword [rbx + 61h]  ;Get ptr to join byte
-  1936 000035AC 488B5B2A            <1>     mov rbx, qword [rbx + 2Ah]  ;Get CDS ptr
-  1937                              <1>     ;Set the join flag on A and make CDS path C:\JOINTEST,0
-  1938 000035B0 B801800000          <1>     mov eax, 8001h  ;Enter crit 1
-  1939 000035B5 CD2A                <1>     int 2Ah
-  1940 000035B7 66814B430020        <1>     or word [rbx + cds.wFlags], cdsJoinDrive    ;Set that we are join
-  1941 000035BD 4889DF              <1>     mov rdi, rbx
-  1942 000035C0 488D3544000000      <1>     lea rsi, .joinPath
-  1943 000035C7 B90C000000          <1>     mov ecx, .joinPathL
-  1944 000035CC F3A4                <1>     rep movsb   ;Copy chars over
-  1945 000035CE FE4500              <1>     inc byte [rbp]  ;Increment DOS counter
-  1946 000035D1 B801810000          <1>     mov eax, 8101h  ;Exit crit 1
-  1947 000035D6 CD2A                <1>     int 2Ah
-  1948 000035D8 488D1508000000      <1>     lea rdx, .joinEnableMsg
-  1949                              <1> .joinExit:
-  1950 000035DF B800090000          <1>     mov eax, 0900h
-  1951 000035E4 CD21                <1>     int 21h
-  1952                              <1>     return
+  1896                              <1> .touch1:
+  1897 00003532 3C50                <1>     cmp al, errFilExist ;Does the file exist?
+  1898 00003534 7509                <1>     jne .touchError ;If not, this is a proper error!
+  1899 00003536 B8003D0000          <1>     mov eax, 3D00h  ;R/O open instead to update the access time!!
+  1900 0000353B CD21                <1>     int 21h
+  1901 0000353D 73D6                <1>     jnc .touchClose ;If this worked, close the handle immediately
+  1902                              <1> .touchError:
+  1903 0000353F 3C03                <1>     cmp al, errPnf
+  1904 00003541 0F848DE9FFFF        <1>     je badArgError
+  1905 00003547 3C02                <1>     cmp al, errFnf
+  1906 00003549 0F84A0E9FFFF        <1>     je badFnf
+  1907 0000354F E965E9FFFF          <1>     jmp badAccError
+  1908                              <1>     
+  1909                              <1> 
+  1910                              <1> join:
+  1911                              <1> ;Mock join command, to test join. Make an external command.
+  1912                              <1> ;Mounts the A drive on C:\JOINTEST,0
+  1913 00003554 F605AF000000FF      <1>     test byte [.joinOn], -1
+  1914 0000355B 743D                <1>     jz .okJoin
+  1915                              <1> .joindisable:
+  1916 0000355D B800520000          <1>     mov eax, 5200h  
+  1917 00003562 CD21                <1>     int 21h
+  1918                              <1>     ;Set the join flag on A and make CDS path C:\JOINTEST,0
+  1919 00003564 B801800000          <1>     mov eax, 8001h  ;Enter crit 1
+  1920 00003569 CD2A                <1>     int 2Ah
+  1921 0000356B 488D6B61            <1>     lea rbp, qword [rbx + 61h]  ;Get ptr to join byte
+  1922 0000356F 488B5B2A            <1>     mov rbx, qword [rbx + 2Ah]  ;Get CDS ptr
+  1923 00003573 66816343FFDF        <1>     and word [rbx + cds.wFlags], ~cdsJoinDrive    ;Clear that we are join
+  1924 00003579 C60341              <1>     mov byte [rbx], "A"     ;Set back to A
+  1925 0000357C C6430300            <1>     mov byte [rbx + 3], 0   ;Terminating Nul
+  1926 00003580 FE4D00              <1>     dec byte [rbp]          ;Decrement DOS counter
+  1927 00003583 B801810000          <1>     mov eax, 8101h  ;Exit crit 1
+  1928 00003588 CD2A                <1>     int 2Ah
+  1929 0000358A C6057900000000      <1>     mov byte [.joinOn], 0
+  1930 00003591 488D1560000000      <1>     lea rdx, .joinDisableMsg
+  1931 00003598 EB45                <1>     jmp short .joinExit
+  1932                              <1> .okJoin:
+  1933 0000359A C60569000000FF      <1>     mov byte [.joinOn], -1
+  1934 000035A1 B800520000          <1>     mov eax, 5200h  
+  1935 000035A6 CD21                <1>     int 21h
+  1936 000035A8 488D6B61            <1>     lea rbp, qword [rbx + 61h]  ;Get ptr to join byte
+  1937 000035AC 488B5B2A            <1>     mov rbx, qword [rbx + 2Ah]  ;Get CDS ptr
+  1938                              <1>     ;Set the join flag on A and make CDS path C:\JOINTEST,0
+  1939 000035B0 B801800000          <1>     mov eax, 8001h  ;Enter crit 1
+  1940 000035B5 CD2A                <1>     int 2Ah
+  1941 000035B7 66814B430020        <1>     or word [rbx + cds.wFlags], cdsJoinDrive    ;Set that we are join
+  1942 000035BD 4889DF              <1>     mov rdi, rbx
+  1943 000035C0 488D3544000000      <1>     lea rsi, .joinPath
+  1944 000035C7 B90C000000          <1>     mov ecx, .joinPathL
+  1945 000035CC F3A4                <1>     rep movsb   ;Copy chars over
+  1946 000035CE FE4500              <1>     inc byte [rbp]  ;Increment DOS counter
+  1947 000035D1 B801810000          <1>     mov eax, 8101h  ;Exit crit 1
+  1948 000035D6 CD2A                <1>     int 2Ah
+  1949 000035D8 488D1508000000      <1>     lea rdx, .joinEnableMsg
+  1950                              <1> .joinExit:
+  1951 000035DF B800090000          <1>     mov eax, 0900h
+  1952 000035E4 CD21                <1>     int 21h
+  1953                              <1>     return
     13                              <2> %%_ret:
     14 000035E6 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-  1953 000035E7 0D0A4A4F494E20656E- <1> .joinEnableMsg:  db CR,LF,"JOIN enabled",CR,LF,"$"
-  1953 000035F0 61626C65640D0A24    <1>
-  1954 000035F8 0D0A4A4F494E206469- <1> .joinDisableMsg: db CR,LF,"JOIN disabled",CR,LF,"$"
-  1954 00003601 7361626C65640D0A24  <1>
-  1955 0000360A 00                  <1> .joinOn: db 0    ;Var to indicate we are on
-  1956 0000360B 433A5C4A4F494E5445- <1> .joinPath:  db "C:\JOINTEST",0
-  1956 00003614 535400              <1>
-  1957                              <1> .joinPathL  equ $ - .joinPath 
-  1958                              <1> 
-  1959                              <1> subst:
-  1960                              <1> ;Mock subst command, to test SUBST. Make an external command.
-  1961                              <1> ;Substitutes C:\SUBTEST,0 for "D:\"
-  1962 00003617 F605D3000000FF      <1>     test byte [.substOn], -1
-  1963 0000361E 7443                <1>     jz .okSubst
-  1964                              <1> .substdisable:
-  1965 00003620 B800520000          <1>     mov eax, 5200h  
-  1966 00003625 CD21                <1>     int 21h
-  1967                              <1>     ;Set the SUBST and valid flags on D: and make CDS path C:\SUBSTEST,0
-  1968 00003627 B801800000          <1>     mov eax, 8001h  ;Enter crit 1
-  1969 0000362C CD2A                <1>     int 2Ah
-  1970 0000362E 488B5B2A            <1>     mov rbx, qword [rbx + 2Ah]  ;Get CDS ptr
-  1971 00003632 4881C31D010000      <1>     add rbx, 3*cds_size ;Go to the fourth CDS
-  1972 00003639 66816343FFAF        <1>     and word [rbx + cds.wFlags], ~(cdsSubstDrive | cdsValidDrive)    ;Clear that we are subst (and valid)
-  1973 0000363F C60344              <1>     mov byte [rbx], "D"     ;Set back to D
-  1974 00003642 C6430300            <1>     mov byte [rbx + 3], 0   ;Terminating Nul
-  1975 00003646 66C7435D0200        <1>     mov word [rbx + cds.wBackslashOffset], 2
-  1976 0000364C B801810000          <1>     mov eax, 8101h  ;Exit crit 1
-  1977 00003651 CD2A                <1>     int 2Ah
-  1978 00003653 C6059700000000      <1>     mov byte [.substOn], 0
-  1979 0000365A 488D157D000000      <1>     lea rdx, .substDisableMsg
-  1980 00003661 EB61                <1>     jmp short .substExit
-  1981                              <1> .okSubst:
-  1982 00003663 C60587000000FF      <1>     mov byte [.substOn], -1
-  1983 0000366A B800520000          <1>     mov eax, 5200h  
-  1984 0000366F CD21                <1>     int 21h
-  1985 00003671 B801800000          <1>     mov eax, 8001h  ;Enter crit 1
-  1986 00003676 CD2A                <1>     int 2Ah
-  1987 00003678 488B5B2A            <1>     mov rbx, qword [rbx + 2Ah]  ;Get CDS ptr
-  1988 0000367C 4881C3BE000000      <1>     add rbx, 2*cds_size ;Go to the third CDS to get the DPB ptr
-  1989 00003683 488B4345            <1>     mov rax, qword [rbx + cds.qDPBPtr]
-  1990 00003687 4881C35F000000      <1>     add rbx, cds_size   ;Now go the fourth CDS
-  1991 0000368E 48894345            <1>     mov qword [rbx + cds.qDPBPtr], rax
-  1992 00003692 C7434D59000000      <1>     mov dword [rbx + cds.dStartCluster], 59h ;Hardcoded, read from the FAT table
-  1993                              <1>     ;Set the subst flag on D and make CDS path C:\SUBSTEST,0
-  1994 00003699 66814B430050        <1>     or word [rbx + cds.wFlags], cdsSubstDrive | cdsValidDrive   ;Set that we are join
-  1995 0000369F 66C7435D0B00        <1>     mov word [rbx + cds.wBackslashOffset], .substPathL - 1
-  1996 000036A5 4889DF              <1>     mov rdi, rbx
-  1997 000036A8 488D3543000000      <1>     lea rsi, .substPath
-  1998 000036AF B90C000000          <1>     mov ecx, .substPathL
-  1999 000036B4 F3A4                <1>     rep movsb   ;Copy chars over
-  2000 000036B6 B801810000          <1>     mov eax, 8101h  ;Exit crit 1
-  2001 000036BB CD2A                <1>     int 2Ah
-  2002 000036BD 488D1508000000      <1>     lea rdx, .substEnableMsg
-  2003                              <1> .substExit:
-  2004 000036C4 B800090000          <1>     mov eax, 0900h
-  2005 000036C9 CD21                <1>     int 21h
-  2006                              <1>     return
+  1954 000035E7 0D0A4A4F494E20656E- <1> .joinEnableMsg:  db CR,LF,"JOIN enabled",CR,LF,"$"
+  1954 000035F0 61626C65640D0A24    <1>
+  1955 000035F8 0D0A4A4F494E206469- <1> .joinDisableMsg: db CR,LF,"JOIN disabled",CR,LF,"$"
+  1955 00003601 7361626C65640D0A24  <1>
+  1956 0000360A 00                  <1> .joinOn: db 0    ;Var to indicate we are on
+  1957 0000360B 433A5C4A4F494E5445- <1> .joinPath:  db "C:\JOINTEST",0
+  1957 00003614 535400              <1>
+  1958                              <1> .joinPathL  equ $ - .joinPath 
+  1959                              <1> 
+  1960                              <1> subst:
+  1961                              <1> ;Mock subst command, to test SUBST. Make an external command.
+  1962                              <1> ;Substitutes C:\SUBTEST,0 for "D:\"
+  1963 00003617 F605D3000000FF      <1>     test byte [.substOn], -1
+  1964 0000361E 7443                <1>     jz .okSubst
+  1965                              <1> .substdisable:
+  1966 00003620 B800520000          <1>     mov eax, 5200h  
+  1967 00003625 CD21                <1>     int 21h
+  1968                              <1>     ;Set the SUBST and valid flags on D: and make CDS path C:\SUBSTEST,0
+  1969 00003627 B801800000          <1>     mov eax, 8001h  ;Enter crit 1
+  1970 0000362C CD2A                <1>     int 2Ah
+  1971 0000362E 488B5B2A            <1>     mov rbx, qword [rbx + 2Ah]  ;Get CDS ptr
+  1972 00003632 4881C31D010000      <1>     add rbx, 3*cds_size ;Go to the fourth CDS
+  1973 00003639 66816343FFAF        <1>     and word [rbx + cds.wFlags], ~(cdsSubstDrive | cdsValidDrive)    ;Clear that we are subst (and valid)
+  1974 0000363F C60344              <1>     mov byte [rbx], "D"     ;Set back to D
+  1975 00003642 C6430300            <1>     mov byte [rbx + 3], 0   ;Terminating Nul
+  1976 00003646 66C7435D0200        <1>     mov word [rbx + cds.wBackslashOffset], 2
+  1977 0000364C B801810000          <1>     mov eax, 8101h  ;Exit crit 1
+  1978 00003651 CD2A                <1>     int 2Ah
+  1979 00003653 C6059700000000      <1>     mov byte [.substOn], 0
+  1980 0000365A 488D157D000000      <1>     lea rdx, .substDisableMsg
+  1981 00003661 EB61                <1>     jmp short .substExit
+  1982                              <1> .okSubst:
+  1983 00003663 C60587000000FF      <1>     mov byte [.substOn], -1
+  1984 0000366A B800520000          <1>     mov eax, 5200h  
+  1985 0000366F CD21                <1>     int 21h
+  1986 00003671 B801800000          <1>     mov eax, 8001h  ;Enter crit 1
+  1987 00003676 CD2A                <1>     int 2Ah
+  1988 00003678 488B5B2A            <1>     mov rbx, qword [rbx + 2Ah]  ;Get CDS ptr
+  1989 0000367C 4881C3BE000000      <1>     add rbx, 2*cds_size ;Go to the third CDS to get the DPB ptr
+  1990 00003683 488B4345            <1>     mov rax, qword [rbx + cds.qDPBPtr]
+  1991 00003687 4881C35F000000      <1>     add rbx, cds_size   ;Now go the fourth CDS
+  1992 0000368E 48894345            <1>     mov qword [rbx + cds.qDPBPtr], rax
+  1993 00003692 C7434D59000000      <1>     mov dword [rbx + cds.dStartCluster], 59h ;Hardcoded, read from the FAT table
+  1994                              <1>     ;Set the subst flag on D and make CDS path C:\SUBSTEST,0
+  1995 00003699 66814B430050        <1>     or word [rbx + cds.wFlags], cdsSubstDrive | cdsValidDrive   ;Set that we are join
+  1996 0000369F 66C7435D0B00        <1>     mov word [rbx + cds.wBackslashOffset], .substPathL - 1
+  1997 000036A5 4889DF              <1>     mov rdi, rbx
+  1998 000036A8 488D3543000000      <1>     lea rsi, .substPath
+  1999 000036AF B90C000000          <1>     mov ecx, .substPathL
+  2000 000036B4 F3A4                <1>     rep movsb   ;Copy chars over
+  2001 000036B6 B801810000          <1>     mov eax, 8101h  ;Exit crit 1
+  2002 000036BB CD2A                <1>     int 2Ah
+  2003 000036BD 488D1508000000      <1>     lea rdx, .substEnableMsg
+  2004                              <1> .substExit:
+  2005 000036C4 B800090000          <1>     mov eax, 0900h
+  2006 000036C9 CD21                <1>     int 21h
+  2007                              <1>     return
     13                              <2> %%_ret:
     14 000036CB C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-  2007 000036CC 0D0A53554253542065- <1> .substEnableMsg:  db CR,LF,"SUBST enabled",CR,LF,"$"
-  2007 000036D5 6E61626C65640D0A24  <1>
-  2008 000036DE 0D0A53554253542064- <1> .substDisableMsg: db CR,LF,"SUBST disabled",CR,LF,"$"
-  2008 000036E7 697361626C65640D0A- <1>
-  2008 000036F0 24                  <1>
-  2009 000036F1 00                  <1> .substOn: db 0    ;Var to indicate we are on
-  2010 000036F2 433A5C535542535445- <1> .substPath:  db "C:\SUBSTEST",0
-  2010 000036FB 535400              <1>
-  2011                              <1> .substPathL  equ $ - .substPath 
-  2012                              <1> ;TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP
-  2013                              <1> truename:
-  2014 000036FE F6059FC9FFFFFF      <1>     test byte [arg1Flg], -1
-  2015 00003705 0F84C9E7FFFF        <1>     jz badArgError
-  2016 0000370B E81A0F0000          <1>     call buildCommandPath   ;Get the first argument into the searchSpec
-  2017 00003710 488D3579CDFFFF      <1>     lea rsi, searchSpec     ;Store the path here
-  2018 00003717 4889F7              <1>     mov rdi, rsi    ;Normalise the pathspec here
-  2019 0000371A B800600000          <1>     mov eax, 6000h  ;TRUENAME
-  2020 0000371F CD21                <1>     int 21h
-  2021 00003721 730D                <1>     jnc .writePath
-  2022 00003723 3C02                <1>     cmp al, errFnf
-  2023 00003725 0F84B2E7FFFF        <1>     je badFileError
-  2024 0000372B E992E7FFFF          <1>     jmp badParamError
-  2025                              <1> .writePath:
-  2026 00003730 4889FA              <1>     mov rdx, rdi    ;Print from the destination buffer
-  2027 00003733 B9FFFFFFFF          <1>     mov ecx, -1
-  2028 00003738 30C0                <1>     xor al, al
-  2029 0000373A F2AE                <1>     repne scasb     ;Get the new len
-  2030 0000373C F7D1                <1>     not ecx         ;Invert bits and subtract by 1 (to drop trailing 0)
-  2031 0000373E FFC9                <1>     dec ecx
-  2032 00003740 BB01000000          <1>     mov ebx, 01
-  2033 00003745 B440                <1>     mov ah, 40h
-  2034 00003747 CD21                <1>     int 21h
-  2035 00003749 E8160B0000          <1>     call printCRLF
-  2036                              <1>     return
+  2008 000036CC 0D0A53554253542065- <1> .substEnableMsg:  db CR,LF,"SUBST enabled",CR,LF,"$"
+  2008 000036D5 6E61626C65640D0A24  <1>
+  2009 000036DE 0D0A53554253542064- <1> .substDisableMsg: db CR,LF,"SUBST disabled",CR,LF,"$"
+  2009 000036E7 697361626C65640D0A- <1>
+  2009 000036F0 24                  <1>
+  2010 000036F1 00                  <1> .substOn: db 0    ;Var to indicate we are on
+  2011 000036F2 433A5C535542535445- <1> .substPath:  db "C:\SUBSTEST",0
+  2011 000036FB 535400              <1>
+  2012                              <1> .substPathL  equ $ - .substPath 
+  2013                              <1> ;TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP
+  2014                              <1> truename:
+  2015 000036FE F6059FC9FFFFFF      <1>     test byte [arg1Flg], -1
+  2016 00003705 0F84C9E7FFFF        <1>     jz badArgError
+  2017 0000370B E81A0F0000          <1>     call buildCommandPath   ;Get the first argument into the searchSpec
+  2018 00003710 488D3579CDFFFF      <1>     lea rsi, searchSpec     ;Store the path here
+  2019 00003717 4889F7              <1>     mov rdi, rsi    ;Normalise the pathspec here
+  2020 0000371A B800600000          <1>     mov eax, 6000h  ;TRUENAME
+  2021 0000371F CD21                <1>     int 21h
+  2022 00003721 730D                <1>     jnc .writePath
+  2023 00003723 3C02                <1>     cmp al, errFnf
+  2024 00003725 0F84B2E7FFFF        <1>     je badFileError
+  2025 0000372B E992E7FFFF          <1>     jmp badParamError
+  2026                              <1> .writePath:
+  2027 00003730 4889FA              <1>     mov rdx, rdi    ;Print from the destination buffer
+  2028 00003733 B9FFFFFFFF          <1>     mov ecx, -1
+  2029 00003738 30C0                <1>     xor al, al
+  2030 0000373A F2AE                <1>     repne scasb     ;Get the new len
+  2031 0000373C F7D1                <1>     not ecx         ;Invert bits and subtract by 1 (to drop trailing 0)
+  2032 0000373E FFC9                <1>     dec ecx
+  2033 00003740 BB01000000          <1>     mov ebx, 01
+  2034 00003745 B440                <1>     mov ah, 40h
+  2035 00003747 CD21                <1>     int 21h
+  2036 00003749 E8160B0000          <1>     call printCRLF
+  2037                              <1>     return
     13                              <2> %%_ret:
     14 0000374E C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-  2037                              <1> 
-  2038                              <1> volume:
-  2039                              <1> ;Only one argument. VOL X: (you can have more trash after the colon)
-  2040 0000374F F60551C9FFFFFF      <1>     test byte [arg2Flg], -1
-  2041 00003756 0F8578E7FFFF        <1>     jnz badArgError
-  2042 0000375C F60541C9FFFFFF      <1>     test byte [arg1Flg], -1
-  2043 00003763 7507                <1>     jnz .notCurrentDrive
-  2044 00003765 E8090D0000          <1>     call getCurrentDrive    ;Get 0-based current drive number in al
-  2045 0000376A EB31                <1>     jmp short .dirEP
-  2046                              <1> .notCurrentDrive:
-  2047 0000376C E8B90E0000          <1>     call buildCommandPath   ;Get the first argument into the searchSpec
-  2048 00003771 488D3518CDFFFF      <1>     lea rsi, searchSpec
-  2049 00003778 E8390D0000          <1>     call skipDelimiters     ;Move rsi to the first char of the command
-  2050 0000377D 66AD                <1>     lodsw                   ;Get this word
-  2051 0000377F 80FC3A              <1>     cmp ah, ":"             ;If this is not a colon, not a drive, error
-  2052 00003782 0F854CE7FFFF        <1>     jne badArgError
-  2053 00003788 8A0518C9FFFF        <1>     mov al, byte [arg1FCBret]   ;Get the response from the parse
-  2054 0000378E A8FF                <1>     test al, -1
-  2055 00003790 0F8535E7FFFF        <1>     jnz badDriveError ;Can't have either wildcards nor be invalid (obviously)
-  2056 00003796 410FB6405C          <1>     movzx eax, byte [r8 + fcb1 + fcb.driveNum] ;Get the 1-based drive number
-  2057 0000379B FFC8                <1>     dec eax ;Convert to 0 based number
-  2058                              <1> .dirEP: ;Must be called with VALID 0 based drive number in al  
-  2059 0000379D E8B10F0000          <1>     call setDTA     ;Ensure we have our DTA set correctly, preserving all regs
-  2060 000037A2 488D1584CEFFFF      <1>     lea rdx, volFcb
-  2061 000037A9 FFC0                <1>     inc eax ;Get 1 based drive number
-  2062 000037AB 89C3                <1>     mov ebx, eax    ;Save the drive number in ebx
-  2063 000037AD 884207              <1>     mov byte [rdx + exFcb.driveNum], al ;Store drive number we are 
-  2064 000037B0 B800110000          <1>     mov eax, 1100h ;Find first FCB
-  2065 000037B5 CD21                <1>     int 21h
-  2066 000037B7 50                  <1>     push rax
-  2067                              <1>     ;Print the label intro spiel, using the given (valid) drive number
-  2068 000037B8 488D15C2D0FFFF      <1>     lea rdx, crlf
-  2069 000037BF B409                <1>     mov ah, 09h
-  2070 000037C1 CD21                <1>     int 21h
-  2071 000037C3 488D1577D3FFFF      <1>     lea rdx, volMes
-  2072 000037CA B409                <1>     mov ah, 09h
-  2073 000037CC CD21                <1>     int 21h
-  2074 000037CE 88DA                <1>     mov dl, bl  ;Get the 1 based drive number
-  2075 000037D0 80C240              <1>     add dl, "@" ;Convert to a ASCII char to print
-  2076 000037D3 B402                <1>     mov ah, 02h
-  2077 000037D5 CD21                <1>     int 21h
-  2078 000037D7 58                  <1>     pop rax
-  2079 000037D8 84C0                <1>     test al, al ;If this is zero, the call succeeded
-  2080 000037DA 7409                <1>     jz .volIDOk
-  2081 000037DC 488D1575D3FFFF      <1>     lea rdx, volNo
-  2082 000037E3 EB19                <1>     jmp short .volEndPrint
-  2083                              <1> .volIDOk:
-  2084 000037E5 488D1567D3FFFF      <1>     lea rdx, volOk
-  2085 000037EC B409                <1>     mov ah, 09h
-  2086 000037EE CD21                <1>     int 21h
-  2087 000037F0 C60532C9FFFF24      <1>     mov byte [cmdFFBlock + exFcb.curBlock], "$"   ;Place a $ at the end of the name
-  2088 000037F7 488D1520C9FFFF      <1>     lea rdx, qword [cmdFFBlock + exFcb.filename]
-  2089                              <1> .volEndPrint:
-  2090 000037FE B409                <1>     mov ah, 09h
-  2091 00003800 CD21                <1>     int 21h
-  2092 00003802 488D1578D0FFFF      <1>     lea rdx, crlf
-  2093 00003809 B409                <1>     mov ah, 09h
-  2094 0000380B CD21                <1>     int 21h
-  2095                              <1>     return
+  2038                              <1> 
+  2039                              <1> volume:
+  2040                              <1> ;Only one argument. VOL X: (you can have more trash after the colon)
+  2041 0000374F F60551C9FFFFFF      <1>     test byte [arg2Flg], -1
+  2042 00003756 0F8578E7FFFF        <1>     jnz badArgError
+  2043 0000375C F60541C9FFFFFF      <1>     test byte [arg1Flg], -1
+  2044 00003763 7507                <1>     jnz .notCurrentDrive
+  2045 00003765 E8090D0000          <1>     call getCurrentDrive    ;Get 0-based current drive number in al
+  2046 0000376A EB31                <1>     jmp short .dirEP
+  2047                              <1> .notCurrentDrive:
+  2048 0000376C E8B90E0000          <1>     call buildCommandPath   ;Get the first argument into the searchSpec
+  2049 00003771 488D3518CDFFFF      <1>     lea rsi, searchSpec
+  2050 00003778 E8390D0000          <1>     call skipDelimiters     ;Move rsi to the first char of the command
+  2051 0000377D 66AD                <1>     lodsw                   ;Get this word
+  2052 0000377F 80FC3A              <1>     cmp ah, ":"             ;If this is not a colon, not a drive, error
+  2053 00003782 0F854CE7FFFF        <1>     jne badArgError
+  2054 00003788 8A0518C9FFFF        <1>     mov al, byte [arg1FCBret]   ;Get the response from the parse
+  2055 0000378E A8FF                <1>     test al, -1
+  2056 00003790 0F8535E7FFFF        <1>     jnz badDriveError ;Can't have either wildcards nor be invalid (obviously)
+  2057 00003796 410FB6405C          <1>     movzx eax, byte [r8 + fcb1 + fcb.driveNum] ;Get the 1-based drive number
+  2058 0000379B FFC8                <1>     dec eax ;Convert to 0 based number
+  2059                              <1> .dirEP: ;Must be called with VALID 0 based drive number in al  
+  2060 0000379D E8B10F0000          <1>     call setDTA     ;Ensure we have our DTA set correctly, preserving all regs
+  2061 000037A2 488D1584CEFFFF      <1>     lea rdx, volFcb
+  2062 000037A9 FFC0                <1>     inc eax ;Get 1 based drive number
+  2063 000037AB 89C3                <1>     mov ebx, eax    ;Save the drive number in ebx
+  2064 000037AD 884207              <1>     mov byte [rdx + exFcb.driveNum], al ;Store drive number we are 
+  2065 000037B0 B800110000          <1>     mov eax, 1100h ;Find first FCB
+  2066 000037B5 CD21                <1>     int 21h
+  2067 000037B7 50                  <1>     push rax
+  2068                              <1>     ;Print the label intro spiel, using the given (valid) drive number
+  2069 000037B8 488D15C2D0FFFF      <1>     lea rdx, crlf
+  2070 000037BF B409                <1>     mov ah, 09h
+  2071 000037C1 CD21                <1>     int 21h
+  2072 000037C3 488D1577D3FFFF      <1>     lea rdx, volMes
+  2073 000037CA B409                <1>     mov ah, 09h
+  2074 000037CC CD21                <1>     int 21h
+  2075 000037CE 88DA                <1>     mov dl, bl  ;Get the 1 based drive number
+  2076 000037D0 80C240              <1>     add dl, "@" ;Convert to a ASCII char to print
+  2077 000037D3 B402                <1>     mov ah, 02h
+  2078 000037D5 CD21                <1>     int 21h
+  2079 000037D7 58                  <1>     pop rax
+  2080 000037D8 84C0                <1>     test al, al ;If this is zero, the call succeeded
+  2081 000037DA 7409                <1>     jz .volIDOk
+  2082 000037DC 488D1575D3FFFF      <1>     lea rdx, volNo
+  2083 000037E3 EB19                <1>     jmp short .volEndPrint
+  2084                              <1> .volIDOk:
+  2085 000037E5 488D1567D3FFFF      <1>     lea rdx, volOk
+  2086 000037EC B409                <1>     mov ah, 09h
+  2087 000037EE CD21                <1>     int 21h
+  2088 000037F0 C60532C9FFFF24      <1>     mov byte [cmdFFBlock + exFcb.curBlock], "$"   ;Place a $ at the end of the name
+  2089 000037F7 488D1520C9FFFF      <1>     lea rdx, qword [cmdFFBlock + exFcb.filename]
+  2090                              <1> .volEndPrint:
+  2091 000037FE B409                <1>     mov ah, 09h
+  2092 00003800 CD21                <1>     int 21h
+  2093 00003802 488D1578D0FFFF      <1>     lea rdx, crlf
+  2094 00003809 B409                <1>     mov ah, 09h
+  2095 0000380B CD21                <1>     int 21h
+  2096                              <1>     return
     13                              <2> %%_ret:
     14 0000380D C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-  2096                              <1> 
-  2097                              <1> version:
-  2098 0000380E 488D156CD0FFFF      <1>     lea rdx, crlf
-  2099 00003815 B409                <1>     mov ah, 09h
-  2100 00003817 CD21                <1>     int 21h
-  2101 00003819 488D150FD3FFFF      <1>     lea rdx, dosVer
-  2102 00003820 B409                <1>     mov ah, 09h
-  2103 00003822 CD21                <1>     int 21h
-  2104 00003824 E80C000000          <1>     call .printVersionNumber
-  2105 00003829 488D1551D0FFFF      <1>     lea rdx, crlf
-  2106 00003830 B409                <1>     mov ah, 09h
-  2107 00003832 CD21                <1>     int 21h
-  2108                              <1>     return
+  2097                              <1> 
+  2098                              <1> version:
+  2099 0000380E 488D156CD0FFFF      <1>     lea rdx, crlf
+  2100 00003815 B409                <1>     mov ah, 09h
+  2101 00003817 CD21                <1>     int 21h
+  2102 00003819 488D150FD3FFFF      <1>     lea rdx, dosVer
+  2103 00003820 B409                <1>     mov ah, 09h
+  2104 00003822 CD21                <1>     int 21h
+  2105 00003824 E80C000000          <1>     call .printVersionNumber
+  2106 00003829 488D1551D0FFFF      <1>     lea rdx, crlf
+  2107 00003830 B409                <1>     mov ah, 09h
+  2108 00003832 CD21                <1>     int 21h
+  2109                              <1>     return
     13                              <2> %%_ret:
     14 00003834 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-  2109                              <1> .printVersionNumber:
-  2110 00003835 B430                <1>     mov ah, 30h ;Get version numbers, al = Major, ah = Minor
-  2111 00003837 CD21                <1>     int 21h
-  2112 00003839 50                  <1>     push rax
-  2113 0000383A 0FB6C0              <1>     movzx eax, al
-  2114 0000383D E8210E0000          <1>     call printDecimalWord
-  2115 00003842 B22E                <1>     mov dl, "."
-  2116 00003844 B402                <1>     mov ah, 02h
-  2117 00003846 CD21                <1>     int 21h
-  2118 00003848 58                  <1>     pop rax
-  2119 00003849 0FB6C4              <1>     movzx eax, ah
-  2120 0000384C E8120E0000          <1>     call printDecimalWord
-  2121                              <1>     return
+  2110                              <1> .printVersionNumber:
+  2111 00003835 B430                <1>     mov ah, 30h ;Get version numbers, al = Major, ah = Minor
+  2112 00003837 CD21                <1>     int 21h
+  2113 00003839 50                  <1>     push rax
+  2114 0000383A 0FB6C0              <1>     movzx eax, al
+  2115 0000383D E8210E0000          <1>     call printDecimalWord
+  2116 00003842 B22E                <1>     mov dl, "."
+  2117 00003844 B402                <1>     mov ah, 02h
+  2118 00003846 CD21                <1>     int 21h
+  2119 00003848 58                  <1>     pop rax
+  2120 00003849 0FB6C4              <1>     movzx eax, ah
+  2121 0000384C E8120E0000          <1>     call printDecimalWord
+  2122                              <1>     return
     13                              <2> %%_ret:
     14 00003851 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-  2122                              <1> 
   2123                              <1> 
-  2124                              <1> memory:
-  2125 00003852 B800520000          <1>     mov eax, 5200h  ;Get Sysvars :)
-  2126 00003857 CD21                <1>     int 21h
-  2127 00003859 4885DB              <1>     test rbx, rbx
-  2128 0000385C 7510                <1>     jnz .sysvarsOK
-  2129 0000385E 488D15B1D5FFFF      <1>     lea rdx, memBad0
-  2130 00003865 B409                <1>     mov ah, 09h
-  2131 00003867 CD21                <1>     int 21h
-  2132 00003869 E9D50E0000          <1>     jmp freezePC.altEP
-  2133                              <1> .sysvarsOK:
-  2134                              <1>     ;Use rsi to store DOS memory, rdi to store Free memory and rbp for Hole
-  2135                              <1>     ; and rcx to store Application memory
-  2136 0000386E 31F6                <1>     xor esi, esi
-  2137 00003870 31FF                <1>     xor edi, edi
-  2138 00003872 31ED                <1>     xor ebp, ebp
-  2139 00003874 31C9                <1>     xor ecx, ecx
-  2140 00003876 488D5BF8            <1>     lea rbx, qword [rbx - 8]    ;Go back a qword
-  2141 0000387A 488B1B              <1>     mov rbx, qword [rbx]
-  2142                              <1> .memLp:
-  2143 0000387D 803B4D              <1>     cmp byte [rbx], mcbMarkCtn
-  2144 00003880 7409                <1>     je .validMCB
-  2145 00003882 803B5A              <1>     cmp byte [rbx], mcbMarkEnd
-  2146 00003885 0F8501010000        <1>     jne .badMCBFound
-  2147                              <1> .validMCB:
-  2148 0000388B 8B4309              <1>     mov eax, dword [rbx + mcb.blockSize]
-  2149 0000388E 48C1E004            <1>     shl rax, 4  ;Convert to bytes
-  2150 00003892 48817B0108000000    <1>     cmp qword [rbx + mcb.owner], mcbOwnerDOS
-  2151 0000389A 7505                <1>     jne .notDOS
-  2152 0000389C 4801C6              <1>     add rsi, rax    ;Add to DOS count
-  2153 0000389F EB21                <1>     jmp short .gotoNext
-  2154                              <1> .notDOS:
-  2155 000038A1 48817B0100000000    <1>     cmp qword [rbx + mcb.owner], mcbOwnerFree
-  2156 000038A9 7505                <1>     jne .notFree
-  2157 000038AB 4801C7              <1>     add rdi, rax    ;Add to Free space count
-  2158 000038AE EB12                <1>     jmp short .gotoNext
-  2159                              <1> .notFree:
-  2160 000038B0 48817B0107000000    <1>     cmp qword [rbx + mcb.owner], mcbOwnerHole
-  2161 000038B8 7505                <1>     jne .notHole
-  2162 000038BA 4801C5              <1>     add rbp, rax    ;Add to Hole count
-  2163 000038BD EB03                <1>     jmp short .gotoNext
-  2164                              <1> .notHole:
-  2165 000038BF 4801C1              <1>     add rcx, rax    ;Add to Application count
-  2166                              <1> .gotoNext:
-  2167 000038C2 803B5A              <1>     cmp byte [rbx], mcbMarkEnd
-  2168 000038C5 7407                <1>     je .endOfWalk
-  2169 000038C7 488D5C0310          <1>     lea rbx, qword [rbx + mcb.program + rax]
-  2170 000038CC EBAF                <1>     jmp short .memLp
-  2171                              <1> .endOfWalk:
-  2172                              <1>     
-  2173 000038CE 488D15A2D4FFFF      <1>     lea rdx, memDOS
-  2174 000038D5 B409                <1>     mov ah, 09h
-  2175 000038D7 CD21                <1>     int 21h
-  2176 000038D9 4889F0              <1>     mov rax, rsi
-  2177 000038DC E89D000000          <1>     call .mcbPrintAmount
-  2178 000038E1 488D1527D5FFFF      <1>     lea rdx, memByte
-  2179 000038E8 B409                <1>     mov ah, 09h
-  2180 000038EA CD21                <1>     int 21h
-  2181                              <1> 
-  2182 000038EC 4885ED              <1>     test rbp, rbp
-  2183 000038EF 741E                <1>     jz .skipHole
-  2184 000038F1 488D15CBD4FFFF      <1>     lea rdx, memHole
-  2185 000038F8 B409                <1>     mov ah, 09h
-  2186 000038FA CD21                <1>     int 21h
-  2187 000038FC 4889E8              <1>     mov rax, rbp
-  2188 000038FF E87A000000          <1>     call .mcbPrintAmount
-  2189 00003904 488D1504D5FFFF      <1>     lea rdx, memByte
-  2190 0000390B B409                <1>     mov ah, 09h
-  2191 0000390D CD21                <1>     int 21h
-  2192                              <1> .skipHole:
-  2193                              <1> 
-  2194 0000390F 488D1587D4FFFF      <1>     lea rdx, memApp
-  2195 00003916 B409                <1>     mov ah, 09h
-  2196 00003918 CD21                <1>     int 21h
-  2197 0000391A 4889C8              <1>     mov rax, rcx
-  2198 0000391D E85C000000          <1>     call .mcbPrintAmount
-  2199 00003922 488D15E6D4FFFF      <1>     lea rdx, memByte
-  2200 00003929 B409                <1>     mov ah, 09h
-  2201 0000392B CD21                <1>     int 21h
-  2202                              <1> 
-  2203 0000392D 488D15B5D4FFFF      <1>     lea rdx, memFree
-  2204 00003934 B409                <1>     mov ah, 09h
-  2205 00003936 CD21                <1>     int 21h
-  2206 00003938 4889F8              <1>     mov rax, rdi
-  2207 0000393B E83E000000          <1>     call .mcbPrintAmount
-  2208 00003940 488D15C8D4FFFF      <1>     lea rdx, memByte
-  2209 00003947 B409                <1>     mov ah, 09h
-  2210 00003949 CD21                <1>     int 21h
-  2211                              <1> 
-  2212 0000394B 488D15FFD3FFFF      <1>     lea rdx, memSys
-  2213 00003952 B409                <1>     mov ah, 09h
-  2214 00003954 CD21                <1>     int 21h
-  2215 00003956 4889F0              <1>     mov rax, rsi
-  2216 00003959 4801F8              <1>     add rax, rdi
-  2217 0000395C 4801C8              <1>     add rax, rcx
-  2218 0000395F 4801E8              <1>     add rax, rbp
-  2219 00003962 E817000000          <1>     call .mcbPrintAmount
-  2220 00003967 488D15A1D4FFFF      <1>     lea rdx, memByte
-  2221 0000396E B409                <1>     mov ah, 09h
-  2222 00003970 CD21                <1>     int 21h
-  2223                              <1> 
-  2224 00003972 488D1508CFFFFF      <1>     lea rdx, crlf
-  2225 00003979 B409                <1>     mov ah, 09h
-  2226 0000397B CD21                <1>     int 21h
-  2227                              <1>     return
+  2124                              <1> 
+  2125                              <1> memory:
+  2126 00003852 B800520000          <1>     mov eax, 5200h  ;Get Sysvars :)
+  2127 00003857 CD21                <1>     int 21h
+  2128 00003859 4885DB              <1>     test rbx, rbx
+  2129 0000385C 7510                <1>     jnz .sysvarsOK
+  2130 0000385E 488D15B1D5FFFF      <1>     lea rdx, memBad0
+  2131 00003865 B409                <1>     mov ah, 09h
+  2132 00003867 CD21                <1>     int 21h
+  2133 00003869 E9D50E0000          <1>     jmp freezePC.altEP
+  2134                              <1> .sysvarsOK:
+  2135                              <1>     ;Use rsi to store DOS memory, rdi to store Free memory and rbp for Hole
+  2136                              <1>     ; and rcx to store Application memory
+  2137 0000386E 31F6                <1>     xor esi, esi
+  2138 00003870 31FF                <1>     xor edi, edi
+  2139 00003872 31ED                <1>     xor ebp, ebp
+  2140 00003874 31C9                <1>     xor ecx, ecx
+  2141 00003876 488D5BF8            <1>     lea rbx, qword [rbx - 8]    ;Go back a qword
+  2142 0000387A 488B1B              <1>     mov rbx, qword [rbx]
+  2143                              <1> .memLp:
+  2144 0000387D 803B4D              <1>     cmp byte [rbx], mcbMarkCtn
+  2145 00003880 7409                <1>     je .validMCB
+  2146 00003882 803B5A              <1>     cmp byte [rbx], mcbMarkEnd
+  2147 00003885 0F8501010000        <1>     jne .badMCBFound
+  2148                              <1> .validMCB:
+  2149 0000388B 8B4309              <1>     mov eax, dword [rbx + mcb.blockSize]
+  2150 0000388E 48C1E004            <1>     shl rax, 4  ;Convert to bytes
+  2151 00003892 48817B0108000000    <1>     cmp qword [rbx + mcb.owner], mcbOwnerDOS
+  2152 0000389A 7505                <1>     jne .notDOS
+  2153 0000389C 4801C6              <1>     add rsi, rax    ;Add to DOS count
+  2154 0000389F EB21                <1>     jmp short .gotoNext
+  2155                              <1> .notDOS:
+  2156 000038A1 48817B0100000000    <1>     cmp qword [rbx + mcb.owner], mcbOwnerFree
+  2157 000038A9 7505                <1>     jne .notFree
+  2158 000038AB 4801C7              <1>     add rdi, rax    ;Add to Free space count
+  2159 000038AE EB12                <1>     jmp short .gotoNext
+  2160                              <1> .notFree:
+  2161 000038B0 48817B0107000000    <1>     cmp qword [rbx + mcb.owner], mcbOwnerHole
+  2162 000038B8 7505                <1>     jne .notHole
+  2163 000038BA 4801C5              <1>     add rbp, rax    ;Add to Hole count
+  2164 000038BD EB03                <1>     jmp short .gotoNext
+  2165                              <1> .notHole:
+  2166 000038BF 4801C1              <1>     add rcx, rax    ;Add to Application count
+  2167                              <1> .gotoNext:
+  2168 000038C2 803B5A              <1>     cmp byte [rbx], mcbMarkEnd
+  2169 000038C5 7407                <1>     je .endOfWalk
+  2170 000038C7 488D5C0310          <1>     lea rbx, qword [rbx + mcb.program + rax]
+  2171 000038CC EBAF                <1>     jmp short .memLp
+  2172                              <1> .endOfWalk:
+  2173                              <1>     
+  2174 000038CE 488D15A2D4FFFF      <1>     lea rdx, memDOS
+  2175 000038D5 B409                <1>     mov ah, 09h
+  2176 000038D7 CD21                <1>     int 21h
+  2177 000038D9 4889F0              <1>     mov rax, rsi
+  2178 000038DC E89D000000          <1>     call .mcbPrintAmount
+  2179 000038E1 488D1527D5FFFF      <1>     lea rdx, memByte
+  2180 000038E8 B409                <1>     mov ah, 09h
+  2181 000038EA CD21                <1>     int 21h
+  2182                              <1> 
+  2183 000038EC 4885ED              <1>     test rbp, rbp
+  2184 000038EF 741E                <1>     jz .skipHole
+  2185 000038F1 488D15CBD4FFFF      <1>     lea rdx, memHole
+  2186 000038F8 B409                <1>     mov ah, 09h
+  2187 000038FA CD21                <1>     int 21h
+  2188 000038FC 4889E8              <1>     mov rax, rbp
+  2189 000038FF E87A000000          <1>     call .mcbPrintAmount
+  2190 00003904 488D1504D5FFFF      <1>     lea rdx, memByte
+  2191 0000390B B409                <1>     mov ah, 09h
+  2192 0000390D CD21                <1>     int 21h
+  2193                              <1> .skipHole:
+  2194                              <1> 
+  2195 0000390F 488D1587D4FFFF      <1>     lea rdx, memApp
+  2196 00003916 B409                <1>     mov ah, 09h
+  2197 00003918 CD21                <1>     int 21h
+  2198 0000391A 4889C8              <1>     mov rax, rcx
+  2199 0000391D E85C000000          <1>     call .mcbPrintAmount
+  2200 00003922 488D15E6D4FFFF      <1>     lea rdx, memByte
+  2201 00003929 B409                <1>     mov ah, 09h
+  2202 0000392B CD21                <1>     int 21h
+  2203                              <1> 
+  2204 0000392D 488D15B5D4FFFF      <1>     lea rdx, memFree
+  2205 00003934 B409                <1>     mov ah, 09h
+  2206 00003936 CD21                <1>     int 21h
+  2207 00003938 4889F8              <1>     mov rax, rdi
+  2208 0000393B E83E000000          <1>     call .mcbPrintAmount
+  2209 00003940 488D15C8D4FFFF      <1>     lea rdx, memByte
+  2210 00003947 B409                <1>     mov ah, 09h
+  2211 00003949 CD21                <1>     int 21h
+  2212                              <1> 
+  2213 0000394B 488D15FFD3FFFF      <1>     lea rdx, memSys
+  2214 00003952 B409                <1>     mov ah, 09h
+  2215 00003954 CD21                <1>     int 21h
+  2216 00003956 4889F0              <1>     mov rax, rsi
+  2217 00003959 4801F8              <1>     add rax, rdi
+  2218 0000395C 4801C8              <1>     add rax, rcx
+  2219 0000395F 4801E8              <1>     add rax, rbp
+  2220 00003962 E817000000          <1>     call .mcbPrintAmount
+  2221 00003967 488D15A1D4FFFF      <1>     lea rdx, memByte
+  2222 0000396E B409                <1>     mov ah, 09h
+  2223 00003970 CD21                <1>     int 21h
+  2224                              <1> 
+  2225 00003972 488D1508CFFFFF      <1>     lea rdx, crlf
+  2226 00003979 B409                <1>     mov ah, 09h
+  2227 0000397B CD21                <1>     int 21h
+  2228                              <1>     return
     13                              <2> %%_ret:
     14 0000397D C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-  2228                              <1> 
-  2229                              <1> .mcbPrintAmount:
-  2230 0000397E 51                  <1>     push rcx
-  2231 0000397F 56                  <1>     push rsi
-  2232 00003980 57                  <1>     push rdi
-  2233 00003981 55                  <1>     push rbp
-  2234 00003982 E8DC0C0000          <1>     call printDecimalWord
-  2235 00003987 5D                  <1>     pop rbp
-  2236 00003988 5F                  <1>     pop rdi
-  2237 00003989 5E                  <1>     pop rsi
-  2238 0000398A 59                  <1>     pop rcx
-  2239                              <1>     return
+  2229                              <1> 
+  2230                              <1> .mcbPrintAmount:
+  2231 0000397E 51                  <1>     push rcx
+  2232 0000397F 56                  <1>     push rsi
+  2233 00003980 57                  <1>     push rdi
+  2234 00003981 55                  <1>     push rbp
+  2235 00003982 E8DC0C0000          <1>     call printDecimalWord
+  2236 00003987 5D                  <1>     pop rbp
+  2237 00003988 5F                  <1>     pop rdi
+  2238 00003989 5E                  <1>     pop rsi
+  2239 0000398A 59                  <1>     pop rcx
+  2240                              <1>     return
     13                              <2> %%_ret:
     14 0000398B C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-  2240                              <1> .badMCBFound:
-  2241 0000398C 488D15C3D4FFFF      <1>     lea rdx, memBad2
-  2242 00003993 B409                <1>     mov ah, 09h
-  2243 00003995 CD21                <1>     int 21h
-  2244 00003997 E9A70D0000          <1>     jmp freezePC.altEP
-  2245                              <1> 
-  2246                              <1> type:
-  2247 0000399C F60501C7FFFFFF      <1>     test byte [arg1Flg], -1 ;If this not set, error
-  2248 000039A3 0F842BE5FFFF        <1>     jz badArgError
-  2249 000039A9 F605F7C6FFFFFF      <1>     test byte [arg2Flg], -1
-  2250 000039B0 0F851EE5FFFF        <1>     jnz badArgError         ;If this set, error
-  2251 000039B6 4C8B0552C6FFFF      <1>     mov r8, [pspPtr]
-  2252 000039BD 498DB081000000      <1>     lea rsi, qword [r8 + cmdLine]
-  2253 000039C4 0FB605DAC6FFFF      <1>     movzx eax, byte [arg1Off]
-  2254 000039CB 4801C6              <1>     add rsi, rax    ;Point rsi to this argument
-  2255 000039CE 803E0D              <1>     cmp byte [rsi], CR
-  2256 000039D1 0F84FDE4FFFF        <1>     je badArgError
-  2257 000039D7 807E013A            <1>     cmp byte [rsi + 1], ":" ;If a drive is specified, check if valid
-  2258 000039DB 750F                <1>     jne .noDrive
-  2259 000039DD 0FB605C2C6FFFF      <1>     movzx eax, byte [arg1FCBret]
-  2260 000039E4 3CFF                <1>     cmp al, -1
-  2261 000039E6 0F84DFE4FFFF        <1>     je badDriveError
-  2262                              <1> .noDrive:
-  2263                              <1>     ;Now we open the provided file
-  2264 000039EC E8390C0000          <1>     call buildCommandPath
-  2265 000039F1 488D1598CAFFFF      <1>     lea rdx, searchSpec
-  2266 000039F8 B8003D0000          <1>     mov eax, 3D00h  ;Open in read only mode
-  2267 000039FD CD21                <1>     int 21h
-  2268 000039FF 0F82D8E4FFFF        <1>     jc badFileError
-  2269 00003A05 498D9080000000      <1>     lea rdx, qword [r8 + psp.dta]
-  2270 00003A0C 0FB7D8              <1>     movzx ebx, ax    ;Save the file handle in ebx
-  2271                              <1> .lp:
-  2272 00003A0F B980000000          <1>     mov ecx, 128    ;Read 128 bytes at a time
-  2273 00003A14 B43F                <1>     mov ah, 3Fh ;Read handle
-  2274 00003A16 CD21                <1>     int 21h
-  2275 00003A18 89C1                <1>     mov ecx, eax
-  2276 00003A1A 67E317              <1>     jecxz .exit
-  2277 00003A1D 53                  <1>     push rbx    ;Save the original in handle
-  2278 00003A1E BB01000000          <1>     mov ebx, 1  ;STDOUT
-  2279 00003A23 B440                <1>     mov ah, 40h
-  2280 00003A25 CD21                <1>     int 21h
-  2281 00003A27 5B                  <1>     pop rbx ;Get back the original read handle
-  2282 00003A28 720F                <1>     jc .exitBad
-  2283 00003A2A 39C8                <1>     cmp eax, ecx
-  2284 00003A2C 74E1                <1>     je .lp
-  2285 00003A2E FFC9                <1>     dec ecx ;One less for a ^Z
-  2286 00003A30 39C8                <1>     cmp eax, ecx
-  2287 00003A32 7505                <1>     jne .exitBad
-  2288                              <1> .exit:
-  2289 00003A34 B43E                <1>     mov ah, 3Eh ;Close handle
-  2290 00003A36 CD21                <1>     int 21h
-  2291                              <1>     return
+  2241                              <1> .badMCBFound:
+  2242 0000398C 488D15C3D4FFFF      <1>     lea rdx, memBad2
+  2243 00003993 B409                <1>     mov ah, 09h
+  2244 00003995 CD21                <1>     int 21h
+  2245 00003997 E9A70D0000          <1>     jmp freezePC.altEP
+  2246                              <1> 
+  2247                              <1> type:
+  2248 0000399C F60501C7FFFFFF      <1>     test byte [arg1Flg], -1 ;If this not set, error
+  2249 000039A3 0F842BE5FFFF        <1>     jz badArgError
+  2250 000039A9 F605F7C6FFFFFF      <1>     test byte [arg2Flg], -1
+  2251 000039B0 0F851EE5FFFF        <1>     jnz badArgError         ;If this set, error
+  2252 000039B6 4C8B0552C6FFFF      <1>     mov r8, [pspPtr]
+  2253 000039BD 498DB081000000      <1>     lea rsi, qword [r8 + cmdLine]
+  2254 000039C4 0FB605DAC6FFFF      <1>     movzx eax, byte [arg1Off]
+  2255 000039CB 4801C6              <1>     add rsi, rax    ;Point rsi to this argument
+  2256 000039CE 803E0D              <1>     cmp byte [rsi], CR
+  2257 000039D1 0F84FDE4FFFF        <1>     je badArgError
+  2258 000039D7 807E013A            <1>     cmp byte [rsi + 1], ":" ;If a drive is specified, check if valid
+  2259 000039DB 750F                <1>     jne .noDrive
+  2260 000039DD 0FB605C2C6FFFF      <1>     movzx eax, byte [arg1FCBret]
+  2261 000039E4 3CFF                <1>     cmp al, -1
+  2262 000039E6 0F84DFE4FFFF        <1>     je badDriveError
+  2263                              <1> .noDrive:
+  2264                              <1>     ;Now we open the provided file
+  2265 000039EC E8390C0000          <1>     call buildCommandPath
+  2266 000039F1 488D1598CAFFFF      <1>     lea rdx, searchSpec
+  2267 000039F8 B8003D0000          <1>     mov eax, 3D00h  ;Open in read only mode
+  2268 000039FD CD21                <1>     int 21h
+  2269 000039FF 0F82D8E4FFFF        <1>     jc badFileError
+  2270 00003A05 498D9080000000      <1>     lea rdx, qword [r8 + psp.dta]
+  2271 00003A0C 0FB7D8              <1>     movzx ebx, ax    ;Save the file handle in ebx
+  2272                              <1> .lp:
+  2273 00003A0F B980000000          <1>     mov ecx, 128    ;Read 128 bytes at a time
+  2274 00003A14 B43F                <1>     mov ah, 3Fh ;Read handle
+  2275 00003A16 CD21                <1>     int 21h
+  2276 00003A18 89C1                <1>     mov ecx, eax
+  2277 00003A1A 67E317              <1>     jecxz .exit
+  2278 00003A1D 53                  <1>     push rbx    ;Save the original in handle
+  2279 00003A1E BB01000000          <1>     mov ebx, 1  ;STDOUT
+  2280 00003A23 B440                <1>     mov ah, 40h
+  2281 00003A25 CD21                <1>     int 21h
+  2282 00003A27 5B                  <1>     pop rbx ;Get back the original read handle
+  2283 00003A28 720F                <1>     jc .exitBad
+  2284 00003A2A 39C8                <1>     cmp eax, ecx
+  2285 00003A2C 74E1                <1>     je .lp
+  2286 00003A2E FFC9                <1>     dec ecx ;One less for a ^Z
+  2287 00003A30 39C8                <1>     cmp eax, ecx
+  2288 00003A32 7505                <1>     jne .exitBad
+  2289                              <1> .exit:
+  2290 00003A34 B43E                <1>     mov ah, 3Eh ;Close handle
+  2291 00003A36 CD21                <1>     int 21h
+  2292                              <1>     return
     13                              <2> %%_ret:
     14 00003A38 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-  2292                              <1> .exitBad:
-  2293                              <1>     ;If it is a char device, don't print an error
-  2294 00003A39 B800440000          <1>     mov eax, 4400h  ;Get IOCTL mode 
-  2295 00003A3E BB01000000          <1>     mov ebx, 1
-  2296 00003A43 CD21                <1>     int 21h
-  2297 00003A45 F6C280              <1>     test dl, devCharDev
-  2298                              <1>     retnz
+  2293                              <1> .exitBad:
+  2294                              <1>     ;If it is a char device, don't print an error
+  2295 00003A39 B800440000          <1>     mov eax, 4400h  ;Get IOCTL mode 
+  2296 00003A3E BB01000000          <1>     mov ebx, 1
+  2297 00003A43 CD21                <1>     int 21h
+  2298 00003A45 F6C280              <1>     test dl, devCharDev
+  2299                              <1>     retnz
     45                              <2> cret nz
     19                              <3> %%_base:
     20                              <3> %assign baseVar %%_base-$$
@@ -6089,242 +6090,242 @@
     35                              <3>  return
     36                              <3> %%a:
     37                              <3>  %endif
-  2299 00003A4A E92AE4FFFF          <1>     jmp badDiskFull
-  2300                              <1> 
-  2301                              <1> exit:
-  2302 00003A4F F6053EC6FFFF01      <1>     test byte [statFlg1], permaShell
-  2303 00003A56 740E                <1>     jz .ouch        ;If not permashell, time to EXIT
-  2304 00003A58 F60535C6FFFF04      <1>     test byte [statFlg1], inSingle  ;If perma and single command
-  2305 00003A5F 0F85CFE0FFFF        <1>     jnz int2ERet    ;We are Int 2Eh, exit through the handler
-  2306                              <1>     return  ;Else, permashell just returns
+  2300 00003A4A E92AE4FFFF          <1>     jmp badDiskFull
+  2301                              <1> 
+  2302                              <1> exit:
+  2303 00003A4F F6053EC6FFFF01      <1>     test byte [statFlg1], permaShell
+  2304 00003A56 740E                <1>     jz .ouch        ;If not permashell, time to EXIT
+  2305 00003A58 F60535C6FFFF04      <1>     test byte [statFlg1], inSingle  ;If perma and single command
+  2306 00003A5F 0F85CFE0FFFF        <1>     jnz int2ERet    ;We are Int 2Eh, exit through the handler
+  2307                              <1>     return  ;Else, permashell just returns
     13                              <2> %%_ret:
     14 00003A65 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-  2307                              <1> .ouch:
-  2308 00003A66 B8004C0000          <1>     mov eax, 4C00h  ;Exit now okay
-  2309 00003A6B CD21                <1>     int 21h
-  2310                              <1>     return  ;If the exit wasn't successful for some reason, return as normal
+  2308                              <1> .ouch:
+  2309 00003A66 B8004C0000          <1>     mov eax, 4C00h  ;Exit now okay
+  2310 00003A6B CD21                <1>     int 21h
+  2311                              <1>     return  ;If the exit wasn't successful for some reason, return as normal
     13                              <2> %%_ret:
     14 00003A6D C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-  2311                              <1> 
-  2312                              <1> launchChild:
-  2313                              <1>     ;We execute an external command here.
-  2314                              <1>     ;Here we will behave like COMMAND.COM for later DOS and honour extensions.
-  2315                              <1>     ;COMMAND.COM on DOS 3.3 doesn't honour the extension. If there exists a 
-  2316                              <1>     ;foo.com and a foo.exe in the same dir and you type foo.exe it launches 
-  2317                              <1>     ;foo.com. We will not honour this behaviour as this kinda sucks!
-  2318                              <1>     ;We know the drive we are on is valid so no need to double check that!
-  2319 00003A6E E8E00C0000          <1>     call setDTA         
-  2320                              <1>     ;Now we rebuild the cmdFcb from the last path componant.
-  2321 00003A73 488D3D6DC8FFFF      <1>     lea rdi, cmdPathSpec
-  2322 00003A7A 4889FE              <1>     mov rsi, rdi
-  2323 00003A7D B811120000          <1>     mov eax, 1211h  ;Normalise this path first
-  2324 00003A82 CD2F                <1>     int 2fh
-  2325 00003A84 E8E40A0000          <1>     call findLastPathComponant  ;Point rdi to last path componant
-  2326 00003A89 4889FE              <1>     mov rsi, rdi    ;Source here
-  2327 00003A8C 488D3D73C6FFFF      <1>     lea rdi, cmdFcb
-  2328 00003A93 B801290000          <1>     mov eax, 2901h  ;Skip leading blanks, clean the FCB name
-  2329 00003A98 CD21                <1>     int 21h
-  2330 00003A9A 84C0                <1>     test al, al     ;Don't allow any wildcards in the name
-  2331 00003A9C 0F8562E4FFFF        <1>     jnz badCmdError
-  2332 00003AA2 4831ED              <1>     xor rbp, rbp    ;rbp keeps a ptr to the next PATH componant to search in
-  2333                              <1> .pathLoop:
-  2334 00003AA5 488D3563C6FFFF      <1>     lea rsi, qword [cmdFcb + fcb.fileext]
-  2335 00003AAC 488D3D1DD4FFFF      <1>     lea rdi, extStr
-  2336 00003AB3 BA03000000          <1>     mov edx, 3  ;Number of valid extension types
-  2337                              <1> .extLp:
-  2338 00003AB8 56                  <1>     push rsi    ;Save the ptr to the head of the file extension
-  2339 00003AB9 B903000000          <1>     mov ecx, 3  ;Number of chars per extension
-  2340 00003ABE F3A6                <1>     rep cmpsb   ;Compare the two strings
-  2341 00003AC0 5E                  <1>     pop rsi
-  2342 00003AC1 85C9                <1>     test ecx, ecx
-  2343 00003AC3 7452                <1>     jz .extFnd      ;If all three chars were equal, we have valid ext!
-  2344 00003AC5 4801CF              <1>     add rdi, rcx    ;Add the remaining chars to rdi
-  2345 00003AC8 FFCA                <1>     dec edx         ;Else one less extension type to check
-  2346 00003ACA 75EC                <1>     jnz .extLp
-  2347                              <1>     ;None of the three extensions were ok, so check if it is all spaces.
-  2348                              <1>     ;If not, error.
-  2349 00003ACC B903000000          <1>     mov ecx, 3
-  2350 00003AD1 4889F7              <1>     mov rdi, rsi
-  2351 00003AD4 B020                <1>     mov al, SPC
-  2352 00003AD6 F3AE                <1>     rep scasb   
-  2353 00003AD8 85C9                <1>     test ecx, ecx   ;Are all three chars spaces?
-  2354 00003ADA 0F8524E4FFFF        <1>     jnz badCmdError    ;If not, error!
-  2355                              <1>     ;Now we search first with COM, then EXE, then BAT. 
-  2356 00003AE0 488D35E9D3FFFF      <1>     lea rsi, extStr
-  2357 00003AE7 BB03000000          <1>     mov ebx, 3  ;Use ebx as the attempt counter
-  2358                              <1> .extSrchLp:
-  2359 00003AEC 488D3D1CC6FFFF      <1>     lea rdi, qword [cmdFcb + fcb.fileext]
-  2360 00003AF3 B903000000          <1>     mov ecx, 3
-  2361 00003AF8 F3A4                <1>     rep movsb   ;Copy the extension over!
-  2362 00003AFA E846010000          <1>     call .prepAndSearch     ;Prep and search path in rdx.
-  2363 00003AFF 731D                <1>     jnc .extSrchFnd         ;If CF=NC, find found!
-  2364 00003B01 FFCB                <1>     dec ebx                 ;Decrement extension counter
-  2365 00003B03 75E7                <1>     jnz .extSrchLp
-  2366                              <1> ;Here we have ran out of extensions to search for! Now if the path was rel
-  2367                              <1> ; we start prepending path componants and trying again. To do this, we reset
-  2368                              <1> ; by setting the fcb extension back to all spaces.
-  2369 00003B05 488D3D03C6FFFF      <1>     lea rdi, qword [cmdFcb + fcb.fileext]
-  2370 00003B0C B903000000          <1>     mov ecx, 3
-  2371 00003B11 B020                <1>     mov al, SPC
-  2372 00003B13 F3AA                <1>     rep stosb   ;Store back the empty extension!
-  2373 00003B15 EB70                <1>     jmp short .pathHandle
-  2374                              <1> .extFnd:
-  2375                              <1> ;Here if the file had the right extension.
-  2376 00003B17 E829010000          <1>     call .prepAndSearch    ;Prep and search path in rdx.
-  2377 00003B1C 7269                <1>     jc .pathHandle
-  2378                              <1> .extSrchFnd:
-  2379                              <1> ;Pathspec in rdx exists, so now we prepare to launch it! First check it is not
-  2380                              <1> ; a BAT. If it is, separate handling!
-  2381 00003B1E 803DEAC5FFFF42      <1>     cmp byte [cmdFcb + fcb.fileext], "B"    ;If it is B, its a batch!
-  2382 00003B25 0F8462E0FFFF        <1>     je batLaunch
-  2383 00003B2B 488D1D0FC6FFFF      <1>     lea rbx, launchBlock
-  2384 00003B32 498B403E            <1>     mov rax, qword [r8 + psp.envPtr]    ;Get the env pointer
-  2385 00003B36 488903              <1>     mov qword [rbx + execProg.pEnv], rax 
-  2386 00003B39 498D8080000000      <1>     lea rax, qword [r8 + cmdTail]
-  2387 00003B40 48894308            <1>     mov qword [rbx + execProg.pCmdLine], rax
-  2388 00003B44 498D405C            <1>     lea rax, qword [r8 + fcb1]
-  2389 00003B48 48894310            <1>     mov qword [rbx + execProg.pfcb1], rax
-  2390 00003B4C 498D406C            <1>     lea rax, qword [r8 + fcb2]
-  2391 00003B50 48894318            <1>     mov qword [rbx + execProg.pfcb2], rax
-  2392 00003B54 488D158CC7FFFF      <1>     lea rdx, cmdPathSpec
-  2393 00003B5B B8004B0000          <1>     mov eax, 4B00h  ;Load and execute!
-  2394 00003B60 CD21                <1>     int 21h
-  2395                              <1> ;If the program failed to start, verify why!
-  2396 00003B62 B800590000          <1>     mov eax, 5900h      ;Get extended error
-  2397 00003B67 31DB                <1>     xor ebx, ebx
-  2398 00003B69 CD21                <1>     int 21h
-  2399 00003B6B 6689059BC4FFFF      <1>     mov word [returnCode], ax   ;Error code from EXEC
-  2400 00003B72 3C05                <1>     cmp al, errAccDen   ;Access denied?
-  2401 00003B74 0F843FE3FFFF        <1>     je badAccError
-  2402 00003B7A 3C07                <1>     cmp al, errMCBbad   ;If MCB bad error, freeze PC
-  2403 00003B7C 0F84B60B0000        <1>     je freezePC
-  2404 00003B82 E97DE3FFFF          <1>     jmp badCmdError     ;If something goes wrong, error out
-  2405                              <1> .pathHandle:        
-  2406                              <1> ;First check if rbp is null. If it is, its a first time entry. 
-  2407                              <1> ;al has error code!
-  2408 00003B87 4885ED              <1>     test rbp, rbp
-  2409 00003B8A 0F85A3000000        <1>     jnz .pathReentry
-  2410                              <1> ;Now check if the command we recieved included an absolute path.
-  2411                              <1> ;If so, we don't do path substitution and just fail at this point
-  2412 00003B90 488D3550C7FFFF      <1>     lea rsi, cmdPathSpec
-  2413 00003B97 66AD                <1>     lodsw   ;Get the first two chars
-  2414 00003B99 3A058AC4FFFF        <1>     cmp al, byte [pathSep]  ;If char 1 a pathsep, we are absolute!
-  2415 00003B9F 0F845FE3FFFF        <1>     je badCmdError  ;Therefore, exit bad!
-  2416 00003BA5 84E4                <1>     test ah, ah ;If the second char is nul, its a 1 char command, must be rel
-  2417 00003BA7 7412                <1>     je .pathGetEnv
-  2418 00003BA9 80FC3A              <1>     cmp ah, ":" ;If char 2 is colon, must be drive sep (not chardev)
-  2419 00003BAC 750D                <1>     jne .pathGetEnv ;Therefore, if not equal, relative path!
-  2420 00003BAE AC                  <1>     lodsb   ;Get the third char
-  2421 00003BAF 3A0574C4FFFF        <1>     cmp al, byte [pathSep]  ;If this is a pathsep, we are absolute!
-  2422 00003BB5 0F8449E3FFFF        <1>     je badCmdError  ;Therefore, exit bad!
-  2423                              <1> .pathGetEnv:
-  2424                              <1> ;Now get a pointer to the environment and search for PATH=
-  2425                              <1> ;We only take the final portion of the path and add it to each path componant
-  2426                              <1> ;This agrees with DOS 3.3
-  2427 00003BBB E8F40B0000          <1>     call checkEnvGoodAndGet   ;Ensure our env is double null terminated!
-  2428 00003BC0 0F843EE3FFFF        <1>     jz badCmdError  ;If returned ZF=ZE, error out!
-  2429                              <1>     ;If we are here, env is double null terminated. rsi has the env ptr
-  2430                              <1>     ;Now we know we dont have to keep track of chars!!
-  2431 00003BC6 488D3D25D3FFFF      <1>     lea rdi, pathEVar   ;Get a ptr to the path env string
-  2432 00003BCD E83C0C0000          <1>     call searchForEnvVar
-  2433 00003BD2 0F822CE3FFFF        <1>     jc badCmdError      ;If PATH not found, exit error!
-  2434 00003BD8 4889F7              <1>     mov rdi, rsi        ;Move the PATH= ptr to rdi
-  2435 00003BDB 4881C705000000      <1>     add rdi, 5          ;Go past the PATH= portion of the env string
-  2436                              <1> .pathRejoin:
-  2437 00003BE2 803F00              <1>     cmp byte [rdi], 0   ;Is the first char after equals a null?
-  2438 00003BE5 0F8419E3FFFF        <1>     je badCmdError      ;Empty or no more path? Error!
-  2439 00003BEB 4889FE              <1>     mov rsi, rdi        ;This is a ; or null delimited ASCII string
-  2440 00003BEE 488D3D9BC8FFFF      <1>     lea rdi, searchSpec ;Build the path in searchSpec
-  2441                              <1>     ;WARNING!!! THIS COULD CAUSE A BUFFER OVERFLOW BUG!!
-  2442                              <1>     ;SHOULD CHECK THE LENGTH OF THE PATH COMPONANT THAT WE ARE 
-  2443                              <1>     ; SPLICING ON. IF IT IS LONGER THAN 64 CHARS WE IGNORE IT!!
-  2444                              <1>     ;This is impossible to do if env edited by COMMAND.COM
-  2445 00003BF5 E8D7090000          <1>     call cpDelimOrCtrlStringToBufz      ;Copies upto ; or null 
-  2446 00003BFA 48FFCE              <1>     dec rsi ;Point rsi to the char which delimited the path
-  2447 00003BFD 4889F5              <1>     mov rbp, rsi    ;Point rbp to this char
-  2448 00003C00 48FFCF              <1>     dec rdi ;Point to the null terminator
-  2449 00003C03 8A0520C4FFFF        <1>     mov al, byte [pathSep]
-  2450 00003C09 3847FF              <1>     cmp byte [rdi - 1], al
-  2451 00003C0C 7401                <1>     je .skipPathsep ;Need for rootdir as a double slash start is a netpath
-  2452 00003C0E AA                  <1>     stosb   ;Store a pathsep onto the null terminator
-  2453                              <1> .skipPathsep: ;Affects double slashes in path (but thats ok)
-  2454 00003C0F 488D35F1C4FFFF      <1>     lea rsi, qword [cmdFcb + fcb.filename]
-  2455 00003C16 E876090000          <1>     call FCBToAsciiz    ;Store the name here and null terminate
-  2456 00003C1B 488D356EC8FFFF      <1>     lea rsi, searchSpec 
-  2457 00003C22 488D3DBEC6FFFF      <1>     lea rdi, cmdPathSpec
-  2458 00003C29 E84A080000          <1>     call strcpy         ;Copy the string to the cmdPathSpec
-  2459 00003C2E E972FEFFFF          <1>     jmp .pathLoop       ;And try again, now in this path!
-  2460                              <1> .pathReentry:
-  2461 00003C33 807D0000            <1>     cmp byte [rbp], 0   ;Each env string is finally null terminated.
-  2462 00003C37 0F84C7E2FFFF        <1>     je badCmdError
-  2463                              <1> ;Currently, because we dont swap drives, we wont print this message.
-  2464                              <1> ;Not really a big deal...
-  2465                              <1>     ;cmp al, errBadDrv
-  2466                              <1>     ;jne .pathDrvOk
-  2467                              <1>     ;lea rdx, badDrvSrch ;Print the drive was invalid!
-  2468                              <1>     ;mov eax, 0900h
-  2469                              <1>     ;int 21h
-  2470                              <1> ;.pathDrvOk:
-  2471 00003C3D 48FFC5              <1>     inc rbp             ;Go to the start of the next componant
-  2472 00003C40 4889EF              <1>     mov rdi, rbp        ;So rdi points to the first char of next comp
-  2473 00003C43 EB9D                <1>     jmp short .pathRejoin   ;Check if null, and if not, proceed again!
-  2474                              <1> 
-  2475                              <1> .prepAndSearch:
-  2476                              <1> ;Copies over the name and extension in UC to the last componant of the 
-  2477                              <1> ;cmdPathSpec and null terminates. 
-  2478                              <1> ;Input: cmdFcb name + ext setup. 
-  2479                              <1> ;Output: rdx -> Filled in cmdPathSpec 
-  2480                              <1> ;        CF=NC, file in rdx found. CF=CY, file in rdx not found! al = errcde
-  2481 00003C45 51                  <1>     push rcx
-  2482 00003C46 56                  <1>     push rsi
-  2483 00003C47 57                  <1>     push rdi
-  2484 00003C48 488D3D98C6FFFF      <1>     lea rdi, cmdPathSpec 
-  2485 00003C4F 4889FA              <1>     mov rdx, rdi    ;Save the path ptr in rdx
-  2486 00003C52 E816090000          <1>     call findLastPathComponant  ;Point rdi to the final path componant 
-  2487 00003C57 807F013A            <1>     cmp byte [rdi + 1], ":"
-  2488 00003C5B 7507                <1>     jne .notdriveRel
-  2489 00003C5D 4881C702000000      <1>     add rdi, 2  ;Go past the drive specifier, but keep it!
-  2490                              <1> .notdriveRel:
-  2491 00003C64 488D359CC4FFFF      <1>     lea rsi, qword [cmdFcb + fcb.filename]
-  2492 00003C6B E821090000          <1>     call FCBToAsciiz    ;Get an asciiz suffix
-  2493 00003C70 B8004E0000          <1>     mov eax, 4E00h  ;Find first
-  2494 00003C75 31C9                <1>     xor ecx, ecx  ;Only Normal and RO files searchable!
-  2495 00003C77 CD21                <1>     int 21h
-  2496 00003C79 5F                  <1>     pop rdi
-  2497 00003C7A 5E                  <1>     pop rsi
-  2498 00003C7B 59                  <1>     pop rcx
-  2499                              <1>     return
+  2312                              <1> 
+  2313                              <1> launchChild:
+  2314                              <1>     ;We execute an external command here.
+  2315                              <1>     ;Here we will behave like COMMAND.COM for later DOS and honour extensions.
+  2316                              <1>     ;COMMAND.COM on DOS 3.3 doesn't honour the extension. If there exists a 
+  2317                              <1>     ;foo.com and a foo.exe in the same dir and you type foo.exe it launches 
+  2318                              <1>     ;foo.com. We will not honour this behaviour as this kinda sucks!
+  2319                              <1>     ;We know the drive we are on is valid so no need to double check that!
+  2320 00003A6E E8E00C0000          <1>     call setDTA         
+  2321                              <1>     ;Now we rebuild the cmdFcb from the last path componant.
+  2322 00003A73 488D3D6DC8FFFF      <1>     lea rdi, cmdPathSpec
+  2323 00003A7A 4889FE              <1>     mov rsi, rdi
+  2324 00003A7D B811120000          <1>     mov eax, 1211h  ;Normalise this path first
+  2325 00003A82 CD2F                <1>     int 2fh
+  2326 00003A84 E8E40A0000          <1>     call findLastPathComponant  ;Point rdi to last path componant
+  2327 00003A89 4889FE              <1>     mov rsi, rdi    ;Source here
+  2328 00003A8C 488D3D73C6FFFF      <1>     lea rdi, cmdFcb
+  2329 00003A93 B801290000          <1>     mov eax, 2901h  ;Skip leading blanks, clean the FCB name
+  2330 00003A98 CD21                <1>     int 21h
+  2331 00003A9A 84C0                <1>     test al, al     ;Don't allow any wildcards in the name
+  2332 00003A9C 0F8562E4FFFF        <1>     jnz badCmdError
+  2333 00003AA2 4831ED              <1>     xor rbp, rbp    ;rbp keeps a ptr to the next PATH componant to search in
+  2334                              <1> .pathLoop:
+  2335 00003AA5 488D3563C6FFFF      <1>     lea rsi, qword [cmdFcb + fcb.fileext]
+  2336 00003AAC 488D3D1DD4FFFF      <1>     lea rdi, extStr
+  2337 00003AB3 BA03000000          <1>     mov edx, 3  ;Number of valid extension types
+  2338                              <1> .extLp:
+  2339 00003AB8 56                  <1>     push rsi    ;Save the ptr to the head of the file extension
+  2340 00003AB9 B903000000          <1>     mov ecx, 3  ;Number of chars per extension
+  2341 00003ABE F3A6                <1>     rep cmpsb   ;Compare the two strings
+  2342 00003AC0 5E                  <1>     pop rsi
+  2343 00003AC1 85C9                <1>     test ecx, ecx
+  2344 00003AC3 7452                <1>     jz .extFnd      ;If all three chars were equal, we have valid ext!
+  2345 00003AC5 4801CF              <1>     add rdi, rcx    ;Add the remaining chars to rdi
+  2346 00003AC8 FFCA                <1>     dec edx         ;Else one less extension type to check
+  2347 00003ACA 75EC                <1>     jnz .extLp
+  2348                              <1>     ;None of the three extensions were ok, so check if it is all spaces.
+  2349                              <1>     ;If not, error.
+  2350 00003ACC B903000000          <1>     mov ecx, 3
+  2351 00003AD1 4889F7              <1>     mov rdi, rsi
+  2352 00003AD4 B020                <1>     mov al, SPC
+  2353 00003AD6 F3AE                <1>     rep scasb   
+  2354 00003AD8 85C9                <1>     test ecx, ecx   ;Are all three chars spaces?
+  2355 00003ADA 0F8524E4FFFF        <1>     jnz badCmdError    ;If not, error!
+  2356                              <1>     ;Now we search first with COM, then EXE, then BAT. 
+  2357 00003AE0 488D35E9D3FFFF      <1>     lea rsi, extStr
+  2358 00003AE7 BB03000000          <1>     mov ebx, 3  ;Use ebx as the attempt counter
+  2359                              <1> .extSrchLp:
+  2360 00003AEC 488D3D1CC6FFFF      <1>     lea rdi, qword [cmdFcb + fcb.fileext]
+  2361 00003AF3 B903000000          <1>     mov ecx, 3
+  2362 00003AF8 F3A4                <1>     rep movsb   ;Copy the extension over!
+  2363 00003AFA E846010000          <1>     call .prepAndSearch     ;Prep and search path in rdx.
+  2364 00003AFF 731D                <1>     jnc .extSrchFnd         ;If CF=NC, find found!
+  2365 00003B01 FFCB                <1>     dec ebx                 ;Decrement extension counter
+  2366 00003B03 75E7                <1>     jnz .extSrchLp
+  2367                              <1> ;Here we have ran out of extensions to search for! Now if the path was rel
+  2368                              <1> ; we start prepending path componants and trying again. To do this, we reset
+  2369                              <1> ; by setting the fcb extension back to all spaces.
+  2370 00003B05 488D3D03C6FFFF      <1>     lea rdi, qword [cmdFcb + fcb.fileext]
+  2371 00003B0C B903000000          <1>     mov ecx, 3
+  2372 00003B11 B020                <1>     mov al, SPC
+  2373 00003B13 F3AA                <1>     rep stosb   ;Store back the empty extension!
+  2374 00003B15 EB70                <1>     jmp short .pathHandle
+  2375                              <1> .extFnd:
+  2376                              <1> ;Here if the file had the right extension.
+  2377 00003B17 E829010000          <1>     call .prepAndSearch    ;Prep and search path in rdx.
+  2378 00003B1C 7269                <1>     jc .pathHandle
+  2379                              <1> .extSrchFnd:
+  2380                              <1> ;Pathspec in rdx exists, so now we prepare to launch it! First check it is not
+  2381                              <1> ; a BAT. If it is, separate handling!
+  2382 00003B1E 803DEAC5FFFF42      <1>     cmp byte [cmdFcb + fcb.fileext], "B"    ;If it is B, its a batch!
+  2383 00003B25 0F8462E0FFFF        <1>     je batLaunch
+  2384 00003B2B 488D1D0FC6FFFF      <1>     lea rbx, launchBlock
+  2385 00003B32 498B403E            <1>     mov rax, qword [r8 + psp.envPtr]    ;Get the env pointer
+  2386 00003B36 488903              <1>     mov qword [rbx + execProg.pEnv], rax 
+  2387 00003B39 498D8080000000      <1>     lea rax, qword [r8 + cmdTail]
+  2388 00003B40 48894308            <1>     mov qword [rbx + execProg.pCmdLine], rax
+  2389 00003B44 498D405C            <1>     lea rax, qword [r8 + fcb1]
+  2390 00003B48 48894310            <1>     mov qword [rbx + execProg.pfcb1], rax
+  2391 00003B4C 498D406C            <1>     lea rax, qword [r8 + fcb2]
+  2392 00003B50 48894318            <1>     mov qword [rbx + execProg.pfcb2], rax
+  2393 00003B54 488D158CC7FFFF      <1>     lea rdx, cmdPathSpec
+  2394 00003B5B B8004B0000          <1>     mov eax, 4B00h  ;Load and execute!
+  2395 00003B60 CD21                <1>     int 21h
+  2396                              <1> ;If the program failed to start, verify why!
+  2397 00003B62 B800590000          <1>     mov eax, 5900h      ;Get extended error
+  2398 00003B67 31DB                <1>     xor ebx, ebx
+  2399 00003B69 CD21                <1>     int 21h
+  2400 00003B6B 6689059BC4FFFF      <1>     mov word [returnCode], ax   ;Error code from EXEC
+  2401 00003B72 3C05                <1>     cmp al, errAccDen   ;Access denied?
+  2402 00003B74 0F843FE3FFFF        <1>     je badAccError
+  2403 00003B7A 3C07                <1>     cmp al, errMCBbad   ;If MCB bad error, freeze PC
+  2404 00003B7C 0F84B60B0000        <1>     je freezePC
+  2405 00003B82 E97DE3FFFF          <1>     jmp badCmdError     ;If something goes wrong, error out
+  2406                              <1> .pathHandle:        
+  2407                              <1> ;First check if rbp is null. If it is, its a first time entry. 
+  2408                              <1> ;al has error code!
+  2409 00003B87 4885ED              <1>     test rbp, rbp
+  2410 00003B8A 0F85A3000000        <1>     jnz .pathReentry
+  2411                              <1> ;Now check if the command we recieved included an absolute path.
+  2412                              <1> ;If so, we don't do path substitution and just fail at this point
+  2413 00003B90 488D3550C7FFFF      <1>     lea rsi, cmdPathSpec
+  2414 00003B97 66AD                <1>     lodsw   ;Get the first two chars
+  2415 00003B99 3A058AC4FFFF        <1>     cmp al, byte [pathSep]  ;If char 1 a pathsep, we are absolute!
+  2416 00003B9F 0F845FE3FFFF        <1>     je badCmdError  ;Therefore, exit bad!
+  2417 00003BA5 84E4                <1>     test ah, ah ;If the second char is nul, its a 1 char command, must be rel
+  2418 00003BA7 7412                <1>     je .pathGetEnv
+  2419 00003BA9 80FC3A              <1>     cmp ah, ":" ;If char 2 is colon, must be drive sep (not chardev)
+  2420 00003BAC 750D                <1>     jne .pathGetEnv ;Therefore, if not equal, relative path!
+  2421 00003BAE AC                  <1>     lodsb   ;Get the third char
+  2422 00003BAF 3A0574C4FFFF        <1>     cmp al, byte [pathSep]  ;If this is a pathsep, we are absolute!
+  2423 00003BB5 0F8449E3FFFF        <1>     je badCmdError  ;Therefore, exit bad!
+  2424                              <1> .pathGetEnv:
+  2425                              <1> ;Now get a pointer to the environment and search for PATH=
+  2426                              <1> ;We only take the final portion of the path and add it to each path componant
+  2427                              <1> ;This agrees with DOS 3.3
+  2428 00003BBB E8F40B0000          <1>     call checkEnvGoodAndGet   ;Ensure our env is double null terminated!
+  2429 00003BC0 0F843EE3FFFF        <1>     jz badCmdError  ;If returned ZF=ZE, error out!
+  2430                              <1>     ;If we are here, env is double null terminated. rsi has the env ptr
+  2431                              <1>     ;Now we know we dont have to keep track of chars!!
+  2432 00003BC6 488D3D25D3FFFF      <1>     lea rdi, pathEVar   ;Get a ptr to the path env string
+  2433 00003BCD E83C0C0000          <1>     call searchForEnvVar
+  2434 00003BD2 0F822CE3FFFF        <1>     jc badCmdError      ;If PATH not found, exit error!
+  2435 00003BD8 4889F7              <1>     mov rdi, rsi        ;Move the PATH= ptr to rdi
+  2436 00003BDB 4881C705000000      <1>     add rdi, 5          ;Go past the PATH= portion of the env string
+  2437                              <1> .pathRejoin:
+  2438 00003BE2 803F00              <1>     cmp byte [rdi], 0   ;Is the first char after equals a null?
+  2439 00003BE5 0F8419E3FFFF        <1>     je badCmdError      ;Empty or no more path? Error!
+  2440 00003BEB 4889FE              <1>     mov rsi, rdi        ;This is a ; or null delimited ASCII string
+  2441 00003BEE 488D3D9BC8FFFF      <1>     lea rdi, searchSpec ;Build the path in searchSpec
+  2442                              <1>     ;WARNING!!! THIS COULD CAUSE A BUFFER OVERFLOW BUG!!
+  2443                              <1>     ;SHOULD CHECK THE LENGTH OF THE PATH COMPONANT THAT WE ARE 
+  2444                              <1>     ; SPLICING ON. IF IT IS LONGER THAN 64 CHARS WE IGNORE IT!!
+  2445                              <1>     ;This is impossible to do if env edited by COMMAND.COM
+  2446 00003BF5 E8D7090000          <1>     call cpDelimOrCtrlStringToBufz      ;Copies upto ; or null 
+  2447 00003BFA 48FFCE              <1>     dec rsi ;Point rsi to the char which delimited the path
+  2448 00003BFD 4889F5              <1>     mov rbp, rsi    ;Point rbp to this char
+  2449 00003C00 48FFCF              <1>     dec rdi ;Point to the null terminator
+  2450 00003C03 8A0520C4FFFF        <1>     mov al, byte [pathSep]
+  2451 00003C09 3847FF              <1>     cmp byte [rdi - 1], al
+  2452 00003C0C 7401                <1>     je .skipPathsep ;Need for rootdir as a double slash start is a netpath
+  2453 00003C0E AA                  <1>     stosb   ;Store a pathsep onto the null terminator
+  2454                              <1> .skipPathsep: ;Affects double slashes in path (but thats ok)
+  2455 00003C0F 488D35F1C4FFFF      <1>     lea rsi, qword [cmdFcb + fcb.filename]
+  2456 00003C16 E876090000          <1>     call FCBToAsciiz    ;Store the name here and null terminate
+  2457 00003C1B 488D356EC8FFFF      <1>     lea rsi, searchSpec 
+  2458 00003C22 488D3DBEC6FFFF      <1>     lea rdi, cmdPathSpec
+  2459 00003C29 E84A080000          <1>     call strcpy         ;Copy the string to the cmdPathSpec
+  2460 00003C2E E972FEFFFF          <1>     jmp .pathLoop       ;And try again, now in this path!
+  2461                              <1> .pathReentry:
+  2462 00003C33 807D0000            <1>     cmp byte [rbp], 0   ;Each env string is finally null terminated.
+  2463 00003C37 0F84C7E2FFFF        <1>     je badCmdError
+  2464                              <1> ;Currently, because we dont swap drives, we wont print this message.
+  2465                              <1> ;Not really a big deal...
+  2466                              <1>     ;cmp al, errBadDrv
+  2467                              <1>     ;jne .pathDrvOk
+  2468                              <1>     ;lea rdx, badDrvSrch ;Print the drive was invalid!
+  2469                              <1>     ;mov eax, 0900h
+  2470                              <1>     ;int 21h
+  2471                              <1> ;.pathDrvOk:
+  2472 00003C3D 48FFC5              <1>     inc rbp             ;Go to the start of the next componant
+  2473 00003C40 4889EF              <1>     mov rdi, rbp        ;So rdi points to the first char of next comp
+  2474 00003C43 EB9D                <1>     jmp short .pathRejoin   ;Check if null, and if not, proceed again!
+  2475                              <1> 
+  2476                              <1> .prepAndSearch:
+  2477                              <1> ;Copies over the name and extension in UC to the last componant of the 
+  2478                              <1> ;cmdPathSpec and null terminates. 
+  2479                              <1> ;Input: cmdFcb name + ext setup. 
+  2480                              <1> ;Output: rdx -> Filled in cmdPathSpec 
+  2481                              <1> ;        CF=NC, file in rdx found. CF=CY, file in rdx not found! al = errcde
+  2482 00003C45 51                  <1>     push rcx
+  2483 00003C46 56                  <1>     push rsi
+  2484 00003C47 57                  <1>     push rdi
+  2485 00003C48 488D3D98C6FFFF      <1>     lea rdi, cmdPathSpec 
+  2486 00003C4F 4889FA              <1>     mov rdx, rdi    ;Save the path ptr in rdx
+  2487 00003C52 E816090000          <1>     call findLastPathComponant  ;Point rdi to the final path componant 
+  2488 00003C57 807F013A            <1>     cmp byte [rdi + 1], ":"
+  2489 00003C5B 7507                <1>     jne .notdriveRel
+  2490 00003C5D 4881C702000000      <1>     add rdi, 2  ;Go past the drive specifier, but keep it!
+  2491                              <1> .notdriveRel:
+  2492 00003C64 488D359CC4FFFF      <1>     lea rsi, qword [cmdFcb + fcb.filename]
+  2493 00003C6B E821090000          <1>     call FCBToAsciiz    ;Get an asciiz suffix
+  2494 00003C70 B8004E0000          <1>     mov eax, 4E00h  ;Find first
+  2495 00003C75 31C9                <1>     xor ecx, ecx  ;Only Normal and RO files searchable!
+  2496 00003C77 CD21                <1>     int 21h
+  2497 00003C79 5F                  <1>     pop rdi
+  2498 00003C7A 5E                  <1>     pop rsi
+  2499 00003C7B 59                  <1>     pop rcx
+  2500                              <1>     return
     13                              <2> %%_ret:
     14 00003C7C C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-  2500                              <1> 
-  2501                              <1> set:
-  2502 00003C7D F60520C4FFFFFF      <1>     test byte [arg1Flg], -1
-  2503 00003C84 7539                <1>     jnz .editEnv
-  2504                              <1>     ;Here we just print the environment.
-  2505 00003C86 E8290B0000          <1>     call checkEnvGoodAndGet 
-  2506 00003C8B 0F841FE2FFFF        <1>     jz badEnvSpaceError
-  2507                              <1>     ;We know this is a good env so keep going! env ptr in rsi
-  2508 00003C91 4889F7              <1>     mov rdi, rsi
-  2509 00003C94 4889F2              <1>     mov rdx, rsi
-  2510                              <1> .findLp:
-  2511 00003C97 B9FFFFFFFF          <1>     mov ecx, -1
-  2512 00003C9C 31C0                <1>     xor eax, eax
-  2513                              <1> .scanLp:
-  2514 00003C9E F2AE                <1>     repne scasb
-  2515 00003CA0 75FC                <1>     jne .scanLp
-  2516 00003CA2 F7D1                <1>     not ecx ;Get count and subtract by 1 to drop end null
-  2517                              <1>     ;Else, we now print this environment variable and CRLF it
-  2518                              <1>     ;rdx points to the start of the string aleady
-  2519                              <1>     ;ecx has the bytes to print
-  2520 00003CA4 BB01000000          <1>     mov ebx, 1      ;Print to STDOUT
-  2521 00003CA9 B800400000          <1>     mov eax, 4000h  ;Print to handle
-  2522 00003CAE CD21                <1>     int 21h
-  2523 00003CB0 E8AF050000          <1>     call printCRLF
-  2524 00003CB5 803F00              <1>     cmp byte [rdi], 0   ;Is this a second null.
-  2525                              <1>     rete    ;Return if it is
+  2501                              <1> 
+  2502                              <1> set:
+  2503 00003C7D F60520C4FFFFFF      <1>     test byte [arg1Flg], -1
+  2504 00003C84 7539                <1>     jnz .editEnv
+  2505                              <1>     ;Here we just print the environment.
+  2506 00003C86 E8290B0000          <1>     call checkEnvGoodAndGet 
+  2507 00003C8B 0F841FE2FFFF        <1>     jz badEnvSpaceError
+  2508                              <1>     ;We know this is a good env so keep going! env ptr in rsi
+  2509 00003C91 4889F7              <1>     mov rdi, rsi
+  2510 00003C94 4889F2              <1>     mov rdx, rsi
+  2511                              <1> .findLp:
+  2512 00003C97 B9FFFFFFFF          <1>     mov ecx, -1
+  2513 00003C9C 31C0                <1>     xor eax, eax
+  2514                              <1> .scanLp:
+  2515 00003C9E F2AE                <1>     repne scasb
+  2516 00003CA0 75FC                <1>     jne .scanLp
+  2517 00003CA2 F7D1                <1>     not ecx ;Get count and subtract by 1 to drop end null
+  2518                              <1>     ;Else, we now print this environment variable and CRLF it
+  2519                              <1>     ;rdx points to the start of the string aleady
+  2520                              <1>     ;ecx has the bytes to print
+  2521 00003CA4 BB01000000          <1>     mov ebx, 1      ;Print to STDOUT
+  2522 00003CA9 B800400000          <1>     mov eax, 4000h  ;Print to handle
+  2523 00003CAE CD21                <1>     int 21h
+  2524 00003CB0 E8AF050000          <1>     call printCRLF
+  2525 00003CB5 803F00              <1>     cmp byte [rdi], 0   ;Is this a second null.
+  2526                              <1>     rete    ;Return if it is
     49                              <2> cret e
     19                              <3> %%_base:
     20                              <3> %assign baseVar %%_base-$$
@@ -6345,61 +6346,61 @@
     35                              <3>  return
     36                              <3> %%a:
     37                              <3>  %endif
-  2526 00003CBA 4889FA              <1>     mov rdx, rdi   
-  2527 00003CBD EBD8                <1>     jmp short .findLp
-  2528                              <1> .editEnv:
-  2529 00003CBF E8F00A0000          <1>     call checkEnvGoodAndGet
-  2530 00003CC4 0F84E6E1FFFF        <1>     jz badEnvSpaceError
-  2531 00003CCA 0FB605D4C3FFFF      <1>     movzx eax, byte [arg1Off]
-  2532 00003CD1 498DB081000000      <1>     lea rsi, qword [r8 + cmdLine]
-  2533 00003CD8 4801C6              <1>     add rsi, rax            ;rsi -> EnvvarName=[string]<CR>
-  2534                              <1> .altEp:
-  2535 00003CDB 4889F7              <1>     mov rdi, rsi            ;Point rdi to the start of the string
-  2536 00003CDE B00D                <1>     mov al, CR              ;Search for the CR
-  2537 00003CE0 410FB68880000000    <1>     movzx ecx, byte [r8 + cmdLineCnt]   ;Get the char count of the tail
-  2538 00003CE8 89CB                <1>     mov ebx, ecx            ;Save this count 
-  2539 00003CEA 53                  <1>     push rbx                ;Save this count on the stack too!
-  2540 00003CEB F2AE                <1>     repne scasb             ;Now get the length of this env string
-  2541 00003CED 29CB                <1>     sub ebx, ecx            ;Get the length of the string with <CR>
-  2542 00003CEF 66891D9CCAFFFF      <1>     mov word [envVarSz], bx ;Store the count
-  2543 00003CF6 59                  <1>     pop rcx                 ;Get the char count back!
-  2544 00003CF7 89CB                <1>     mov ebx, ecx            
-  2545 00003CF9 4889F7              <1>     mov rdi, rsi            ;Point rdi again to the cmdTail
-  2546 00003CFC B03D                <1>     mov al, "="             ;Scan for an equals sign
-  2547 00003CFE F2AE                <1>     repne scasb
-  2548 00003D00 0F85A1E1FFFF        <1>     jne badSyntaxError      ;There must be an equal sign here!
-  2549 00003D06 29CB                <1>     sub ebx, ecx            ;Get the count with space for a terminating 0
-  2550 00003D08 66891D85CAFFFF      <1>     mov word [envVarNamSz], bx
-  2551 00003D0F 803F0D              <1>     cmp byte [rdi], CR      ;If the path is just PATH=<CR>, free var!
-  2552 00003D12 7477                <1>     je .delEnvVar           ;Free the envvar and return
-  2553 00003D14 56                  <1>     push rsi                ;Save the ptr to the start of the envvar
-  2554 00003D15 4889F7              <1>     mov rdi, rsi            ;Input= rdi -> String to search for
-  2555 00003D18 E8F10A0000          <1>     call searchForEnvVar    ;Look for the environment variable
-  2556 00003D1D 7205                <1>     jc .editNewEnv          ;Create a new environment variable!
-  2557 00003D1F E8180B0000          <1>     call envFree            ;Free the var in rsi
-  2558                              <1> .editNewEnv:
-  2559 00003D24 E84C0B0000          <1>     call getFreeSpace       ;Get the free space in env in ecx
-  2560 00003D29 E86C0B0000          <1>     call getPtrToEndOfEnv   ;Point to the free space in rdi
-  2561 00003D2E 5E                  <1>     pop rsi                 ;Get back the ptr to the string
-  2562 00003D2F 31C0                <1>     xor eax, eax            ;Prepare null length!
-  2563 00003D31 81F904000000        <1>     cmp ecx, 4              ;Minimal env string size is 4, i.e. "X=A<CR>"
-  2564 00003D37 0F42C8              <1>     cmovb ecx, eax          ;If below, essentially 0 bytes
-  2565 00003D3A 720B                <1>     jb .reallocTry          ;Try to reallocate!
-  2566 00003D3C FFC9                <1>     dec ecx                 ;Save a byte for end magic null
-  2567 00003D3E 663B0D4DCAFFFF      <1>     cmp cx, word [envVarSz] ;Do we have enough space?
-  2568 00003D45 7327                <1>     jae .nameCp             ;If above or equal, we good to go!
-  2569                              <1> .reallocTry:
-  2570                              <1>     ;Here we try to reallocate the environment. If we cannot reallocate
-  2571                              <1>     ; we proceed with the environment size.
-  2572 00003D47 E8630B0000          <1>     call growEnvBlock   ;Attempt to grow the environment
-  2573 00003D4C 7319                <1>     jnc .reallocOk
-  2574 00003D4E 0F845CE1FFFF        <1>     jz badEnvSpaceError    ;Max environment space
-  2575                              <1>     ;Here we couldnt reallocate, but we check to see if we can fit
-  2576                              <1>     ; partially the variable into the env. If so we do that. If the name
-  2577                              <1>     ; cannot fit, we don't bother
-  2578                              <1>     ;Min size of envVarNamSz is 2 i.e. "X="
-  2579 00003D54 663B0D39CAFFFF      <1>     cmp cx, word [envVarNamSz]  ;cx has the free space in environment
-  2580                              <1>     retb    ;Fail silently if we cant, catches the cx=0,1 case!
+  2527 00003CBA 4889FA              <1>     mov rdx, rdi   
+  2528 00003CBD EBD8                <1>     jmp short .findLp
+  2529                              <1> .editEnv:
+  2530 00003CBF E8F00A0000          <1>     call checkEnvGoodAndGet
+  2531 00003CC4 0F84E6E1FFFF        <1>     jz badEnvSpaceError
+  2532 00003CCA 0FB605D4C3FFFF      <1>     movzx eax, byte [arg1Off]
+  2533 00003CD1 498DB081000000      <1>     lea rsi, qword [r8 + cmdLine]
+  2534 00003CD8 4801C6              <1>     add rsi, rax            ;rsi -> EnvvarName=[string]<CR>
+  2535                              <1> .altEp:
+  2536 00003CDB 4889F7              <1>     mov rdi, rsi            ;Point rdi to the start of the string
+  2537 00003CDE B00D                <1>     mov al, CR              ;Search for the CR
+  2538 00003CE0 410FB68880000000    <1>     movzx ecx, byte [r8 + cmdLineCnt]   ;Get the char count of the tail
+  2539 00003CE8 89CB                <1>     mov ebx, ecx            ;Save this count 
+  2540 00003CEA 53                  <1>     push rbx                ;Save this count on the stack too!
+  2541 00003CEB F2AE                <1>     repne scasb             ;Now get the length of this env string
+  2542 00003CED 29CB                <1>     sub ebx, ecx            ;Get the length of the string with <CR>
+  2543 00003CEF 66891D9CCAFFFF      <1>     mov word [envVarSz], bx ;Store the count
+  2544 00003CF6 59                  <1>     pop rcx                 ;Get the char count back!
+  2545 00003CF7 89CB                <1>     mov ebx, ecx            
+  2546 00003CF9 4889F7              <1>     mov rdi, rsi            ;Point rdi again to the cmdTail
+  2547 00003CFC B03D                <1>     mov al, "="             ;Scan for an equals sign
+  2548 00003CFE F2AE                <1>     repne scasb
+  2549 00003D00 0F85A1E1FFFF        <1>     jne badSyntaxError      ;There must be an equal sign here!
+  2550 00003D06 29CB                <1>     sub ebx, ecx            ;Get the count with space for a terminating 0
+  2551 00003D08 66891D85CAFFFF      <1>     mov word [envVarNamSz], bx
+  2552 00003D0F 803F0D              <1>     cmp byte [rdi], CR      ;If the path is just PATH=<CR>, free var!
+  2553 00003D12 7477                <1>     je .delEnvVar           ;Free the envvar and return
+  2554 00003D14 56                  <1>     push rsi                ;Save the ptr to the start of the envvar
+  2555 00003D15 4889F7              <1>     mov rdi, rsi            ;Input= rdi -> String to search for
+  2556 00003D18 E8F10A0000          <1>     call searchForEnvVar    ;Look for the environment variable
+  2557 00003D1D 7205                <1>     jc .editNewEnv          ;Create a new environment variable!
+  2558 00003D1F E8180B0000          <1>     call envFree            ;Free the var in rsi
+  2559                              <1> .editNewEnv:
+  2560 00003D24 E84C0B0000          <1>     call getFreeSpace       ;Get the free space in env in ecx
+  2561 00003D29 E86C0B0000          <1>     call getPtrToEndOfEnv   ;Point to the free space in rdi
+  2562 00003D2E 5E                  <1>     pop rsi                 ;Get back the ptr to the string
+  2563 00003D2F 31C0                <1>     xor eax, eax            ;Prepare null length!
+  2564 00003D31 81F904000000        <1>     cmp ecx, 4              ;Minimal env string size is 4, i.e. "X=A<CR>"
+  2565 00003D37 0F42C8              <1>     cmovb ecx, eax          ;If below, essentially 0 bytes
+  2566 00003D3A 720B                <1>     jb .reallocTry          ;Try to reallocate!
+  2567 00003D3C FFC9                <1>     dec ecx                 ;Save a byte for end magic null
+  2568 00003D3E 663B0D4DCAFFFF      <1>     cmp cx, word [envVarSz] ;Do we have enough space?
+  2569 00003D45 7327                <1>     jae .nameCp             ;If above or equal, we good to go!
+  2570                              <1> .reallocTry:
+  2571                              <1>     ;Here we try to reallocate the environment. If we cannot reallocate
+  2572                              <1>     ; we proceed with the environment size.
+  2573 00003D47 E8630B0000          <1>     call growEnvBlock   ;Attempt to grow the environment
+  2574 00003D4C 7319                <1>     jnc .reallocOk
+  2575 00003D4E 0F845CE1FFFF        <1>     jz badEnvSpaceError    ;Max environment space
+  2576                              <1>     ;Here we couldnt reallocate, but we check to see if we can fit
+  2577                              <1>     ; partially the variable into the env. If so we do that. If the name
+  2578                              <1>     ; cannot fit, we don't bother
+  2579                              <1>     ;Min size of envVarNamSz is 2 i.e. "X="
+  2580 00003D54 663B0D39CAFFFF      <1>     cmp cx, word [envVarNamSz]  ;cx has the free space in environment
+  2581                              <1>     retb    ;Fail silently if we cant, catches the cx=0,1 case!
     65                              <2> cret b
     19                              <3> %%_base:
     20                              <3> %assign baseVar %%_base-$$
@@ -6423,138 +6424,138 @@
     35                              <3>  return
     36                              <3> %%a:
     37                              <3>  %endif
-  2581 00003D5E E84DE1FFFF          <1>     call badEnvSpaceError   ;Print the env space error!
-  2582 00003D63 FFC9                <1>     dec ecx  ;Make space for the end null of the environment! Wont overflow!
-  2583 00003D65 EB07                <1>     jmp short .nameCp   ;Else, just copy what we can
-  2584                              <1> .reallocOk:
-  2585                              <1>     ;Here we have all the space to just copy the full path
-  2586 00003D67 0FB70D24CAFFFF      <1>     movzx ecx, word [envVarSz]
-  2587                              <1> .nameCp:
-  2588                              <1> ;Now copy over the env var, ecx = #ofchars to copy
-  2589                              <1> ;Always enough memory for name= here
-  2590 00003D6E AC                  <1>     lodsb
-  2591 00003D6F E827070000          <1>     call ucChar
-  2592 00003D74 AA                  <1>     stosb
-  2593 00003D75 66FFC9              <1>     dec cx      ;Always decrement this count
-  2594 00003D78 3C3D                <1>     cmp al, "="
-  2595 00003D7A 75F2                <1>     jne .nameCp
-  2596                              <1> .exitNameCp:
-  2597 00003D7C AC                  <1>     lodsb
-  2598 00003D7D 3C0D                <1>     cmp al, CR
-  2599 00003D7F 7405                <1>     je .exitCp
-  2600 00003D81 AA                  <1>     stosb
-  2601 00003D82 FFC9                <1>     dec ecx
-  2602 00003D84 75F6                <1>     jnz .exitNameCp
-  2603                              <1> .exitCp:
-  2604 00003D86 31C0                <1>     xor eax, eax
-  2605 00003D88 66AB                <1>     stosw   ;Store the final null word
-  2606                              <1>     return
+  2582 00003D5E E84DE1FFFF          <1>     call badEnvSpaceError   ;Print the env space error!
+  2583 00003D63 FFC9                <1>     dec ecx  ;Make space for the end null of the environment! Wont overflow!
+  2584 00003D65 EB07                <1>     jmp short .nameCp   ;Else, just copy what we can
+  2585                              <1> .reallocOk:
+  2586                              <1>     ;Here we have all the space to just copy the full path
+  2587 00003D67 0FB70D24CAFFFF      <1>     movzx ecx, word [envVarSz]
+  2588                              <1> .nameCp:
+  2589                              <1> ;Now copy over the env var, ecx = #ofchars to copy
+  2590                              <1> ;Always enough memory for name= here
+  2591 00003D6E AC                  <1>     lodsb
+  2592 00003D6F E827070000          <1>     call ucChar
+  2593 00003D74 AA                  <1>     stosb
+  2594 00003D75 66FFC9              <1>     dec cx      ;Always decrement this count
+  2595 00003D78 3C3D                <1>     cmp al, "="
+  2596 00003D7A 75F2                <1>     jne .nameCp
+  2597                              <1> .exitNameCp:
+  2598 00003D7C AC                  <1>     lodsb
+  2599 00003D7D 3C0D                <1>     cmp al, CR
+  2600 00003D7F 7405                <1>     je .exitCp
+  2601 00003D81 AA                  <1>     stosb
+  2602 00003D82 FFC9                <1>     dec ecx
+  2603 00003D84 75F6                <1>     jnz .exitNameCp
+  2604                              <1> .exitCp:
+  2605 00003D86 31C0                <1>     xor eax, eax
+  2606 00003D88 66AB                <1>     stosw   ;Store the final null word
+  2607                              <1>     return
     13                              <2> %%_ret:
     14 00003D8A C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-  2607                              <1> .delEnvVar:
-  2608                              <1>     ;rsi -> Start of the envvar name in user buffer
-  2609 00003D8B 4889F7              <1>     mov rdi, rsi            ;Input= rdi -> String to search for
-  2610 00003D8E E87B0A0000          <1>     call searchForEnvVar    ;Look for the environment variable
-  2611 00003D93 7205                <1>     jc .delEnvVarSkip
-  2612 00003D95 E8A20A0000          <1>     call envFree    ;Free the env var at rsi
-  2613                              <1> .delEnvVarSkip:
-  2614 00003D9A F8                  <1>     clc             ;Clear CF if the var doesnt exist
-  2615                              <1>     return
+  2608                              <1> .delEnvVar:
+  2609                              <1>     ;rsi -> Start of the envvar name in user buffer
+  2610 00003D8B 4889F7              <1>     mov rdi, rsi            ;Input= rdi -> String to search for
+  2611 00003D8E E87B0A0000          <1>     call searchForEnvVar    ;Look for the environment variable
+  2612 00003D93 7205                <1>     jc .delEnvVarSkip
+  2613 00003D95 E8A20A0000          <1>     call envFree    ;Free the env var at rsi
+  2614                              <1> .delEnvVarSkip:
+  2615 00003D9A F8                  <1>     clc             ;Clear CF if the var doesnt exist
+  2616                              <1>     return
     13                              <2> %%_ret:
     14 00003D9B C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-  2616                              <1> 
-  2617                              <1> pathEdit:
-  2618                              <1> ;Each path componant !!must!! be terminated by a semicolon. 
-  2619                              <1> ;No separators allowed either side of the semicolon. Spaces allowed ONLY 
-  2620                              <1> ; after the equals sign. If what follows a semicolon is a terminator, we 
-  2621                              <1> ; end there. Error with too many arguments error!
-  2622                              <1> ;If after the equals sign there is nothing, we just print the path!
-  2623                              <1> ;Gotta process the command line ourselves first
-  2624 00003D9C E8130A0000          <1>     call checkEnvGoodAndGet         ;Use as a good environment check!
-  2625 00003DA1 0F8409E1FFFF        <1>     jz badEnvSpaceError
-  2626                              <1>     ;Now we know we can use r8 to get the envptr when needed
-  2627 00003DA7 498DB081000000      <1>     lea rsi, qword [r8 + cmdLine]   ;Get the ptr to scan for ; or <CR>
-  2628 00003DAE E8AD000000          <1>     call .skipPathDelimiters
-  2629 00003DB3 3C0D                <1>     cmp al, CR
-  2630 00003DB5 7466                <1>     je .printPath
-  2631                              <1> ;Else use the set command to setup the path in the searchSpec.
-  2632 00003DB7 56                  <1>     push rsi    ;Save the first char of the command line string
-  2633 00003DB8 488D3533D1FFFF      <1>     lea rsi, pathEVar
-  2634 00003DBF 488D3DCAC6FFFF      <1>     lea rdi, searchSpec
-  2635 00003DC6 E8AD060000          <1>     call strcpy
-  2636 00003DCB 48FFCF              <1>     dec rdi     ;Point to the terminating null
-  2637 00003DCE 5E                  <1>     pop rsi     ;Get back the first char of the pathstring
-  2638 00003DCF 31C9                <1>     xor ecx, ecx    ;Make a count of chars
-  2639                              <1> .cpLp:
-  2640 00003DD1 AC                  <1>     lodsb
-  2641 00003DD2 3C0D                <1>     cmp al, CR
-  2642 00003DD4 7411                <1>     je .cpLpExit
-  2643 00003DD6 E891000000          <1>     call .isALPathDelimiter ;Any path delims now are exit conditions!
-  2644 00003DDB 740A                <1>     je .cpLpExit
-  2645 00003DDD E8B9060000          <1>     call ucChar ;Uppercase the char
-  2646 00003DE2 AA                  <1>     stosb       ;Store it
-  2647 00003DE3 FFC1                <1>     inc ecx     ;Inc the count, CR not inclusive!
-  2648 00003DE5 EBEA                <1>     jmp short .cpLp
-  2649                              <1> .cpLpExit:
-  2650                              <1>     ;Remove trailing semicolons
-  2651 00003DE7 807FFF3B            <1>     cmp byte [rdi - 1], ";" ;Check back a char
-  2652 00003DEB 7507                <1>     jne .cpLpNoIntervene
-  2653 00003DED FFC9                <1>     dec ecx     ;Reduce the count by one
-  2654 00003DEF 48FFCF              <1>     dec rdi     ;Go back a char
-  2655 00003DF2 EBF3                <1>     jmp short .cpLpExit ;Keep removing
-  2656                              <1> .cpLpNoIntervene:
-  2657 00003DF4 B00D                <1>     mov al, CR  ;Now we store the terminator!
-  2658 00003DF6 AA                  <1>     stosb       ;Store it!
-  2659 00003DF7 81C105000000        <1>     add ecx, 5  ;PATH= is 5 chars
-  2660 00003DFD 41888880000000      <1>     mov byte [r8 + cmdLineCnt], cl  ;Store the count
-  2661 00003E04 FFC1                <1>     inc ecx     ;Add the CR for copying over
-  2662 00003E06 488D3583C6FFFF      <1>     lea rsi, searchSpec
-  2663 00003E0D 498DB881000000      <1>     lea rdi, qword [r8 + cmdLine]
-  2664 00003E14 57                  <1>     push rdi
-  2665 00003E15 F3A4                <1>     rep movsb
-  2666 00003E17 5E                  <1>     pop rsi         ;Get the ptr to the cmdline in rsi
-  2667 00003E18 E9BEFEFFFF          <1>     jmp set.altEp   ;We've now set the string up, lets go!
-  2668                              <1> .printPath:
-  2669 00003E1D 488D3DCED0FFFF      <1>     lea rdi, pathEVar   ;This is what we want to get
-  2670 00003E24 E8E5090000          <1>     call searchForEnvVar    ;Returns ptr to env var in rsi
-  2671 00003E29 7221                <1>     jc .noPathPrnt      ;If the var doesnt exit, print no path!
-  2672 00003E2B 4889F7              <1>     mov rdi, rsi        
-  2673 00003E2E E85E060000          <1>     call strlen         ;Get the length of the path in rdi
-  2674 00003E33 81F906000000        <1>     cmp ecx, 6          ;Is our path just PATH=<NUL>?
-  2675 00003E39 7411                <1>     je .noPathPrnt      ;Print no path!
-  2676 00003E3B FFC9                <1>     dec ecx             ;Drop the terminating null from the count
-  2677 00003E3D 4889FA              <1>     mov rdx, rdi        ;Set path ptr for printing
-  2678 00003E40 BB01000000          <1>     mov ebx, 1          ;STDOUT
-  2679 00003E45 B800400000          <1>     mov eax, 4000h      ;ecx = char count, rdx points to PATH= string
-  2680 00003E4A EB0C                <1>     jmp short .pathExit
-  2681                              <1> .noPathPrnt:
-  2682 00003E4C 488D158BCDFFFF      <1>     lea rdx, noPath
-  2683 00003E53 B800090000          <1>     mov eax, 0900h
-  2684                              <1> .pathExit:
-  2685 00003E58 CD21                <1>     int 21h
-  2686 00003E5A E805040000          <1>     call printCRLF      ;Print a crlf at the end
-  2687                              <1>     return
+  2617                              <1> 
+  2618                              <1> pathEdit:
+  2619                              <1> ;Each path componant !!must!! be terminated by a semicolon. 
+  2620                              <1> ;No separators allowed either side of the semicolon. Spaces allowed ONLY 
+  2621                              <1> ; after the equals sign. If what follows a semicolon is a terminator, we 
+  2622                              <1> ; end there. Error with too many arguments error!
+  2623                              <1> ;If after the equals sign there is nothing, we just print the path!
+  2624                              <1> ;Gotta process the command line ourselves first
+  2625 00003D9C E8130A0000          <1>     call checkEnvGoodAndGet         ;Use as a good environment check!
+  2626 00003DA1 0F8409E1FFFF        <1>     jz badEnvSpaceError
+  2627                              <1>     ;Now we know we can use r8 to get the envptr when needed
+  2628 00003DA7 498DB081000000      <1>     lea rsi, qword [r8 + cmdLine]   ;Get the ptr to scan for ; or <CR>
+  2629 00003DAE E8AD000000          <1>     call .skipPathDelimiters
+  2630 00003DB3 3C0D                <1>     cmp al, CR
+  2631 00003DB5 7466                <1>     je .printPath
+  2632                              <1> ;Else use the set command to setup the path in the searchSpec.
+  2633 00003DB7 56                  <1>     push rsi    ;Save the first char of the command line string
+  2634 00003DB8 488D3533D1FFFF      <1>     lea rsi, pathEVar
+  2635 00003DBF 488D3DCAC6FFFF      <1>     lea rdi, searchSpec
+  2636 00003DC6 E8AD060000          <1>     call strcpy
+  2637 00003DCB 48FFCF              <1>     dec rdi     ;Point to the terminating null
+  2638 00003DCE 5E                  <1>     pop rsi     ;Get back the first char of the pathstring
+  2639 00003DCF 31C9                <1>     xor ecx, ecx    ;Make a count of chars
+  2640                              <1> .cpLp:
+  2641 00003DD1 AC                  <1>     lodsb
+  2642 00003DD2 3C0D                <1>     cmp al, CR
+  2643 00003DD4 7411                <1>     je .cpLpExit
+  2644 00003DD6 E891000000          <1>     call .isALPathDelimiter ;Any path delims now are exit conditions!
+  2645 00003DDB 740A                <1>     je .cpLpExit
+  2646 00003DDD E8B9060000          <1>     call ucChar ;Uppercase the char
+  2647 00003DE2 AA                  <1>     stosb       ;Store it
+  2648 00003DE3 FFC1                <1>     inc ecx     ;Inc the count, CR not inclusive!
+  2649 00003DE5 EBEA                <1>     jmp short .cpLp
+  2650                              <1> .cpLpExit:
+  2651                              <1>     ;Remove trailing semicolons
+  2652 00003DE7 807FFF3B            <1>     cmp byte [rdi - 1], ";" ;Check back a char
+  2653 00003DEB 7507                <1>     jne .cpLpNoIntervene
+  2654 00003DED FFC9                <1>     dec ecx     ;Reduce the count by one
+  2655 00003DEF 48FFCF              <1>     dec rdi     ;Go back a char
+  2656 00003DF2 EBF3                <1>     jmp short .cpLpExit ;Keep removing
+  2657                              <1> .cpLpNoIntervene:
+  2658 00003DF4 B00D                <1>     mov al, CR  ;Now we store the terminator!
+  2659 00003DF6 AA                  <1>     stosb       ;Store it!
+  2660 00003DF7 81C105000000        <1>     add ecx, 5  ;PATH= is 5 chars
+  2661 00003DFD 41888880000000      <1>     mov byte [r8 + cmdLineCnt], cl  ;Store the count
+  2662 00003E04 FFC1                <1>     inc ecx     ;Add the CR for copying over
+  2663 00003E06 488D3583C6FFFF      <1>     lea rsi, searchSpec
+  2664 00003E0D 498DB881000000      <1>     lea rdi, qword [r8 + cmdLine]
+  2665 00003E14 57                  <1>     push rdi
+  2666 00003E15 F3A4                <1>     rep movsb
+  2667 00003E17 5E                  <1>     pop rsi         ;Get the ptr to the cmdline in rsi
+  2668 00003E18 E9BEFEFFFF          <1>     jmp set.altEp   ;We've now set the string up, lets go!
+  2669                              <1> .printPath:
+  2670 00003E1D 488D3DCED0FFFF      <1>     lea rdi, pathEVar   ;This is what we want to get
+  2671 00003E24 E8E5090000          <1>     call searchForEnvVar    ;Returns ptr to env var in rsi
+  2672 00003E29 7221                <1>     jc .noPathPrnt      ;If the var doesnt exit, print no path!
+  2673 00003E2B 4889F7              <1>     mov rdi, rsi        
+  2674 00003E2E E85E060000          <1>     call strlen         ;Get the length of the path in rdi
+  2675 00003E33 81F906000000        <1>     cmp ecx, 6          ;Is our path just PATH=<NUL>?
+  2676 00003E39 7411                <1>     je .noPathPrnt      ;Print no path!
+  2677 00003E3B FFC9                <1>     dec ecx             ;Drop the terminating null from the count
+  2678 00003E3D 4889FA              <1>     mov rdx, rdi        ;Set path ptr for printing
+  2679 00003E40 BB01000000          <1>     mov ebx, 1          ;STDOUT
+  2680 00003E45 B800400000          <1>     mov eax, 4000h      ;ecx = char count, rdx points to PATH= string
+  2681 00003E4A EB0C                <1>     jmp short .pathExit
+  2682                              <1> .noPathPrnt:
+  2683 00003E4C 488D158BCDFFFF      <1>     lea rdx, noPath
+  2684 00003E53 B800090000          <1>     mov eax, 0900h
+  2685                              <1> .pathExit:
+  2686 00003E58 CD21                <1>     int 21h
+  2687 00003E5A E805040000          <1>     call printCRLF      ;Print a crlf at the end
+  2688                              <1>     return
     13                              <2> %%_ret:
     14 00003E5F C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-  2688                              <1> .skipPathDelimiters:
-  2689                              <1> ;Input: rsi -> Start of string to parse
-  2690                              <1> ;Output: rsi -> First non-delimiter char of string
-  2691                              <1> ;        al = First non delim char
-  2692 00003E60 AC                  <1>     lodsb
-  2693 00003E61 E806000000          <1>     call .isALPathDelimiter
-  2694 00003E66 74F8                <1>     je .skipPathDelimiters
-  2695 00003E68 48FFCE              <1>     dec rsi
-  2696                              <1>     return
+  2689                              <1> .skipPathDelimiters:
+  2690                              <1> ;Input: rsi -> Start of string to parse
+  2691                              <1> ;Output: rsi -> First non-delimiter char of string
+  2692                              <1> ;        al = First non delim char
+  2693 00003E60 AC                  <1>     lodsb
+  2694 00003E61 E806000000          <1>     call .isALPathDelimiter
+  2695 00003E66 74F8                <1>     je .skipPathDelimiters
+  2696 00003E68 48FFCE              <1>     dec rsi
+  2697                              <1>     return
     13                              <2> %%_ret:
     14 00003E6B C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-  2697                              <1> .isALPathDelimiter:
-  2698                              <1> ;Same as before without semicolon
-  2699 00003E6C 3C20                <1>     cmp al, SPC
-  2700                              <1>     rete
+  2698                              <1> .isALPathDelimiter:
+  2699                              <1> ;Same as before without semicolon
+  2700 00003E6C 3C20                <1>     cmp al, SPC
+  2701                              <1>     rete
     49                              <2> cret e
     19                              <3> %%_base:
     20                              <3> %assign baseVar %%_base-$$
@@ -6575,8 +6576,8 @@
     35                              <3>  return
     36                              <3> %%a:
     37                              <3>  %endif
-  2701 00003E70 3C09                <1>     cmp al, TAB
-  2702                              <1>     rete
+  2702 00003E70 3C09                <1>     cmp al, TAB
+  2703                              <1>     rete
     49                              <2> cret e
     19                              <3> %%_base:
     20                              <3> %assign baseVar %%_base-$$
@@ -6597,8 +6598,8 @@
     35                              <3>  return
     36                              <3> %%a:
     37                              <3>  %endif
-  2703 00003E74 3C2C                <1>     cmp al, ","
-  2704                              <1>     rete
+  2704 00003E74 3C2C                <1>     cmp al, ","
+  2705                              <1>     rete
     49                              <2> cret e
     19                              <3> %%_base:
     20                              <3> %assign baseVar %%_base-$$
@@ -6619,141 +6620,141 @@
     35                              <3>  return
     36                              <3> %%a:
     37                              <3>  %endif
-  2705 00003E78 3C3D                <1>     cmp al, "="
-  2706                              <1>     return
+  2706 00003E78 3C3D                <1>     cmp al, "="
+  2707                              <1>     return
     13                              <2> %%_ret:
     14 00003E7A C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-  2707                              <1> 
-  2708                              <1> prompt:
-  2709 00003E7B E834090000          <1>     call checkEnvGoodAndGet         ;Use as a good environment check!
-  2710 00003E80 0F842AE0FFFF        <1>     jz badEnvSpaceError
-  2711                              <1>     ;Now we know we can use r8 to get the envptr when needed
-  2712 00003E86 498DB081000000      <1>     lea rsi, qword [r8 + cmdLine]   ;Get the ptr to scan for ; or <CR>
-  2713 00003E8D E824060000          <1>     call skipDelimiters ;Points rsi to the first non-delimiter char
-  2714 00003E92 803E0D              <1>     cmp byte [rsi], CR  ;Is the first non-delim a CR?
-  2715 00003E95 742C                <1>     je .reset   ;Reset if so
-  2716 00003E97 56                  <1>     push rsi    ;Save ptr to the start of the user typed line
-  2717 00003E98 488D3529D0FFFF      <1>     lea rsi, promptEVar ;Copy the PROMPT= prefix to searchspec
-  2718 00003E9F 488D3DEAC5FFFF      <1>     lea rdi, searchSpec
-  2719 00003EA6 B907000000          <1>     mov ecx, 7  ;Copy without <CR>
-  2720 00003EAB F3A4                <1>     rep movsb
-  2721 00003EAD 5E                  <1>     pop rsi ;Get back ptr to the user typed line
-  2722 00003EAE 31C9                <1>     xor ecx, ecx    ;Get char count
-  2723                              <1> .cp:    ;Now copy the user string over
-  2724 00003EB0 AC                  <1>     lodsb
-  2725 00003EB1 AA                  <1>     stosb 
-  2726 00003EB2 3C0D                <1>     cmp al, CR
-  2727 00003EB4 7404                <1>     je .cpOk
-  2728 00003EB6 FFC1                <1>     inc ecx ;Increment count if non CR char copied over
-  2729 00003EB8 EBF6                <1>     jmp short .cp
-  2730                              <1> .cpOk:
-  2731 00003EBA 488D35CFC5FFFF      <1>     lea rsi, searchSpec ;Source the string from here
-  2732 00003EC1 EB09                <1>     jmp short .goSet    ;Got the CR-less count
-  2733                              <1> .reset:
-  2734                              <1> ;Delete the environment variable!
-  2735 00003EC3 488D35FECFFFFF      <1>     lea rsi, promptEVar 
-  2736 00003ECA 31C9                <1>     xor ecx, ecx    ;No chars to write to the envstring
-  2737                              <1> .goSet:
-  2738 00003ECC 81C107000000        <1>     add ecx, 7  ;Add the chars for the prompt= string too
-  2739 00003ED2 41888880000000      <1>     mov byte [r8 + cmdLineCnt], cl 
-  2740 00003ED9 FFC1                <1>     inc ecx     ;Include CR in copy
-  2741 00003EDB 498DB881000000      <1>     lea rdi, qword [r8 + cmdLine]
-  2742 00003EE2 57                  <1>     push rdi
-  2743 00003EE3 F3A4                <1>     rep movsb
-  2744 00003EE5 5E                  <1>     pop rsi
-  2745 00003EE6 E9F0FDFFFF          <1>     jmp set.altEp
-  2746                              <1> 
-  2747                              <1> echo:
-  2748 00003EEB F605B2C1FFFFFF      <1>     test byte [arg1Flg], -1 ;If no argument, display if on or off
-  2749 00003EF2 752A                <1>     jnz .argGiven
-  2750 00003EF4 488D15D4CDFFFF      <1>     lea rdx, echoIs
-  2751 00003EFB E86B030000          <1>     call printString
-  2752 00003F00 488D15AECDFFFF      <1>     lea rdx, onMes
-  2753 00003F07 488D0DA1CDFFFF      <1>     lea rcx, offMes
-  2754 00003F0E F60581C1FFFFFF      <1>     test byte [echoFlg], -1
-  2755 00003F15 480F44D1            <1>     cmovz rdx, rcx
-  2756 00003F19 E94D030000          <1>     jmp printString
-  2757                              <1> .argGiven:
-  2758 00003F1E 498DB081000000      <1>     lea rsi, qword [r8 + cmdLine]
-  2759 00003F25 0FB60579C1FFFF      <1>     movzx eax, byte [arg1Off]   ;Get the offset
-  2760 00003F2C 4801C6              <1>     add rsi, rax
-  2761 00003F2F AC                  <1>     lodsb   ;Get this char
-  2762 00003F30 48FFCE              <1>     dec rsi ;And go back to the start of the string
-  2763 00003F33 E863050000          <1>     call ucChar
-  2764 00003F38 3C4F                <1>     cmp al, "O" ;Was it an O? If not, direct copy
-  2765 00003F3A 755A                <1>     jne .directEcho
-  2766 00003F3C 8A4601              <1>     mov al, byte [rsi + 1]  ;Get the next char
-  2767 00003F3F E857050000          <1>     call ucChar
-  2768 00003F44 3C4E                <1>     cmp al, "N" ;If its N, check its the last char on the string
-  2769 00003F46 751B                <1>     jne .checkOff
-  2770 00003F48 56                  <1>     push rsi
-  2771 00003F49 4881C602000000      <1>     add rsi, 2  ;Go past on string
-  2772 00003F50 E861050000          <1>     call skipDelimiters
-  2773 00003F55 803E0D              <1>     cmp byte [rsi], CR
-  2774 00003F58 5E                  <1>     pop rsi
-  2775 00003F59 753B                <1>     jne .directEcho ;If its not, just echo the string
-  2776 00003F5B C60534C1FFFF01      <1>     mov byte [echoFlg], 1   ;Set to 1 if on
-  2777                              <1>     return
+  2708                              <1> 
+  2709                              <1> prompt:
+  2710 00003E7B E834090000          <1>     call checkEnvGoodAndGet         ;Use as a good environment check!
+  2711 00003E80 0F842AE0FFFF        <1>     jz badEnvSpaceError
+  2712                              <1>     ;Now we know we can use r8 to get the envptr when needed
+  2713 00003E86 498DB081000000      <1>     lea rsi, qword [r8 + cmdLine]   ;Get the ptr to scan for ; or <CR>
+  2714 00003E8D E824060000          <1>     call skipDelimiters ;Points rsi to the first non-delimiter char
+  2715 00003E92 803E0D              <1>     cmp byte [rsi], CR  ;Is the first non-delim a CR?
+  2716 00003E95 742C                <1>     je .reset   ;Reset if so
+  2717 00003E97 56                  <1>     push rsi    ;Save ptr to the start of the user typed line
+  2718 00003E98 488D3529D0FFFF      <1>     lea rsi, promptEVar ;Copy the PROMPT= prefix to searchspec
+  2719 00003E9F 488D3DEAC5FFFF      <1>     lea rdi, searchSpec
+  2720 00003EA6 B907000000          <1>     mov ecx, 7  ;Copy without <CR>
+  2721 00003EAB F3A4                <1>     rep movsb
+  2722 00003EAD 5E                  <1>     pop rsi ;Get back ptr to the user typed line
+  2723 00003EAE 31C9                <1>     xor ecx, ecx    ;Get char count
+  2724                              <1> .cp:    ;Now copy the user string over
+  2725 00003EB0 AC                  <1>     lodsb
+  2726 00003EB1 AA                  <1>     stosb 
+  2727 00003EB2 3C0D                <1>     cmp al, CR
+  2728 00003EB4 7404                <1>     je .cpOk
+  2729 00003EB6 FFC1                <1>     inc ecx ;Increment count if non CR char copied over
+  2730 00003EB8 EBF6                <1>     jmp short .cp
+  2731                              <1> .cpOk:
+  2732 00003EBA 488D35CFC5FFFF      <1>     lea rsi, searchSpec ;Source the string from here
+  2733 00003EC1 EB09                <1>     jmp short .goSet    ;Got the CR-less count
+  2734                              <1> .reset:
+  2735                              <1> ;Delete the environment variable!
+  2736 00003EC3 488D35FECFFFFF      <1>     lea rsi, promptEVar 
+  2737 00003ECA 31C9                <1>     xor ecx, ecx    ;No chars to write to the envstring
+  2738                              <1> .goSet:
+  2739 00003ECC 81C107000000        <1>     add ecx, 7  ;Add the chars for the prompt= string too
+  2740 00003ED2 41888880000000      <1>     mov byte [r8 + cmdLineCnt], cl 
+  2741 00003ED9 FFC1                <1>     inc ecx     ;Include CR in copy
+  2742 00003EDB 498DB881000000      <1>     lea rdi, qword [r8 + cmdLine]
+  2743 00003EE2 57                  <1>     push rdi
+  2744 00003EE3 F3A4                <1>     rep movsb
+  2745 00003EE5 5E                  <1>     pop rsi
+  2746 00003EE6 E9F0FDFFFF          <1>     jmp set.altEp
+  2747                              <1> 
+  2748                              <1> echo:
+  2749 00003EEB F605B2C1FFFFFF      <1>     test byte [arg1Flg], -1 ;If no argument, display if on or off
+  2750 00003EF2 752A                <1>     jnz .argGiven
+  2751 00003EF4 488D15D4CDFFFF      <1>     lea rdx, echoIs
+  2752 00003EFB E86B030000          <1>     call printString
+  2753 00003F00 488D15AECDFFFF      <1>     lea rdx, onMes
+  2754 00003F07 488D0DA1CDFFFF      <1>     lea rcx, offMes
+  2755 00003F0E F60581C1FFFFFF      <1>     test byte [echoFlg], -1
+  2756 00003F15 480F44D1            <1>     cmovz rdx, rcx
+  2757 00003F19 E94D030000          <1>     jmp printString
+  2758                              <1> .argGiven:
+  2759 00003F1E 498DB081000000      <1>     lea rsi, qword [r8 + cmdLine]
+  2760 00003F25 0FB60579C1FFFF      <1>     movzx eax, byte [arg1Off]   ;Get the offset
+  2761 00003F2C 4801C6              <1>     add rsi, rax
+  2762 00003F2F AC                  <1>     lodsb   ;Get this char
+  2763 00003F30 48FFCE              <1>     dec rsi ;And go back to the start of the string
+  2764 00003F33 E863050000          <1>     call ucChar
+  2765 00003F38 3C4F                <1>     cmp al, "O" ;Was it an O? If not, direct copy
+  2766 00003F3A 755A                <1>     jne .directEcho
+  2767 00003F3C 8A4601              <1>     mov al, byte [rsi + 1]  ;Get the next char
+  2768 00003F3F E857050000          <1>     call ucChar
+  2769 00003F44 3C4E                <1>     cmp al, "N" ;If its N, check its the last char on the string
+  2770 00003F46 751B                <1>     jne .checkOff
+  2771 00003F48 56                  <1>     push rsi
+  2772 00003F49 4881C602000000      <1>     add rsi, 2  ;Go past on string
+  2773 00003F50 E861050000          <1>     call skipDelimiters
+  2774 00003F55 803E0D              <1>     cmp byte [rsi], CR
+  2775 00003F58 5E                  <1>     pop rsi
+  2776 00003F59 753B                <1>     jne .directEcho ;If its not, just echo the string
+  2777 00003F5B C60534C1FFFF01      <1>     mov byte [echoFlg], 1   ;Set to 1 if on
+  2778                              <1>     return
     13                              <2> %%_ret:
     14 00003F62 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-  2778                              <1> .checkOff:
-  2779 00003F63 8A4601              <1>     mov al, byte [rsi + 1]  ;Get first char past O
-  2780 00003F66 E830050000          <1>     call ucChar
-  2781 00003F6B 3C46                <1>     cmp al, "F" ;Is it an F?
-  2782 00003F6D 7527                <1>     jne .directEcho ;No, just direct echo
-  2783 00003F6F 8A4602              <1>     mov al, byte [rsi + 2]
-  2784 00003F72 E824050000          <1>     call ucChar
-  2785 00003F77 3C46                <1>     cmp al, "F"
-  2786 00003F79 751B                <1>     jne .directEcho
-  2787 00003F7B 56                  <1>     push rsi
-  2788 00003F7C 4881C603000000      <1>     add rsi, 3
-  2789 00003F83 E82E050000          <1>     call skipDelimiters
-  2790 00003F88 803E0D              <1>     cmp byte [rsi], CR
-  2791 00003F8B 5E                  <1>     pop rsi
-  2792 00003F8C 7508                <1>     jne .directEcho
-  2793 00003F8E C60501C1FFFF00      <1>     mov byte [echoFlg], 0
-  2794                              <1>     return
+  2779                              <1> .checkOff:
+  2780 00003F63 8A4601              <1>     mov al, byte [rsi + 1]  ;Get first char past O
+  2781 00003F66 E830050000          <1>     call ucChar
+  2782 00003F6B 3C46                <1>     cmp al, "F" ;Is it an F?
+  2783 00003F6D 7527                <1>     jne .directEcho ;No, just direct echo
+  2784 00003F6F 8A4602              <1>     mov al, byte [rsi + 2]
+  2785 00003F72 E824050000          <1>     call ucChar
+  2786 00003F77 3C46                <1>     cmp al, "F"
+  2787 00003F79 751B                <1>     jne .directEcho
+  2788 00003F7B 56                  <1>     push rsi
+  2789 00003F7C 4881C603000000      <1>     add rsi, 3
+  2790 00003F83 E82E050000          <1>     call skipDelimiters
+  2791 00003F88 803E0D              <1>     cmp byte [rsi], CR
+  2792 00003F8B 5E                  <1>     pop rsi
+  2793 00003F8C 7508                <1>     jne .directEcho
+  2794 00003F8E C60501C1FFFF00      <1>     mov byte [echoFlg], 0
+  2795                              <1>     return
     13                              <2> %%_ret:
     14 00003F95 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-  2795                              <1> .directEcho: 
-  2796 00003F96 498D9081000000      <1>     lea rdx, qword [r8 + cmdLine]
-  2797 00003F9D 4889F3              <1>     mov rbx, rsi    
-  2798 00003FA0 4829D3              <1>     sub rbx, rdx
-  2799 00003FA3 410FB68880000000    <1>     movzx ecx, byte [r8 + cmdLineCnt]   ;Get original char count
-  2800 00003FAB 29D9                <1>     sub ecx, ebx    ;Get the remaining chars
-  2801 00003FAD 0F82A7020000        <1>     jc printCRLFecho    ;If something weird, echo nothing
-  2802 00003FB3 4889F2              <1>     mov rdx, rsi
-  2803 00003FB6 BB01000000          <1>     mov ebx, 1
-  2804 00003FBB B800400000          <1>     mov eax, 4000h
-  2805 00003FC0 CD21                <1>     int 21h
-  2806 00003FC2 E99D020000          <1>     jmp printCRLF   ;Needs to be a proper CRLF to insert a CRLF at the end!
-  2807                              <1> 
+  2796                              <1> .directEcho: 
+  2797 00003F96 498D9081000000      <1>     lea rdx, qword [r8 + cmdLine]
+  2798 00003F9D 4889F3              <1>     mov rbx, rsi    
+  2799 00003FA0 4829D3              <1>     sub rbx, rdx
+  2800 00003FA3 410FB68880000000    <1>     movzx ecx, byte [r8 + cmdLineCnt]   ;Get original char count
+  2801 00003FAB 29D9                <1>     sub ecx, ebx    ;Get the remaining chars
+  2802 00003FAD 0F82A7020000        <1>     jc printCRLFecho    ;If something weird, echo nothing
+  2803 00003FB3 4889F2              <1>     mov rdx, rsi
+  2804 00003FB6 BB01000000          <1>     mov ebx, 1
+  2805 00003FBB B800400000          <1>     mov eax, 4000h
+  2806 00003FC0 CD21                <1>     int 21h
+  2807 00003FC2 E99D020000          <1>     jmp printCRLF   ;Needs to be a proper CRLF to insert a CRLF at the end!
   2808                              <1> 
-  2809                              <1> pauza:  ;Well... pause is an instruction in english 0:)
-  2810                              <1> ;Thank you authors of MSDOS Encyclopedia for confusing an argument to this command
-  2811                              <1> ; with just... the actual command tail being echoed with the command -_-
-  2812 00003FC7 F605C8C0FFFFFF      <1>     test byte [echoFlg], -1
-  2813 00003FCE 7528                <1>     jnz .echoTail
-  2814                              <1> ;Since we havent echoed the command out, type the tail out manually
-  2815 00003FD0 498DB081000000      <1>     lea rsi, qword [r8 + cmdLine]  ;Goto command line
-  2816 00003FD7 E8DA040000          <1>     call skipDelimiters ;Skip leading delims
-  2817 00003FDC 4889F2              <1>     mov rdx, rsi
-  2818 00003FDF 410FB68880000000    <1>     movzx ecx, byte [r8 + cmdLineCnt]  ;Get the count
-  2819 00003FE7 BB01000000          <1>     mov ebx, 1  ;Echo to STDOUT 
-  2820 00003FEC B800400000          <1>     mov eax, 4000h  ;Write
-  2821 00003FF1 CD21                <1>     int 21h
-  2822 00003FF3 E86C020000          <1>     call printCRLF
-  2823                              <1> .echoTail:
-  2824 00003FF8 488D1547CAFFFF      <1>     lea rdx, pauseMes
-  2825 00003FFF E867020000          <1>     call printString
-  2826 00004004 B800080000          <1>     mov eax, 0800h  ;CON input w/o echo. Triggers ^C
-  2827 00004009 CD21                <1>     int 21h
-  2828 0000400B E854020000          <1>     call printCRLF
-  2829                              <1> remark:
-  2830                              <1>     return
+  2809                              <1> 
+  2810                              <1> pauza:  ;Well... pause is an instruction in english 0:)
+  2811                              <1> ;Thank you authors of MSDOS Encyclopedia for confusing an argument to this command
+  2812                              <1> ; with just... the actual command tail being echoed with the command -_-
+  2813 00003FC7 F605C8C0FFFFFF      <1>     test byte [echoFlg], -1
+  2814 00003FCE 7528                <1>     jnz .echoTail
+  2815                              <1> ;Since we havent echoed the command out, type the tail out manually
+  2816 00003FD0 498DB081000000      <1>     lea rsi, qword [r8 + cmdLine]  ;Goto command line
+  2817 00003FD7 E8DA040000          <1>     call skipDelimiters ;Skip leading delims
+  2818 00003FDC 4889F2              <1>     mov rdx, rsi
+  2819 00003FDF 410FB68880000000    <1>     movzx ecx, byte [r8 + cmdLineCnt]  ;Get the count
+  2820 00003FE7 BB01000000          <1>     mov ebx, 1  ;Echo to STDOUT 
+  2821 00003FEC B800400000          <1>     mov eax, 4000h  ;Write
+  2822 00003FF1 CD21                <1>     int 21h
+  2823 00003FF3 E86C020000          <1>     call printCRLF
+  2824                              <1> .echoTail:
+  2825 00003FF8 488D1547CAFFFF      <1>     lea rdx, pauseMes
+  2826 00003FFF E867020000          <1>     call printString
+  2827 00004004 B800080000          <1>     mov eax, 0800h  ;CON input w/o echo. Triggers ^C
+  2828 00004009 CD21                <1>     int 21h
+  2829 0000400B E854020000          <1>     call printCRLF
+  2830                              <1> remark:
+  2831                              <1>     return
     13                              <2> %%_ret:
     14 00004010 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$

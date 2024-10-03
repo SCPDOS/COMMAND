@@ -1595,6 +1595,7 @@ cls:
     int 30h
     mov ah, 0Fh ;Get screen mode
     int 30h
+    push rbx
     movzx edx, ah   ;Get number of columns in dl
     dec dl
     mov dh, 25  ;Number of rows is standard
@@ -1604,7 +1605,7 @@ cls:
     mov ah, 6   ;Scroll
     int 30h
     xor edx, edx    ;Set cursor coordinates to top left of screen
-    mov bh, 0   ;Page 0
+    pop rbx
     mov ah, 2
     int 30h
     return
