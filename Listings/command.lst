@@ -8690,7 +8690,7 @@
      4 00004C56 CD21                <1>     int 21h
      5 00004C58 3C01                <1>     cmp al, 01h ;Version 1
      6 00004C5A 760D                <1>     jbe .okVersion
-     7 00004C5C 488D1507050000      <1>     lea rdx, badVerStr
+     7 00004C5C 488D15D0040000      <1>     lea rdx, badVerStr
      8 00004C63 B409                <1>     mov ah, 09h
      9 00004C65 CD21                <1>     int 21h
     10                              <1> .exitBad:
@@ -8781,7 +8781,7 @@
     95 00004D7E B409                <1>     mov ah, 09h
     96 00004D80 CD21                <1>     int 21h ;Print init string
     97 00004D82 E8AEEAFFFF          <1>     call version.printVersionNumber
-    98 00004D87 488D159E030000      <1>     lea rdx, initString2
+    98 00004D87 488D157B030000      <1>     lea rdx, initString2
     99 00004D8E B409                <1>     mov ah, 09h
    100 00004D90 CD21                <1>     int 21h ;Print init string
    101 00004D92 31D2                <1>     xor edx, edx        ;Indicate we DONT want to do Autoexec processing
@@ -8877,7 +8877,7 @@
    188 00004E73 741C                <1>     je .dir ;If so, root dir specified, all oki!
    189                              <1> .badSpec:
    190                              <1> ;rsi has been moved past the argument so we can keep proceeding with processing
-   191 00004E75 488D1506030000      <1>     lea rdx, badCmdDir
+   191 00004E75 488D15CF020000      <1>     lea rdx, badCmdDir
    192                              <1> .bs0:
    193 00004E7C E8EAF3FFFF          <1>     call printString
    194                              <1> .plhop:
@@ -8899,7 +8899,7 @@
    210 00004EA5 B811120000          <1>     mov eax, 1211h  ;Uppercase the pathspec
    211 00004EAA CD2F                <1>     int 2Fh         ;DOS 3.3 does't do this hehe 0:-)
    212 00004EAC 5E                  <1>     pop rsi
-   213 00004EAD C60512030000FF      <1>     mov byte [initNewSpec], -1  ;Set, we have a new comspec
+   213 00004EAD C605DB020000FF      <1>     mov byte [initNewSpec], -1  ;Set, we have a new comspec
    214 00004EB4 EBCB                <1>     jmp short .plhop
    215                              <1> ;-----------------------------------------------------------------
    216                              <1> ;Handle char dev here
@@ -8914,7 +8914,7 @@
    225 00004ED2 488D3D00C0FFFF      <1>     lea rdi, devName
    226 00004ED9 E89AF5FFFF          <1>     call strcpy ;Copy this string over
    227 00004EDE 5E                  <1>     pop rsi
-   228 00004EDF C605E1020000FF      <1>     mov byte [initNewDev], -1   ;Set this byte now we have a new dev!
+   228 00004EDF C605AA020000FF      <1>     mov byte [initNewDev], -1   ;Set this byte now we have a new dev!
    229                              <1> .plhop1:
    230 00004EE6 EB99                <1>     jmp short .plhop    ;parseLp
    231                              <1> .badChar:
@@ -8940,11 +8940,11 @@
    251 00004F21 7710                <1>     ja .badEnv
    252 00004F23 3DA0000000          <1>     cmp eax, 0A0h
    253 00004F28 7209                <1>     jb .badEnv
-   254 00004F2A 66890597020000      <1>     mov word [initEnvSz], ax    ;Store the allocated size here
+   254 00004F2A 66890560020000      <1>     mov word [initEnvSz], ax    ;Store the allocated size here
    255                              <1> .plhop2:
    256 00004F31 EBB3                <1>     jmp short .plhop1  ;parseLp
    257                              <1> .badEnv:
-   258 00004F33 488D1571020000      <1>     lea rdx, badEnvSz
+   258 00004F33 488D153A020000      <1>     lea rdx, badEnvSz
    259 00004F3A EBB3                <1>     jmp short .bs1
    260                              <1> ;-----------------------------------------------------------------
    261                              <1> .switchPerma:
@@ -9028,7 +9028,7 @@
     14 00004FD3 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
    315                              <1> .replacestdio:
-   316 00004FD4 F605EC010000FF      <1>     test byte [initNewDev], -1
+   316 00004FD4 F605B5010000FF      <1>     test byte [initNewDev], -1
    317                              <1>     retz    ;Return if not set
     41                              <2> cret z
     19                              <3> %%_base:
@@ -9058,7 +9058,7 @@
    323 00004FE9 498B703E            <1>     mov rsi, qword [r8 + psp.envPtr]
    324 00004FED 4885F6              <1>     test rsi, rsi
    325 00004FF0 7447                <1>     jz .noInitEnv
-   326 00004FF2 66813DCD0100000000  <1>     cmp word [initEnvSz], 0 ;If an env exists and /E not specified, return!
+   326 00004FF2 66813D960100000000  <1>     cmp word [initEnvSz], 0 ;If an env exists and /E not specified, return!
    327                              <1>     retz
     41                              <2> cret z
     19                              <3> %%_base:
@@ -9086,7 +9086,7 @@
    331                              <1> ; print out of env space and stop there
    332                              <1> ;Else, we simply allocate and create a fresh new environment with the new 
    333                              <1> ; comspec. 
-   334 00004FFD F605C2010000FF      <1>     test byte [initNewSpec], -1  ;If we have a new comspec, create afresh
+   334 00004FFD F6058B010000FF      <1>     test byte [initNewSpec], -1  ;If we have a new comspec, create afresh
    335 00005004 752E                <1>     jnz .prepNewEnv
    336                              <1>     ;Else, we create new alloc and copy master into it
    337 00005006 E867000000          <1>     call .allocEnv
@@ -9137,11 +9137,11 @@
    373                              <1> .allocEnv:
    374                              <1> ;Output: rax -> Ptr to the environment block. 
    375                              <1> ;   If anything goes wrong, error message and exit the shell!
-   376 00005072 0FB71D4F010000      <1>     movzx ebx, word [initEnvSz]
+   376 00005072 0FB71D18010000      <1>     movzx ebx, word [initEnvSz]
    377 00005079 85DB                <1>     test ebx, ebx   ;If this is 0, allocate 160 bytes
    378 0000507B 750C                <1>     jnz .goAlloc
    379 0000507D BBA0000000          <1>     mov ebx, 0A0h    ;160 bytes
-   380 00005082 66891D3F010000      <1>     mov word [initEnvSz], bx    ;Overwrite
+   380 00005082 66891D08010000      <1>     mov word [initEnvSz], bx    ;Overwrite
    381                              <1> .goAlloc:
    382 00005089 81C30F000000        <1>     add ebx, 0Fh
    383 0000508F C1EB04              <1>     shr ebx, 4  ;Round up and turn into paragraphs
@@ -9176,7 +9176,7 @@
    392                              <1> ;Copies the environment
    393                              <1> ;Input: rsi -> Source to copy from
    394                              <1> ;       rdi -> Destination to copy to
-   395 000050AC 0FB70D15010000      <1>     movzx ecx, word [initEnvSz]
+   395 000050AC 0FB70DDE000000      <1>     movzx ecx, word [initEnvSz]
    396                              <1> .lp:
    397 000050B3 AC                  <1>     lodsb
    398 000050B4 AA                  <1>     stosb
@@ -9227,35 +9227,30 @@
    434                              <1> 
    435                              <1> ;Loader Data here
    436                              <1> initString: 
-   437 000050F6 0D0A536369656E7469- <1>     db CR,LF,"Scientific Computer Research(R) SCP/DOS(R) Version $"
-   437 000050FF 66696320436F6D7075- <1>
-   437 00005108 746572205265736561- <1>
-   437 00005111 726368285229205343- <1>
-   437 0000511A 502F444F5328522920- <1>
-   437 00005123 56657273696F6E2024  <1>
+   437 000050F6 0D0A5343502F444F53- <1>     db CR,LF, "SCP/DOS Version $"
+   437 000050FF 2056657273696F6E20- <1>
+   437 00005108 24                  <1>
    438                              <1> initString2:
-   439 0000512C 0D0A20202020202020- <1>     db CR,LF, "          (C)Copyright Scientific Computer Research 2024.",
-   439 00005135 202020284329436F70- <1>
-   439 0000513E 797269676874205363- <1>
-   439 00005147 69656E746966696320- <1>
-   439 00005150 436F6D707574657220- <1>
-   439 00005159 526573656172636820- <1>
-   439 00005162 323032342E          <1>
-   440 00005167 0D0A24              <1>     db CR,LF,"$"
-   441 0000516A 496E636F7272656374- <1> badVerStr:  db "Incorrect DOS version",CR,LF,"$"
-   441 00005173 20444F532076657273- <1>
-   441 0000517C 696F6E0D0A24        <1>
-   442 00005182 537065636966696564- <1> badCmdDir:  db "Specified COMMAND search directory bad",CR,LF,"$"
-   442 0000518B 20434F4D4D414E4420- <1>
-   442 00005194 736561726368206469- <1>
-   442 0000519D 726563746F72792062- <1>
-   442 000051A6 61640D0A24          <1>
-   443 000051AB 496E76616C69642045- <1> badEnvSz:   db "Invalid Environment Size",CR,LF,"$"
-   443 000051B4 6E7669726F6E6D656E- <1>
-   443 000051BD 742053697A650D0A24  <1>
-   444 000051C6 00                  <1> initNewSpec db 0    ;Set if a new comspec found and copied
-   445 000051C7 00                  <1> initNewDev  db 0    ;Set if a new device found and copied
-   446 000051C8 0000                <1> initEnvSz       dw 0  ;Max 7FFFh (32768) bytes. Default to 160. 0 means no /E:
+   439 00005109 0D0A436F7079726967- <1>     db CR,LF, "Copyright 2022,2023,2024, Yll Buzoku.",
+   439 00005112 687420323032322C32- <1>
+   439 0000511B 3032332C323032342C- <1>
+   439 00005124 20596C6C2042757A6F- <1>
+   439 0000512D 6B752E              <1>
+   440 00005130 0D0A24              <1>     db CR,LF,"$"
+   441 00005133 496E636F7272656374- <1> badVerStr:  db "Incorrect DOS version",CR,LF,"$"
+   441 0000513C 20444F532076657273- <1>
+   441 00005145 696F6E0D0A24        <1>
+   442 0000514B 537065636966696564- <1> badCmdDir:  db "Specified COMMAND search directory bad",CR,LF,"$"
+   442 00005154 20434F4D4D414E4420- <1>
+   442 0000515D 736561726368206469- <1>
+   442 00005166 726563746F72792062- <1>
+   442 0000516F 61640D0A24          <1>
+   443 00005174 496E76616C69642045- <1> badEnvSz:   db "Invalid Environment Size",CR,LF,"$"
+   443 0000517D 6E7669726F6E6D656E- <1>
+   443 00005186 742053697A650D0A24  <1>
+   444 0000518F 00                  <1> initNewSpec db 0    ;Set if a new comspec found and copied
+   445 00005190 00                  <1> initNewDev  db 0    ;Set if a new device found and copied
+   446 00005191 0000                <1> initEnvSz       dw 0  ;Max 7FFFh (32768) bytes. Default to 160. 0 means no /E:
     24                                  Segment stack1 nobits valign=16 vfollows=cmd
     25                                  ;This stack is only used during init of COMMAND.COM
     26 00000000 <res 3200h>                 dq stackSize dup (?)

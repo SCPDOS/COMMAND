@@ -434,9 +434,9 @@ getMasterEnv:
 
 ;Loader Data here
 initString: 
-    db CR,LF,"Scientific Computer Research(R) SCP/DOS(R) Version $"
+    db CR,LF, "SCP/DOS Version $"
 initString2:
-    db CR,LF, "          (C)Copyright Scientific Computer Research 2024.",
+    db CR,LF, "Copyright 2022,2023,2024, Yll Buzoku.",
     db CR,LF,"$"
 badVerStr:  db "Incorrect DOS version",CR,LF,"$"
 badCmdDir:  db "Specified COMMAND search directory bad",CR,LF,"$"
