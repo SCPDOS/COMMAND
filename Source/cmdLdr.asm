@@ -436,7 +436,7 @@ getMasterEnv:
 initString: 
     db CR,LF, "SCP/DOS Version $"
 initString2:
-    db CR,LF, "Copyright 2022,2023,2024, Yll Buzoku.",
+    db CR,LF, "Copyright 2022, 2024, Yll Buzoku.",
     db CR,LF,"$"
 badVerStr:  db "Incorrect DOS version",CR,LF,"$"
 badCmdDir:  db "Specified COMMAND search directory bad",CR,LF,"$"
