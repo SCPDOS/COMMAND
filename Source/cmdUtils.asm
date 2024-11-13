@@ -822,58 +822,109 @@ scanForWildcards:
     pop rax
     return
 
+printDecimalValLB:
+;Takes a value in rax and prints it's decimal representation with leading
+; blanks and inserts commas where appropriate.
+;Input: rax = Value to print
+;       rcx = Buffer size to handle (usual values: 17 for max, 13 for dword)
+    mov rbp, rsp
+    sub rsp, rcx ;Allocate the buffer on the stack
+    mov rdi, rbp
+    sub rdi, rcx
+    push rax
+    push rcx
+    push rdi
+    xor eax, eax
+    rep stosb   ;Initialise the buffer with a null value
+    pop rdi     ;Now set the ptr to the head of the buffer
+    pop rcx
+    pop rax
+    push rcx    ;Save this value to keep the buffer length
+    call decimalise   
+    pop rcx     ;Now print the buffer
+    mov rdi, rbp
+    dec rdi
+.skipLp:
+    mov bl, byte [rdi]
+    test bl, bl ;Any leading null's get replaced with a space
+    jne .printLp
+    mov ah, 02h
+    mov dl, " "
+    int 21h
+    dec rdi
+    dec ecx
+    cmp ecx, 1
+    jne .skipLp   ;Always print 1 byte for size
+.printLp:
+    mov dl, byte [rdi]
+    mov ah, 02h
+    int 21h
+    dec rdi
+    dec ecx
+    jnz .printLp
+    mov rsp, rbp    ;Deallocate the buffer and exit!
+    return
+
+decimalise:
+;Input: rax = value to decimalise
+;       rdi -> Ptr to byte buffer to store string in with commas
+;Output: Buffer @ rdi filled in! 
+;       ecx = Number of chars in buffer.
+    push rdi
+    xor ecx, ecx    ;Use cl as buffer length ctr, ch as comma ctr
+    mov ebx, 0Ah    ;Divide by 10
+.gddlp:
+    cmp ch, 3       ;Are we divisible by 3?
+    jne .gddNoComma
+    mov dl, byte [ctryData + countryStruc.thouSep]
+    mov byte [rdi], dl
+    inc rdi 
+    inc cl          ;Inc number of chars
+    xor ch, ch      ;Reset comma counter
+.gddNoComma:
+    xor edx, edx
+    div rbx         ;Divide rax by 10
+    add dl, "0"     
+    mov byte [rdi], dl
+    inc rdi
+    inc cl          ;Inc number of chars
+    inc ch          ;Inc to keep track of commas
+    test rax, rax
+    jnz .gddlp
+    movzx ecx, cl
+    pop rdi
+    return
+
 printDecimalWord:
-;Takes qword in rax and print it's decimal representation
-;Takes the qword in eax and prints its decimal representation
+;Takes a word in ax and print it's decimal representation.
+;DOES NOT SUPPRESS LEADING ZEROS!
+;SHOULD NOT BE USED FOR ANYTHING OVER 3 DIGITS AS NO COMMA!!
+;Input: eax = Zero extended word to print
     xor ecx, ecx
-    xor ebx, ebx    ;Store upper 8 nybbles here
     test eax, eax
     jnz .notZero
     mov ecx, "0"
     mov ebp, 1  ;Print one digit
-    jmp short .dpfb2
+    jmp short .goPrint
 .notZero:
     xor ebp, ebp  ;Use bp as #of digits counter
     mov esi, 0Ah  ;Divide by 10
-.dpfb0:
+.mainLp:
     inc ebp
-    cmp ebp, 8
-    jb .dpfb00
-    shl rbx, 8    ;Space for next nybble
-    jmp short .dpfb01
-.dpfb00:
-    shl rcx, 8    ;Space for next nybble
-.dpfb01:
+    shl ecx, 8    ;Space for next nybble
     xor edx, edx
-    div rsi
+    div esi
     add dl, '0'
-    cmp dl, '9'
-    jbe .dpfb1
-    add dl, 'A'-'0'-10
-.dpfb1:
-    cmp ebp, 8
-    jb .dpfb10
-    mov bl, dl ;Add the bottom bits
-    jmp short .dpfb11
-.dpfb10:
     mov cl, dl    ;Save remainder byte
-.dpfb11:
-    test rax, rax
-    jnz .dpfb0
-.dpfb2:
-    cmp ebp, 8
-    jb .dpfb20
-    mov dl, bl
-    shr rbx, 8
-    jmp short .dpfb21
-.dpfb20:
+    test eax, eax   ;We zero yet?
+    jnz .mainLp
+.goPrint:
     mov dl, cl    ;Get most sig digit into al
-    shr rcx, 8    ;Get next digit down
-.dpfb21:
+    shr ecx, 8    ;Get next digit down
     mov ah, 02h
     int 21h
     dec ebp
-    jnz .dpfb2
+    jnz .goPrint
     return
 
 getDecimalWord:

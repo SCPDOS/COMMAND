@@ -348,17 +348,10 @@ dir:
     call printString
     return
 .filesFound:
-    lea rdx, fourSpc
-    mov ah, 09h
-    int 21h
-    mov ah, 09h ;Print four Spaces twice
-    int 21h
     mov eax, dword [dirFileCtr]   ;Get number of files
-    call printDecimalWord
+    mov ecx, 9
+    call printDecimalValLB
     lea rdx, dirOk
-    mov ah, 09h
-    int 21h
-    lea rdx, threeSpc
     mov ah, 09h
     int 21h
     mov eax, 3600h ;Get disk info
@@ -371,7 +364,8 @@ dir:
     mul ecx ;Get bytes per cluster
     mul rbx ;Multiply to the number of free clusters on the disk
     ;rax now has the number of free bytes on the disk
-    call printDecimalWord
+    mov ecx, 17     ;2 Tb with commas needs this 
+    call printDecimalValLB
     lea rdx, bytesOk
     mov ah, 09h
     int 21h
@@ -413,6 +407,11 @@ dir:
     lea rdx, threeSpc
     mov ah, 09h
     int 21h
+    mov ah, 09h
+    int 21h
+    mov dl, SPC
+    mov ah, 02h
+    int 21h
     jmp short .dirPrintFileDT
 .dirPrintNotDir:
 ;Here we print the file size
@@ -420,41 +419,16 @@ dir:
     mov ah, 02h
     int 21h
     mov eax, dword [cmdFFBlock + ffBlock.fileSize]
-    call getDecimalWord
-    mov rbx, rcx
-    push rcx
-    bswap rbx
-    mov ecx, 8
-.dirPrintFileSizePrep:
-    test bl, bl ;Any leading null's get replaced with a space
-    jne .dirPrintFileSize
+    mov ecx, 13
+    call printDecimalValLB
+    mov dl, SPC
     mov ah, 02h
-    mov dl, " "
-    int 21h
-    shr rbx, 8  ;Get next byte
-    dec ecx
-    cmp ecx, 1
-    jne .dirPrintFileSizePrep   ;Always print 1 byte for size
-.dirPrintFileSize:
-    pop rbx
-.dirPrintFileSizeLoop:
-    mov dl, bl
-    mov ah, 02h
-    int 21h
-    shr rbx, 8  ;Get next byte
-    dec ecx
-    jnz .dirPrintFileSizeLoop
-    lea rdx, twoSpc
-    mov ah, 09h
     int 21h
 .dirPrintFileDT:
-    mov dl, " "
-    mov ah, 02h
-    int 21h
     movzx eax, word [cmdFFBlock + ffBlock.fileDate]
     xor ebx, ebx    ;Ensure we print 2 digit year
     call printDate
-    lea rdx, twoSpc
+    lea rdx, threeSpc
     mov ah, 09h
     int 21h
     movzx eax, word [cmdFFBlock + ffBlock.fileTime]
@@ -919,11 +893,9 @@ copy:
 
 .copyDone:
     call .copyCleanup   ;Clean up resources!
-    mov eax, 0200h      ;Beep a TAB out :)
-    mov dl, TAB
-    int 21h
     mov eax, dword [dCpCnt] ;Get number of files copied
-    call printDecimalWord   ;n File(s) copied
+    mov ecx, 9  ;Maximum copy 9,999,999 files... ofc thats ok
+    call printDecimalValLB   ;n File(s) copied
     lea rdx, copyOk
     mov ah, 09h
     int 21h    
@@ -2232,7 +2204,8 @@ memory:
     push rsi
     push rdi
     push rbp
-    call printDecimalWord
+    mov ecx, 15 ;Makes space for up to (999 Gb of memory)
+    call printDecimalValLB
     pop rbp
     pop rdi
     pop rsi
