@@ -840,10 +840,11 @@ printDecimalValLB:
     pop rcx
     pop rax
     push rcx    ;Save this value to keep the buffer length
-    call decimalise   
+    call decimalise   ;If return with CF=CY, error!
     pop rcx     ;Now print the buffer
     mov rdi, rbp
-    dec rdi
+    dec rdi     ;Doesn't affect CF
+    jc .errPrint    ;Print a mis-aligned ? to clearly mark an error!
 .skipLp:
     mov bl, byte [rdi]
     test bl, bl ;Any leading null's get replaced with a space
@@ -862,26 +863,41 @@ printDecimalValLB:
     dec rdi
     dec ecx
     jnz .printLp
+.exit:
     mov rsp, rbp    ;Deallocate the buffer and exit!
     return
+.errPrint:
+;Print a default ? symbol if an overflow occurs.
+    mov dl, "?"
+    mov eax, 0200h
+    int 21h
+    jmp short .exit
 
 decimalise:
 ;Input: rax = value to decimalise
 ;       rdi -> Ptr to byte buffer to store string in with commas
+;       ecx = buffer length
 ;Output: Buffer @ rdi filled in! 
 ;       ecx = Number of chars in buffer.
+; Warning: If the number of chars in the buffer reaches buffer length,
+;   we return with CF=CY. Else, CF=NC.
     push rdi
+    mov esi, ecx    
     xor ecx, ecx    ;Use cl as buffer length ctr, ch as comma ctr
     mov ebx, 0Ah    ;Divide by 10
-.gddlp:
+.lp:
     cmp ch, 3       ;Are we divisible by 3?
-    jne .gddNoComma
+    jne .skipSep
+    cmp sil, cl
+    je .exitErr     ;Before we add a comma, do we have space?
     mov dl, byte [ctryData + countryStruc.thouSep]
     mov byte [rdi], dl
     inc rdi 
     inc cl          ;Inc number of chars
     xor ch, ch      ;Reset comma counter
-.gddNoComma:
+.skipSep:
+    cmp sil, cl
+    je .exitErr     ;Before we add a digit, do we have space?
     xor edx, edx
     div rbx         ;Divide rax by 10
     add dl, "0"     
@@ -890,11 +906,15 @@ decimalise:
     inc cl          ;Inc number of chars
     inc ch          ;Inc to keep track of commas
     test rax, rax
-    jnz .gddlp
+    jnz .lp
+;The test cleared CF if we are here
     movzx ecx, cl
+.exit:
     pop rdi
     return
-
+.exitErr:
+    stc
+    jmp short .exit
 printDecimalWord:
 ;Takes a word in ax and print it's decimal representation.
 ;DOES NOT SUPPRESS LEADING ZEROS!
