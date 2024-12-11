@@ -1928,60 +1928,6 @@ join:
 .joinOn: db 0    ;Var to indicate we are on
 .joinPath:  db "C:\JOINTEST",0
 .joinPathL  equ $ - .joinPath 
-
-subst:
-;Mock subst command, to test SUBST. Make an external command.
-;Substitutes C:\SUBTEST,0 for "D:\"
-    test byte [.substOn], -1
-    jz .okSubst
-.substdisable:
-    mov eax, 5200h  
-    int 21h
-    ;Set the SUBST and valid flags on D: and make CDS path C:\SUBSTEST,0
-    mov eax, 8001h  ;Enter crit 1
-    int 2Ah
-    mov rbx, qword [rbx + 2Ah]  ;Get CDS ptr
-    add rbx, 3*cds_size ;Go to the fourth CDS
-    and word [rbx + cds.wFlags], ~(cdsSubstDrive | cdsValidDrive)    ;Clear that we are subst (and valid)
-    mov byte [rbx], "D"     ;Set back to D
-    mov byte [rbx + 3], 0   ;Terminating Nul
-    mov word [rbx + cds.wBackslashOffset], 2
-    mov eax, 8101h  ;Exit crit 1
-    int 2Ah
-    mov byte [.substOn], 0
-    lea rdx, .substDisableMsg
-    jmp short .substExit
-.okSubst:
-    mov byte [.substOn], -1
-    mov eax, 5200h  
-    int 21h
-    mov eax, 8001h  ;Enter crit 1
-    int 2Ah
-    mov rbx, qword [rbx + 2Ah]  ;Get CDS ptr
-    add rbx, 2*cds_size ;Go to the third CDS to get the DPB ptr
-    mov rax, qword [rbx + cds.qDPBPtr]
-    add rbx, cds_size   ;Now go the fourth CDS
-    mov qword [rbx + cds.qDPBPtr], rax
-    mov dword [rbx + cds.dStartCluster], 59h ;Hardcoded, read from the FAT table
-    ;Set the subst flag on D and make CDS path C:\SUBSTEST,0
-    or word [rbx + cds.wFlags], cdsSubstDrive | cdsValidDrive   ;Set that we are join
-    mov word [rbx + cds.wBackslashOffset], .substPathL - 1
-    mov rdi, rbx
-    lea rsi, .substPath
-    mov ecx, .substPathL
-    rep movsb   ;Copy chars over
-    mov eax, 8101h  ;Exit crit 1
-    int 2Ah
-    lea rdx, .substEnableMsg
-.substExit:
-    mov eax, 0900h
-    int 21h
-    return
-.substEnableMsg:  db CR,LF,"SUBST enabled",CR,LF,"$"
-.substDisableMsg: db CR,LF,"SUBST disabled",CR,LF,"$"
-.substOn: db 0    ;Var to indicate we are on
-.substPath:  db "C:\SUBSTEST",0
-.substPathL  equ $ - .substPath 
 ;TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP
 truename:
     test byte [arg1Flg], -1

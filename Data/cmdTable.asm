@@ -91,9 +91,7 @@ functionTable:
 
     db 4, "JOIN"
     dw join - startLbl
-
-    db 5, "SUBST"
-    dw subst - startLbl
+    
 ;TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP
 
 ;BATCH ORIENTED COMMANDS HERE
