@@ -1844,6 +1844,7 @@ rename:
     int 21h
     return
 
+;TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP
 touch:
 ;Temporarily used to create files
     test byte [arg1Flg], -1
@@ -1878,57 +1879,8 @@ touch:
     je badFnf
     jmp badAccError
     
-
-join:
-;Mock join command, to test join. Make an external command.
-;Mounts the A drive on C:\JOINTEST,0
-    test byte [.joinOn], -1
-    jz .okJoin
-.joindisable:
-    mov eax, 5200h  
-    int 21h
-    ;Set the join flag on A and make CDS path C:\JOINTEST,0
-    mov eax, 8001h  ;Enter crit 1
-    int 2Ah
-    lea rbp, qword [rbx + 61h]  ;Get ptr to join byte
-    mov rbx, qword [rbx + 2Ah]  ;Get CDS ptr
-    and word [rbx + cds.wFlags], ~cdsJoinDrive    ;Clear that we are join
-    mov byte [rbx], "A"     ;Set back to A
-    mov byte [rbx + 3], 0   ;Terminating Nul
-    dec byte [rbp]          ;Decrement DOS counter
-    mov eax, 8101h  ;Exit crit 1
-    int 2Ah
-    mov byte [.joinOn], 0
-    lea rdx, .joinDisableMsg
-    jmp short .joinExit
-.okJoin:
-    mov byte [.joinOn], -1
-    mov eax, 5200h  
-    int 21h
-    lea rbp, qword [rbx + 61h]  ;Get ptr to join byte
-    mov rbx, qword [rbx + 2Ah]  ;Get CDS ptr
-    ;Set the join flag on A and make CDS path C:\JOINTEST,0
-    mov eax, 8001h  ;Enter crit 1
-    int 2Ah
-    or word [rbx + cds.wFlags], cdsJoinDrive    ;Set that we are join
-    mov rdi, rbx
-    lea rsi, .joinPath
-    mov ecx, .joinPathL
-    rep movsb   ;Copy chars over
-    inc byte [rbp]  ;Increment DOS counter
-    mov eax, 8101h  ;Exit crit 1
-    int 2Ah
-    lea rdx, .joinEnableMsg
-.joinExit:
-    mov eax, 0900h
-    int 21h
-    return
-.joinEnableMsg:  db CR,LF,"JOIN enabled",CR,LF,"$"
-.joinDisableMsg: db CR,LF,"JOIN disabled",CR,LF,"$"
-.joinOn: db 0    ;Var to indicate we are on
-.joinPath:  db "C:\JOINTEST",0
-.joinPathL  equ $ - .joinPath 
 ;TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP
+
 truename:
     test byte [arg1Flg], -1
     jz badArgError

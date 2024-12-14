@@ -85,13 +85,8 @@ functionTable:
     db 6, "PROMPT"
     dw prompt - startLbl
 ;TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP
-
     db 5, "TOUCH"
     dw touch - startLbl
-
-    db 4, "JOIN"
-    dw join - startLbl
-    
 ;TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP
 
 ;BATCH ORIENTED COMMANDS HERE
