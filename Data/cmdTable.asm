@@ -84,10 +84,6 @@ functionTable:
 
     db 6, "PROMPT"
     dw prompt - startLbl
-;TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP
-    db 5, "TOUCH"
-    dw touch - startLbl
-;TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP
 
 ;BATCH ORIENTED COMMANDS HERE
     db 4, "ECHO"

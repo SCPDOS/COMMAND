@@ -1844,43 +1844,6 @@ rename:
     int 21h
     return
 
-;TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP
-touch:
-;Temporarily used to create files
-    test byte [arg1Flg], -1
-    jz badArgError
-    call buildCommandPath
-    lea rdx, searchSpec
-    mov eax, 5B00h  ;Create unique file 
-    xor ecx, ecx
-    int 21h
-    jc .touch1
-.touchClose:
-    movzx ebx, ax   ;Save the handle here
-    mov eax, 120Dh  ;Get date/time words from the DOS
-    int 2fh
-    mov ecx, eax    ;Move the time here
-    xchg edx, ecx   ;Get them in the right place
-    mov eax, 5701h  ;Set the date/time for bx
-    int 21h
-    mov eax, 3e00h  ;Close file immediately
-    int 21h
-    return
-.touch1:
-    cmp al, errFilExist ;Does the file exist?
-    jne .touchError ;If not, this is a proper error!
-    mov eax, 3D00h  ;R/O open instead to update the access time!!
-    int 21h
-    jnc .touchClose ;If this worked, close the handle immediately
-.touchError:
-    cmp al, errPnf
-    je badArgError
-    cmp al, errFnf
-    je badFnf
-    jmp badAccError
-    
-;TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP
-
 truename:
     test byte [arg1Flg], -1
     jz badArgError
