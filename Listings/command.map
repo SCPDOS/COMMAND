@@ -12,7 +12,7 @@ Output file:  ./Binaries/COMMAND.COM
 
 Vstart            Start             Stop              Length    Class     Name
                0                 0                 0  00000000  progbits  .text
-               0                 0              4F91  00004F91  progbits  cmd
+               0                 0              4F94  00004F94  progbits  cmd
             4FA0              4FA0              81A0  00003200  nobits    stack1
 
 -- Sections (detailed) --------------------------------------------------------
@@ -31,7 +31,7 @@ vfollows:  not defined
 ---- Section cmd --------------------------------------------------------------
 
 class:     progbits
-length:                4F91
+length:                4F94
 start:                    0
 align:                    1
 follows:   not defined
@@ -1550,72 +1550,72 @@ Real              Virtual           Name
             4A69              4A69  cmdLdr.exitBad
             4A6B              4A6B  cmdLdr.okVersion
             4A96              4A96  cmdLdr.skipSwitch
-            4B42              4B42  cmdLdr.noAutoexec
-            4B70              4B70  cmdLdr.notMaster
-            4B96              4B96  cmdLdr.prepStart
-            4BAA              4BAA  cmdLdr.singleCom
-            4BBD              4BBD  computeStackPtr
-            4BE1              4BE1  ..@330._ret
-            4BE2              4BE2  parseCmdLine
-            4C09              4C09  parseCmdLine.parseLp
-            4C22              4C22  parseCmdLine.switch
-            4C46              4C46  parseCmdLine.badparm
-            4C4F              4C4F  parseCmdLine.file
-            4C77              4C77  parseCmdLine.badSpec
-            4C7E              4C7E  parseCmdLine.bs0
-            4C83              4C83  parseCmdLine.plhop
-            4C85              4C85  parseCmdLine.charOrDir
-            4C93              4C93  parseCmdLine.dir
-            4CB8              4CB8  parseCmdLine.charDev
-            4CE8              4CE8  parseCmdLine.plhop1
-            4CEA              4CEA  parseCmdLine.badChar
-            4CF1              4CF1  parseCmdLine.bs1
-            4CF3              4CF3  parseCmdLine.switchEnv
-            4D33              4D33  parseCmdLine.plhop2
-            4D35              4D35  parseCmdLine.badEnv
-            4D3E              4D3E  parseCmdLine.switchPerma
-            4D59              4D59  parseCmdLine.spEmbCr
-            4D62              4D62  parseCmdLine.switchStr
-            4D75              4D75  parseCmdLine.ssembCr
-            4D81              4D81  parseCmdLine.ssLp
-            4D8F              4D8F  parseCmdLine.ssOk
-            4D96              4D96  parseCmdLine.endScan
-            4DB3              4DB3  parseCmdLine.esSkipPathsep
-            4DCB              4DCB  ..@332._base
-            4DCD              4DCD  ..@333._ret
-            4DCE              4DCE  ..@332.a
-            4DD5              4DD5  ..@334._ret
-            4DD6              4DD6  parseCmdLine.replacestdio
-            4DDD              4DDD  ..@336._base
-            4DEB              4DEB  doEnv
-            4DFD              4DFD  ..@338._base
-            4E25              4E25  ..@339._ret
-            4E26              4E26  doEnv.freeCurrentEnv
-            4E35              4E35  ..@340._ret
-            4E36              4E36  doEnv.prepNewEnv
-            4E3B              4E3B  doEnv.noInitEnv
-            4E73              4E73  ..@341._ret
-            4E74              4E74  doEnv.allocEnv
-            4E8B              4E8B  doEnv.goAlloc
-            4E9B              4E9B  ..@343._base
-            4EAE              4EAE  doEnv.cpEnv
-            4EB5              4EB5  doEnv.lp
-            4EC4              4EC4  ..@344._ret
-            4EC5              4EC5  doEnv.notNul
-            4EC9              4EC9  doEnv.err
-            4EE0              4EE0  ..@345._ret
-            4EE1              4EE1  getMasterEnv
-            4EE3              4EE3  getMasterEnv.lp
-            4EF1              4EF1  getMasterEnv.exit
-            4EF7              4EF7  ..@346._ret
-            4EF8              4EF8  initString
-            4F0B              4F0B  initString2
-            4F31              4F31  badVerStr
-            4F49              4F49  badCmdDir
-            4F72              4F72  badEnvSz
-            4F8D              4F8D  initNewSpec
-            4F8E              4F8E  initNewDev
-            4F8F              4F8F  initEnvSz
+            4B45              4B45  cmdLdr.noAutoexec
+            4B73              4B73  cmdLdr.notMaster
+            4B99              4B99  cmdLdr.prepStart
+            4BAD              4BAD  cmdLdr.singleCom
+            4BC0              4BC0  computeStackPtr
+            4BE4              4BE4  ..@330._ret
+            4BE5              4BE5  parseCmdLine
+            4C0C              4C0C  parseCmdLine.parseLp
+            4C25              4C25  parseCmdLine.switch
+            4C49              4C49  parseCmdLine.badparm
+            4C52              4C52  parseCmdLine.file
+            4C7A              4C7A  parseCmdLine.badSpec
+            4C81              4C81  parseCmdLine.bs0
+            4C86              4C86  parseCmdLine.plhop
+            4C88              4C88  parseCmdLine.charOrDir
+            4C96              4C96  parseCmdLine.dir
+            4CBB              4CBB  parseCmdLine.charDev
+            4CEB              4CEB  parseCmdLine.plhop1
+            4CED              4CED  parseCmdLine.badChar
+            4CF4              4CF4  parseCmdLine.bs1
+            4CF6              4CF6  parseCmdLine.switchEnv
+            4D36              4D36  parseCmdLine.plhop2
+            4D38              4D38  parseCmdLine.badEnv
+            4D41              4D41  parseCmdLine.switchPerma
+            4D5C              4D5C  parseCmdLine.spEmbCr
+            4D65              4D65  parseCmdLine.switchStr
+            4D78              4D78  parseCmdLine.ssembCr
+            4D84              4D84  parseCmdLine.ssLp
+            4D92              4D92  parseCmdLine.ssOk
+            4D99              4D99  parseCmdLine.endScan
+            4DB6              4DB6  parseCmdLine.esSkipPathsep
+            4DCE              4DCE  ..@332._base
+            4DD0              4DD0  ..@333._ret
+            4DD1              4DD1  ..@332.a
+            4DD8              4DD8  ..@334._ret
+            4DD9              4DD9  parseCmdLine.replacestdio
+            4DE0              4DE0  ..@336._base
+            4DEE              4DEE  doEnv
+            4E00              4E00  ..@338._base
+            4E28              4E28  ..@339._ret
+            4E29              4E29  doEnv.freeCurrentEnv
+            4E38              4E38  ..@340._ret
+            4E39              4E39  doEnv.prepNewEnv
+            4E3E              4E3E  doEnv.noInitEnv
+            4E76              4E76  ..@341._ret
+            4E77              4E77  doEnv.allocEnv
+            4E8E              4E8E  doEnv.goAlloc
+            4E9E              4E9E  ..@343._base
+            4EB1              4EB1  doEnv.cpEnv
+            4EB8              4EB8  doEnv.lp
+            4EC7              4EC7  ..@344._ret
+            4EC8              4EC8  doEnv.notNul
+            4ECC              4ECC  doEnv.err
+            4EE3              4EE3  ..@345._ret
+            4EE4              4EE4  getMasterEnv
+            4EE6              4EE6  getMasterEnv.lp
+            4EF4              4EF4  getMasterEnv.exit
+            4EFA              4EFA  ..@346._ret
+            4EFB              4EFB  initString
+            4F0E              4F0E  initString2
+            4F34              4F34  badVerStr
+            4F4C              4F4C  badCmdDir
+            4F75              4F75  badEnvSz
+            4F90              4F90  initNewSpec
+            4F91              4F91  initNewDev
+            4F92              4F92  initEnvSz
 
 ---- Section stack1 -----------------------------------------------------------
 

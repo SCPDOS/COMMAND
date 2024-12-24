@@ -37,6 +37,7 @@ cmdLdr:
     neg r8  ;Convert -r8 to r8
     int 21h
     jc .exitBad 
+    mov r8, r9  ;Reset r8 to point to the psp
 ;Now space has been made, time to parse the command tail
     call parseCmdLine   ;Now parse the command tail.
     call doEnv          ;Now enact the command tail actions
