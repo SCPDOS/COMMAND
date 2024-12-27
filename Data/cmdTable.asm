@@ -94,4 +94,19 @@ functionTable:
 
     db 3, "REM"
     dw remark - startLbl
+;-----------------------------
+; Commands left to implement 
+;-----------------------------
+    db 5, "SHIFT"
+    dw shift - startLbl
+
+    db 3, "FOR"
+    dw forCmd - startLbl
+
+    db 2, "IF"
+    dw ifCmd - startLbl
+
+    db 4, "GOTO"
+    dw goto - startLbl
+;-----------------------------
     db -1   ;End of table

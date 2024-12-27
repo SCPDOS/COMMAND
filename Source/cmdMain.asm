@@ -28,7 +28,7 @@ commandMain:
 .inputMain:         ;Only reset once per line!
     test byte [statFlg1], inSingle   ;If we here in single mode, time to exit
     jnz exit
-    call printCRLF  ;Command complete, indicate with new line!
+    call printCRLFecho  ;Command complete, indicate with new line!
     mov eax, 5D09h  ;Flush network printers
     int 21h
     mov eax, 5D08h  ;Set net printer state
@@ -37,14 +37,15 @@ commandMain:
 .inputGetAgain:
     call clearCommandLineState      ;Cleans all handles 5->MAX
 .inputGetCmdlineAgain:
-    call printPrompt    ;Ok we are gonna get more input, output prompt
     test byte [statFlg1], inBatch   ;If batch on, get the next line to execute
     jnz batNextLine
+    call printPrompt    ;Ok we are gonna get more input, output prompt
     lea rdx, inBuffer
     mov eax, 0A00h      ;Do Buffered input
     int 21h
+.batProceedCrlf:
+    call printCRLF      ;Note we have accepted input
 .batProceed:            ;Jump here to copy the batch input line 
-    call printCRLFecho  ;Note we have accepted input
 ;First check we had something typed in of length greater than 0
     cmp byte [inBuffer + 1], 0  ;Check input length valid
     je .inputGetCmdlineAgain  ;If not, keep looping input

@@ -83,7 +83,8 @@ batLaunch:
     jnc .bbRelPathOk
     lea rdx, badBat
     call printString
-    jmp batFinish   ;Now clean up the batch stuff we've setup
+    call batCleanup     ;Now clean up the batch stuff we've setup
+    jmp commandMain     ;And start again :)   
 .bbRelPathOk:
 ;Now move rdi to the terminating null   
     xor eax, eax
@@ -135,6 +136,7 @@ batLaunch:
 
 batFinish:
 ;This is the procedure called after we've processed the last batch line
+    call printPrompt    ;Add this to emulate what DOS does
     call batCleanup     ;Cleanup the batch and batch state vars etc etc
     jmp commandMain     ;And start again :)
 batNextLine:
@@ -211,13 +213,15 @@ batNextLine:
     cmp byte [rdx], batNoEchoChar
     je .noEchoPull       
     test byte [echoFlg], -1         
-    jz .noEcho
+    jz commandMain.batProceed
+    push rdx
+    call printPrompt    ;Now output prompt
+    pop rdx
     movzx ecx, byte [inBuffer + 1]    ;Get the number of chars to print
     mov ebx, 1  ;STDOUT
     mov eax, 4000h  ;Write woo!
     int 21h
-.noEcho:
-    jmp commandMain.batProceed
+    jmp commandMain.batProceedCrlf
 .noEchoPull:
     dec byte [inBuffer + 1]     ;Eliminate the @ char
     jz batNextLine    ;If this was just a @<CR><LF>, get next line
@@ -226,7 +230,7 @@ batNextLine:
     movzx ecx, byte [inBuffer + 1]  ;Get the remaining count to copy
     inc ecx                         ;Want to copy over the terminating CR too
     rep movsb 
-    jmp short .noEcho   ;Now proceed normally
+    jmp commandMain.batProceed   ;Now proceed normally w/o crlf
     
 .closeBat:
 ;Close the handle in rbx
