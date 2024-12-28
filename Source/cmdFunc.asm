@@ -2666,7 +2666,9 @@ remark:
 ;If in a batch file, do nothing. Else, go through normal loop.
     test byte [statFlg1], inBatch
     retz
-    pop rax ;Realign the stack back :)
+    pop rbx
+    pop rbx ;Realign the stack back :)
+    call getSetMainState
     jmp commandMain.inputGetAgain   ;Clean any redirs and get input
 shift:
     return
