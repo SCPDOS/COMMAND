@@ -1553,13 +1553,29 @@ cls:
     ;Int 29h MUST be terminated with a IRETQ, within 1024 bytes
     mov eax, 3529h  ;Get the vector for interrupt 29h
     int 21h
+    mov ecx, 1024   ;Check in a 1024 byte window for a Int 30h call
 .biosCheck:
     cmp word [rbx], 30CDh
     je .biosConfirmed
     cmp word [rbx], 0CF48h   ;CFh = IRET, 48h=REX.W
-    je .doAnsi
-    inc rbx
-    jmp short .biosCheck
+    je .doAnsi      ;If we hit an IRETQ, assume not BIOS
+    inc rbx         ;Else, go to next byte for checking
+    dec ecx
+    jnz .biosCheck
+.doAnsi:
+;4 chars in the ansi routine
+;Will just put the ANSI escape sequence on the screen if it doesn't 
+; understand ANSI codes
+    lea rsi, ansiCls
+    mov ecx, 4
+    mov ah, 06h ;Raw char output
+.ansiLp:
+    lodsb   ;Get the char in 
+    mov dl, al
+    int 21h
+    dec ecx
+    jnz .ansiLp
+    return
 .biosConfirmed:
     ;Supports a SCP/BIOS compatible routine, use BIOS   
     mov ah, 0Bh  ; Set overscan to black (when Graphics becomes supported)
@@ -1580,20 +1596,6 @@ cls:
     pop rbx
     mov ah, 2
     int 30h
-    return
-.doAnsi:
-;4 chars in the ansi routine
-;Will just put the ANSI escape sequence on the screen if it doesn't 
-; understand ANSI codes
-    lea rsi, ansiCls
-    mov ecx, 4
-    mov ah, 06h ;Raw char output
-.ansiLp:
-    lodsb   ;Get the char in 
-    mov dl, al
-    int 21h
-    dec ecx
-    jnz .ansiLp
     return
 
 break:
