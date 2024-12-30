@@ -155,7 +155,7 @@ batNextLine:
 .readlp:
     call batReadChar        ;Read the char. Set ZF and flag if no bytes read.
     jz .eofAddCR
-    inc edi                 ;We read a char, woohoo!
+    inc rdi                 ;We read a char, woohoo!
     cmp byte [rdx], EOF     ;Did we read a ^Z char?
     je .eofAddCR
     cmp byte [rdx], CR      ;End of line?
@@ -183,7 +183,7 @@ batNextLine:
     jz .eof     ;That CR was last char, check if we have something to do
     cmp byte [rdx], LF  ;Did we read a LF?
     jne .eolLF          ;Reread this char if not LF
-    inc edi             ;Else add to the count
+    inc rdi             ;Else add to the count
 .eolLF:
     mov byte [rdx], CR  ;Now place the CR over the last char
 .eol:
@@ -191,8 +191,7 @@ batNextLine:
 ;rsi -> Batch block.
     call batClose
 ;Imagine someone gives us a 2+Gb Batch file...
-    add dword [rsi + batBlockHdr.dBatOffLo], edi    ;Add lo dword to chars 
-    adc dword [rsi + batBlockHdr.dBatOffHi], 0      ;Add CF if needed!
+    add qword [rsi + batBlockHdr.qBatOff], rdi    ;Add to count
 ;Now we echo the prompt and command to the console unless the 
 ; first char is @, we hit a label or the echo flag is off.
     lea rdx, inBuffer + 2

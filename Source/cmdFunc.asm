@@ -2685,29 +2685,75 @@ goto:
 ;TEMP TEMP TEMP TEMP 
     return  ;Ensure this is not accidentally entered until we are ready.
 ;TEMP TEMP TEMP TEMP 
+;Start by copying the command line label to fcb1
+    lea rsi, qword [r8 + cmdline]
+    lea rdi, qword [r8 + fcb1]  ;Use fcb1 for the command line
+    call skipDelimiters     ;Go to the first argument on cmdline
+    cmp byte [rsi], ":" ;If we the first char of the cmdline lbl is :, skip
+    jne .startCopy
+    inc rsi
+.startCopy:
+    lodsb
+    stosb
+    cmp al, SPC
+    
+;Now search the batch file for the label.
     mov rsi, qword [bbPtr]
     test rsi, rsi
     retz
-    mov qword [rsi + batBlockHdr.qBatOff], 0    ;Reset the 
+    xor edi, edi    ;Maintain as a file pointer
+    mov qword [rsi + batBlockHdr.qBatOff], rdi    ;Reset the file ptr
     call batOpen    ;Open the batch file. Handle in ebx.
 ;File opened from the start. Now start byte by byte read.
 .notLabelLp:
-    mov byte [inBuffer + 1], 0  ;Reset the buffer count
-    lea rdx, inBuffer + 2   ;Start read pos
-.readLp:
+    lea rdx, [fcb2 + fcb.filename]  ;fcb2 for the bat search buffer
+    xor ecx, ecx    ;Keep as a char counter
+.fndLbl:
+;Keep searching for a label
     call batReadChar
     jz .eof
     cmp byte [rdx], ":"
-    jne .readLp 
-;Here we found a candidate label
+    jne .fndLbl 
+;Here we found a candidate label. Take 8 chars w/o spaces and initial :
+    xor ecx, ecx
 .loadRead:
-    inc rdx
     call batReadChar
-    jz .eofPossible
-
-.eofPossible:
+    jz .lblDone
+    inc rdi ;Inc the fp
+    cmp byte [rdx], CR
+    je .lblDoneCR
+    cmp byte [rdx], LF
+    je .lblDone
+    cmp byte [rdx], SPC
+    je .loadRead
+    inc rdx ;Inc the storage pointer
+    inc ecx ;Inc the count
+    cmp ecx, 8  ;Once we read 8 chars, readthru to end of line
+    jne .loadRead
+.pullEol:
+    call batReadChar
+    jz .lblDone
+    inc rdi ;Inc the fp
+    cmp byte [rdx], CR
+    je .lblDoneCR
+    cmp byte [rdx], LF
+    je .lblDone
+    jmp short .pullEol
+.lblDoneCR:
+;Read a CR, check if the next char is an LF and scan past it.
+    call batReadChar
+    jz .lblDone
+    cmp byte [rdx], LF
+    jne .lblDone    ;No LF
+    inc rdi ;Else include the LF in the count to go past
+.lblDone:
 ;Check what we have to see if it is possible to form a label
+    mov byte [fcb1 + fcb.driveNum], cl  ;Store the len in the drive letter
+    mov qword [rsi + batBlockHdr.qBatOff], rdi  ;Set to the next line
 
 .eof:
 ;Print label not found, end batch mode and return
+    lea rdx, badLbl
+    call printString
+    call batFinish  ;Kill the batch processor
     return
