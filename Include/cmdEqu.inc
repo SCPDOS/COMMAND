@@ -29,6 +29,7 @@ struc batBlockHdr
     .pCallBlk   dq ?    ;Pointer to the previous batch block when CALLed
     .pForBlk    dq ?    ;Pointer to the active FOR block
     .bBatFlg    db ?    ;Indicates type of command currently active
+.qBatOff:
     .dBatOffLo  dd ?    ;LSEEK Low dword of the batch offset
     .dBatOffHi  dd ?    ;LSEEK High dword of the batch offset (0 unless net FS)
     .wArgs      dw 10 dup (?) ;Offsets of parameters %0-%9. -1 means no param

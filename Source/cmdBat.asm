@@ -143,18 +143,7 @@ batNextLine:
 ;Read the next line from the file and sets if we are done with copying
     test byte [statFlg1], batchEOF ;Did we hit EOF?
     jnz batFinish
-    lea rdx, batFile
-.batOpen:
-    mov eax, 3D00h  ;Open for read only
-    int 21h
-    jnc .batOpened
-    lea rdx, needBat
-    call printString
-    mov eax, 0800h  ;CON input w/o echo. Allows for triggering ^C
-    int 21h
-    jmp short .batOpen
-.batOpened:
-    mov ebx, eax            ;Move the handle into ebx
+    call batOpen    ;Open the batch file. Always succeeds. Hdl in ebx.
     mov rsi, qword [bbPtr]  ;Get the batch block ptr
     mov edx, dword [rsi + batBlockHdr.dBatOffLo]
     mov ecx, dword [rsi + batBlockHdr.dBatOffHi]
@@ -164,16 +153,15 @@ batNextLine:
     lea rdx, inBuffer + 2   ;Start read pos
     xor edi, edi            ;Use edi as the char counter
 .readlp:
-    call .readChar          ;Read the char
-    test eax, eax
-    jz .endOfBatAddCr
+    call batReadChar        ;Read the char. Set ZF and flag if no bytes read.
+    jz .eofAddCR
     inc edi                 ;We read a char, woohoo!
     cmp byte [rdx], EOF     ;Did we read a ^Z char?
-    je .endOfBatAddCr
+    je .eofAddCR
     cmp byte [rdx], CR      ;End of line?
-    je .endOfLineCr
+    je .eolCR
     cmp byte [rdx], LF      ;End of line UNIX?
-    je .endOfLineLf
+    je .eolLF
     inc byte [inBuffer + 1] ;Inc our char count
     inc rdx                 ;Store the next char in the next position
     cmp byte [inBuffer + 1], inLen    ;Are we 128 chars w/o CR?
@@ -182,36 +170,40 @@ batNextLine:
     mov byte [rdx], CR      ;Overwrite with a terminating CR instead!!
     dec byte [inBuffer + 1] ;Reduce the valid char count by one
     dec edi                 ;Ignore the 128th char that we read!
-    jmp short .endOfLine    ;The user typed too many chars on a line, EOL
-.endOfBatAddCr:
+    jmp short .eol          ;The user typed too many chars on a line, EOL
+.eofAddCR:
     mov byte [rdx], CR  ;Store a terminating CR on the line!
-.endOfBat:
-    or byte [statFlg1], batchEOF    ;Set if we encounter a ^Z terminator
-    cmp byte [inBuffer + 1], 0      ;If we formally read 0 chars, exit!
-    jne .endOfLine
-    call .closeBat                  ;Close the hdl! This is why this is here!
+.eof:
+    cmp byte [inBuffer + 1], 0      ;If we read any chars, do the line!
+    jne .eol
+    call batClose                   ;Else close the hdl!
     jmp batFinish
-.endOfLineCr:   ;Now get the next char, to possibly eliminate a trailing LF
-    call .readChar  ;Get the LF over the CR
-    test eax, eax   ;Did we read nothing?
-    jz .endOfBat    ;That CR was last char, check if empty buffer, else exec
+.eolCR:   ;Now get the next char, to possibly eliminate a trailing LF
+    call batReadChar  ;Get the LF over CR. Set ZF and flag if no bytes read.
+    jz .eof     ;That CR was last char, check if we have something to do
     cmp byte [rdx], LF  ;Did we read a LF?
-    jne .endOfLineLf    ;Reread this char if not LF
+    jne .eolLF          ;Reread this char if not LF
     inc edi             ;Else add to the count
-.endOfLineLf:
+.eolLF:
     mov byte [rdx], CR  ;Now place the CR over the last char
-.endOfLine:
+.eol:
 ;Close the file, update the batch block file pointer, then proceed.
 ;rsi -> Batch block.
-    call .closeBat
-    ;Imagine someone gives us a 2+Gb Batch file... some server magik lmao
+    call batClose
+;Imagine someone gives us a 2+Gb Batch file...
     add dword [rsi + batBlockHdr.dBatOffLo], edi    ;Add lo dword to chars 
     adc dword [rsi + batBlockHdr.dBatOffHi], 0      ;Add CF if needed!
-;Now we echo the line to the console unless the first char is @ or 
-; the echo flag is off
+;Now we echo the prompt and command to the console unless the 
+; first char is @, we hit a label or the echo flag is off.
     lea rdx, inBuffer + 2
-    cmp byte [rdx], batNoEchoChar
+;Labels and @ chars are first non-delim char on line.
+;Find the first non-delim char in the line and check it!!
+    mov rsi, rdx
+    call skipDelimiters 
+    cmp byte [rsi], batNoEchoChar   ;Line no echo check! (@)
     je .noEchoPull       
+    cmp byte [rsi], ":"     ;Label check! (:)
+    je batNextLine          ;Just get the next line immediately
     test byte [echoFlg], -1         
     jz commandMain.batProceed
     push rdx
@@ -231,21 +223,6 @@ batNextLine:
     inc ecx                         ;Want to copy over the terminating CR too
     rep movsb 
     jmp commandMain.batProceed   ;Now proceed normally w/o crlf
-    
-.closeBat:
-;Close the handle in rbx
-    mov eax, 3E00h  ;Close the file pointer in ebx
-    int 21h         ;We ignore errors here... dont hurt me SHARE pls
-    return
-.readChar:
-;Reads a char. If no chars read, sets the EOF flag!
-    mov ecx, 1
-    mov eax, 3F00h
-    int 21h  
-    test eax, eax
-    retnz   ;If a char read, return
-    or byte [statFlg1], batchEOF    ;Set the end of file reached flag!
-    return
 
 
 batExpandVar:
@@ -280,3 +257,67 @@ batCleanup:
     mov qword [bbPtr], 0    
     and byte [statFlg1], ~(inBatch|batchEOF)   ;Oh bye bye batch mode!
     return
+
+batOpen:
+;Opens the batch file and returns the handle in ebx.
+;Prints the "replace disk" string if file not found.
+;
+;Input: Nothing. Opens the filespec in the batFile.
+;Output: ebx = File handle for filespec in batFile.
+;
+;Funky behaviour worth noting:
+; If a failure occurs in open, we keep prompting the user to 
+; replace the disk. The only way out if the error is really bad is 
+; via ^C which does all the cleanup we need. 
+; Thus this never returns fail.
+    push rax
+    push rdx
+    lea rdx, batFile
+.batOpen:
+    mov eax, 3D00h  ;Open for read only
+    int 21h
+    jnc .batOpened
+    lea rdx, needBat
+    call printString
+    mov eax, 0800h  ;CON input w/o echo. Allows for triggering ^C
+    int 21h
+    jmp short .batOpen
+.batOpened:
+    mov ebx, eax            ;Move the handle into ebx
+    pop rdx
+    pop rax
+    return
+
+batClose:
+;Close the handle in ebx.
+    mov eax, 3E00h  ;Close the file pointer in ebx
+    int 21h         
+    return
+
+batReadChar:
+;Reads a char. 
+;Input: ebx = Handle to read char from.
+;       rdx -> Pointer to byte buffer to store byte.
+;Output: 
+;   CF=NC:
+;       ZF=NZ: eax = 1. One char read.
+;       ZF=ZE: eax = 0. EOF flag set in status byte. No chars read. 
+;   CF=CY: Error in read. We act as if EOF reached. (Never checked.)
+;Clobbers: None.
+    push rcx
+    mov ecx, 1
+    mov eax, 3F00h
+    int 21h 
+    pop rcx 
+    jc .bad     ;If CF, always act as if EOF. An error occured.
+    test eax, eax   ;Here we check if we read 1 byte. (Clear CF)
+    retnz       ;Return if a char was read.
+.eof:
+    pushfq      ;Preserve the flags for the bit toggle
+    or byte [statFlg1], batchEOF    ;Set if we are done reading the file!
+    popfq
+    return    
+.bad:
+    xor eax, eax    ;Pretend we hit an EOF (Set ZF)
+    stc             ;Never check it but ensure reset of CF.
+    jmp short .eof  ;And set the status bit

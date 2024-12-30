@@ -1290,7 +1290,7 @@ date:
     mov ah, 09h
     int 21h
 
-    lea rdx, cpyBuffer
+    lea rdx, cpyBuffer  ;Make sure to use cpyBuffer to preserve F3
     mov byte [rdx], inLen ;Enter a string of up to 128 chars in length
     mov ah, 0Ah
     int 21h
@@ -1406,7 +1406,7 @@ time:
     mov ah, 09h
     int 21h
 
-    lea rdx, inBuffer
+    lea rdx, cpyBuffer  ;Make sure to use cpyBuffer to preserve F3
     mov byte [rdx], inLen ;Enter a string of up to 128 chars in length
     mov ah, 0Ah
     int 21h
@@ -2679,4 +2679,35 @@ forCmd:
 ifCmd:
     return
 goto:
+;If not in batch, immediately return!
+    test byte [statFlg1], inBatch
+    retz
+;TEMP TEMP TEMP TEMP 
+    return  ;Ensure this is not accidentally entered until we are ready.
+;TEMP TEMP TEMP TEMP 
+    mov rsi, qword [bbPtr]
+    test rsi, rsi
+    retz
+    mov qword [rsi + batBlockHdr.qBatOff], 0    ;Reset the 
+    call batOpen    ;Open the batch file. Handle in ebx.
+;File opened from the start. Now start byte by byte read.
+.notLabelLp:
+    mov byte [inBuffer + 1], 0  ;Reset the buffer count
+    lea rdx, inBuffer + 2   ;Start read pos
+.readLp:
+    call batReadChar
+    jz .eof
+    cmp byte [rdx], ":"
+    jne .readLp 
+;Here we found a candidate label
+.loadRead:
+    inc rdx
+    call batReadChar
+    jz .eofPossible
+
+.eofPossible:
+;Check what we have to see if it is possible to form a label
+
+.eof:
+;Print label not found, end batch mode and return
     return
