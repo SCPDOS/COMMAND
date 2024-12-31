@@ -149,8 +149,8 @@ batNextLine:
     mov ecx, dword [rsi + batBlockHdr.dBatOffHi]
     mov eax, 4200h          ;LSEEK to where we left off previously
     int 21h
-    mov byte [inBuffer + 1], 0  ;Reset the buffer count
-    lea rdx, inBuffer + 2   ;Start read pos
+    mov byte [batInBuffer + 1], 0  ;Reset the buffer count
+    lea rdx, batInBuffer + 2   ;Start read pos
     xor edi, edi            ;Use edi as the char counter
 .readlp:
     call batReadChar        ;Read the char. Set ZF and flag if no bytes read.
@@ -160,19 +160,19 @@ batNextLine:
     je .eolCR
     cmp byte [rdx], LF      ;End of line UNIX?
     je .eolLF
-    inc byte [inBuffer + 1] ;Inc our char count
+    inc byte [batInBuffer + 1] ;Inc our char count
     inc rdx                 ;Store the next char in the next position
-    cmp byte [inBuffer + 1], inLen    ;Are we 128 chars w/o CR?
+    cmp byte [batInBuffer + 1], inLen    ;Are we 128 chars w/o CR?
     jne .readlp             ;Get next char if not
     dec rdx                 ;Go back to the char we just read
     mov byte [rdx], CR      ;Overwrite with a terminating CR instead!!
-    dec byte [inBuffer + 1] ;Reduce the valid char count by one
+    dec byte [batInBuffer + 1] ;Reduce the valid char count by one
     dec edi                 ;Ignore the 128th char that we read!
     jmp short .eol          ;The user typed too many chars on a line, EOL
 .eofAddCR:
     mov byte [rdx], CR  ;Store a terminating CR on the line!
 .eof:
-    cmp byte [inBuffer + 1], 0      ;If we read any chars, do the line!
+    cmp byte [batInBuffer + 1], 0      ;If we read any chars, do the line!
     jne .eol
     call batClose                   ;Else close the hdl!
     jmp batFinish
@@ -192,31 +192,34 @@ batNextLine:
     add qword [rsi + batBlockHdr.qBatOff], rdi    ;Add to count
 ;Now we echo the prompt and command to the console unless the 
 ; first char is @, we hit a label or the echo flag is off.
-    lea rdx, inBuffer + 2
+    lea rdx, batInBuffer + 2
 ;Labels and @ chars are first non-delim char on line.
 ;Find the first non-delim char in the line and check it!!
     mov rsi, rdx
-    call skipDelimiters 
-    cmp byte [rsi], batNoEchoChar   ;Line no echo check! (@)
-    je .noEchoPull       
+    call skipDelimiters     
     cmp byte [rsi], ":"     ;Label check! (:)
     je batNextLine          ;Just get the next line immediately
+    call batPreprocess      ;Else we preprocess now
+
+    lea rdx, batCpyBuffer + 2
+    cmp byte [rdx], batNoEchoChar   ;Line no echo check! (@)
+    je .noEchoPull       
     test byte [echoFlg], -1         
     jz commandMain.batProceed
     push rdx
     call printPrompt    ;Now output prompt
     pop rdx
-    movzx ecx, byte [inBuffer + 1]    ;Get the number of chars to print
+    movzx ecx, byte [batCpyBuffer + 1]    ;Get the number of chars to print
     mov ebx, 1  ;STDOUT
     mov eax, 4000h  ;Write woo!
     int 21h
     jmp commandMain.batProceedCrlf
 .noEchoPull:
-    dec byte [inBuffer + 1]     ;Eliminate the @ char
+    dec byte [batCpyBuffer + 1]     ;Eliminate the @ char
     jz batNextLine    ;If this was just a @<CR><LF>, get next line
     mov rdi, rdx
     lea rsi, qword [rdx + 1]    ;Start from the char afterwards
-    movzx ecx, byte [inBuffer + 1]  ;Get the remaining count to copy
+    movzx ecx, byte [batCpyBuffer + 1]  ;Get the remaining count to copy
     inc ecx                         ;Want to copy over the terminating CR too
     rep movsb 
     jmp commandMain.batProceed   ;Now proceed normally w/o crlf
@@ -229,10 +232,12 @@ batPreprocess:
     lea rdi, qword [rbp + 2]    ;Point to the string destination
     mov byte [rbp + 1], 0       ;Reset the buffer count
     lea rsi, qword [batInBuffer + 2]
+    call skipDelimiters ;We strip leading delimiters
 .lp:
     lodsb   ;Get char and advance source ptr
     cmp al, "%" ;Did we get a envvar symbol?
     jne .rawcp
+    ;breakpoint
     call batExpandVar   ;Advances rsi to next char and rdi past envvar
     jmp short .check  
 .rawcp:
@@ -280,16 +285,20 @@ batExpandVar:
     push rsi    ;Save ptr to the first char past the envvar
     ;Take input rdi -> Varname to look for. Already in rdi.
     call searchForEnvVar    ;Returns rsi -> Envvar for copy in place
+    cmovc rdi, rbx  ;Reset rdi here if no envvar found and exit!
+    jc .exit
     mov rdi, rsi    ;Point rdi to the ASCIIZ envvar value itself
+    mov al, "="
+    mov ecx, -1
+    repne scasb     ;Move rdi to the char past the equals sign
     pop rsi         ;Get back the ptr to the first char past the envvar
     retc
 
     push rsi        ;Save the ptr to the first char past the envvar
     mov rsi, rbx    ;Point rsi to where to copy the envvar
-    xchg rdi, rsi   ;Swap pointers for the copy
-
     call strlen ;Get the string length of the envvar value in ecx
     dec ecx     ;Drop 0 from count
+    xchg rdi, rsi   ;Swap pointers for the copy
     movzx ebx, byte [rbp + 1] ;Get the count of chars already in the string
     push rcx
     add ecx, ebx    ;Get # of chars we will have.
@@ -301,6 +310,7 @@ batExpandVar:
 .noTrunc:
     add byte [rbp + 1], cl
     rep movsb   ;Moves rdi to the space for the next char
+.exit:
     pop rsi     ;Get back the ptr to the first char past the envvar name
     return
 
