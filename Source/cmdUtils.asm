@@ -1056,13 +1056,13 @@ resetIDTentries:
 cmpEnvVar:
 ;Checks that we have found the environment variable we are looking for.
 ;Input: rsi -> Environment var to verify the name of
-;       rdi -> Environment var name to compare against
+;       rdi -> Supplied var name to compare against
 ;Output: ZF=ZE: Equal. ZF=NZ: Not equal.
     push rsi
     push rdi
-    xchg rsi, rdi       ;Swap Env and user ptrs
+    xchg rsi, rdi       ;Swap Env and user ptrs. rdi -> env. rsi -> given.
 .lp:
-    lodsb               ;Pick up from user string
+    lodsb               ;Pick up from environment string
     call ucChar         ;Upper case it!
     cmp byte [rdi], al  
     jne .exit

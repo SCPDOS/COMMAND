@@ -221,14 +221,88 @@ batNextLine:
     rep movsb 
     jmp commandMain.batProceed   ;Now proceed normally w/o crlf
 
+batPreprocess:
+;Copies the line from batCpyBuffer to batInBuffer for regular processing,
+; expanding any environment variables as the expansion takes place.
+;Line is guaranteed only CR terminated.
+    lea rbp, batCpyBuffer   ;Save the ptr for the expandVar function
+    lea rdi, qword [rbp + 2]    ;Point to the string destination
+    mov byte [rbp + 1], 0       ;Reset the buffer count
+    lea rsi, qword [batInBuffer + 2]
+.lp:
+    lodsb   ;Get char and advance source ptr
+    cmp al, "%" ;Did we get a envvar symbol?
+    jne .rawcp
+    call batExpandVar   ;Advances rsi to next char and rdi past envvar
+    jmp short .check  
+.rawcp:
+    stosb   ;Store the char
+    cmp al, CR
+    rete    ;Return immediately if we copied a CR. Dont add to count.
+    inc byte [rbp + 1] ;Else inc the buffer count
+.check:
+    cmp byte [rbp + 1], inLen - 1   ;Max chars yet?
+    jne .lp
+    mov al, CR  ;Here if so, terminate the line nicely :)
+    stosb   ;Store this char too
+    return
+
 
 batExpandVar:
+;Expand any environment variables. 
+;%% is treated as an escape char for a %.
+;
 ;Input: rsi -> Char after the % sign that triggered this call.
-;       rdi -> Position to place the substitution string
-;Output: CF=NC: Substitution string is placed in buffer
-;        CF=CY: No substitution string found
+;       rdi -> Position to place the substitution string.
+;       rbp -> Head of destination buffer for copy.
+;Output:
+;   Substitution string is placed in buffer if necessary.
+;       rsi -> Char after the terminal % of the source envvar name.
+;       rdi -> Space for the next char to copy.
+    mov al, byte [rsi + 1]  ;Is this a parameter like %x ?
+    call isALdelimiter
+    rete    ;Do nothing, keep copying
+    cmp byte [rsi], "%" ;If immediately followed by %, then return it
+    rete
+;Now do the env var search. Start by scanning for the terminating
+; % of the var name. If we strike a delimiter char first, 
+; we stop the expansion for the envvar.
+    mov rbx, rdi    ;Save where to write the envvar if one is found
+    mov rdi, rsi    ;Maintain pointer to the head of the envvar string
+.envVarLp:
+    lodsb
+    call isALdelimiter  ;Exit if a delimiter is hit first.
+    rete
+    cmp al, "%"         ;Did we find a terminating % found.
+    jne .envVarLp
+;Fall here if we find the terminating % of the var name. rsi -> past %
+    mov byte [rsi - 1], "=" ;Replace % with an equals sign for var search.
+    push rsi    ;Save ptr to the first char past the envvar
+    ;Take input rdi -> Varname to look for. Already in rdi.
+    call searchForEnvVar    ;Returns rsi -> Envvar for copy in place
+    mov rdi, rsi    ;Point rdi to the ASCIIZ envvar value itself
+    pop rsi         ;Get back the ptr to the first char past the envvar
+    retc
+
+    push rsi        ;Save the ptr to the first char past the envvar
+    mov rsi, rbx    ;Point rsi to where to copy the envvar
+    xchg rdi, rsi   ;Swap pointers for the copy
+
+    call strlen ;Get the string length of the envvar value in ecx
+    dec ecx     ;Drop 0 from count
+    movzx ebx, byte [rbp + 1] ;Get the count of chars already in the string
+    push rcx
+    add ecx, ebx    ;Get # of chars we will have.
+    cmp ecx, inLen  ;If we end up with more than 127 chars, truncate
+    pop rcx
+    jb .noTrunc
+    mov ecx, inLen - 1
+    sub ecx, ebx    ;Turn into # of chars to copy, make space for CR
+.noTrunc:
+    add byte [rbp + 1], cl
+    rep movsb   ;Moves rdi to the space for the next char
+    pop rsi     ;Get back the ptr to the first char past the envvar name
     return
-    ;cmp byte [rsi], "%"
 
 batCleanup:
 ;This function is called after the last line has been processed by the 

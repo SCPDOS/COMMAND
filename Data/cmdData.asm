@@ -72,7 +72,9 @@ launchBlock db execProg_size dup (0)
 ; at least 1 character long. The tail is formed of the remaining chars, so there
 ; will be at least 127 chars left. Thus we always have enough space.
 inLen   equ 128 
-inBuffer    db cmdBufferL dup (0)   ;Original input from user! 128 chars max! 
+batCpyBuffer:   ;Ptr to the buffer to drop the processed line into
+inBuffer    db cmdBufferL dup (0)   ;Original input from user! 128 chars max!
+batInBuffer:    ;Ptr to the buffer for batch input
 cpyBuffer   db cmdBufferL dup (0)   ;Copied input for processing
 cmdBuffer   db cmdBufferL dup (0)   ;Buffer with the command pipeline
 cmdPathSpec db fileSpecZL dup (0)   ;Space for full path to a ext cmd
