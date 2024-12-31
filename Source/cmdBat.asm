@@ -156,8 +156,6 @@ batNextLine:
     call batReadChar        ;Read the char. Set ZF and flag if no bytes read.
     jz .eofAddCR
     inc rdi                 ;We read a char, woohoo!
-    cmp byte [rdx], EOF     ;Did we read a ^Z char?
-    je .eofAddCR
     cmp byte [rdx], CR      ;End of line?
     je .eolCR
     cmp byte [rdx], LF      ;End of line UNIX?
@@ -300,7 +298,7 @@ batReadChar:
 ;Output: 
 ;   CF=NC:
 ;       ZF=NZ: eax = 1. One char read.
-;       ZF=ZE: eax = 0. EOF flag set in status byte. No chars read. 
+;       ZF=ZE: eax = 0. EOF flag set in status byte. Zero or EOF char read.
 ;   CF=CY: Error in read. We act as if EOF reached. (Never checked.)
 ;Clobbers: None.
     push rcx
@@ -309,14 +307,16 @@ batReadChar:
     int 21h 
     pop rcx 
     jc .bad     ;If CF, always act as if EOF. An error occured.
-    test eax, eax   ;Here we check if we read 1 byte. (Clear CF)
-    retnz       ;Return if a char was read.
+    test eax, eax   ;Here we check if we read 1 byte. (Clears CF)
+    jz .eof         ;Jump to eofexit if we didn't read any bytes
+    cmp byte [rdx], EOF ;Did we read ^Z char?
+    retne           ;Return if the char we read was not an EOF char
 .eof:
     pushfq      ;Preserve the flags for the bit toggle
     or byte [statFlg1], batchEOF    ;Set if we are done reading the file!
     popfq
     return    
 .bad:
-    xor eax, eax    ;Pretend we hit an EOF (Set ZF)
+    xor eax, eax    ;Signal we hit an EOF (Set ZF)
     stc             ;Never check it but ensure reset of CF.
     jmp short .eof  ;And set the status bit

@@ -2668,6 +2668,7 @@ remark:
 ;If in a batch file, do nothing. Else, go through normal loop.
     test byte [statFlg1], inBatch
     retz
+.go:
     pop rbx
     pop rbx ;Realign the stack back :)
     call getSetMainState
@@ -2682,50 +2683,64 @@ goto:
 ;If not in batch, immediately return!
     test byte [statFlg1], inBatch
     retz
-;TEMP TEMP TEMP TEMP 
-    return  ;Ensure this is not accidentally entered until we are ready.
-;TEMP TEMP TEMP TEMP 
+    mov rbp, qword [bbPtr]
+    test rbp, rbp
+    retz
 ;Start by copying the command line label to fcb1
-    lea rsi, qword [r8 + cmdline]
-    lea rdi, qword [r8 + fcb1]  ;Use fcb1 for the command line
+    lea rsi, qword [r8 + cmdLine]
+    lea rdi, qword [r8 + fcb1 + fcb.filename]  ;Use fcb1 for the command line
     call skipDelimiters     ;Go to the first argument on cmdline
+    mov ecx, 8
     cmp byte [rsi], ":" ;If we the first char of the cmdline lbl is :, skip
     jne .startCopy
     inc rsi
 .startCopy:
     lodsb
-    stosb
-    cmp al, SPC
-    
+    cmp al, SPC         ;Skip any spaces
+    je .startCopy       
+    cmp al, CR          ;If CR, exit copy
+    je .endCopy
+    call isALdelimiter  ;If delimiter char, exit copy
+    jz .endCopy
+    stosb           
+    dec ecx             ;Decrement counter
+    jnz .startCopy
+.endCopy:
 ;Now search the batch file for the label.
-    mov rsi, qword [bbPtr]
-    test rsi, rsi
-    retz
-    xor edi, edi    ;Maintain as a file pointer
-    mov qword [rsi + batBlockHdr.qBatOff], rdi    ;Reset the file ptr
+    neg ecx
+    add ecx, 8      ;Get the number of chars copied into ecx
+    lea rdx, qword [r8 + fcb1]
+    mov byte [rdx + fcb.driveNum], cl    ;Store the count in drivenum
+    call .ucChars   ;Now we UC the chars in the string
+    mov qword [rbp + batBlockHdr.qBatOff], 0    ;Reset the file ptr
     call batOpen    ;Open the batch file. Handle in ebx.
 ;File opened from the start. Now start byte by byte read.
 .notLabelLp:
-    lea rdx, [fcb2 + fcb.filename]  ;fcb2 for the bat search buffer
-    xor ecx, ecx    ;Keep as a char counter
-.fndLbl:
+    test byte [statFlg1], batchEOF  
+    jnz .eof    ;If we hit an ^Z while processing file, don't loop again
+    lea rdx, [r8 + fcb2 + fcb.filename]  ;fcb2 for the bat search buffer
+.findLbl:
 ;Keep searching for a label
     call batReadChar
     jz .eof
+    inc qword [rbp + batBlockHdr.qBatOff] ;Inc the fp for each char read
     cmp byte [rdx], ":"
-    jne .fndLbl 
+    jne .findLbl 
 ;Here we found a candidate label. Take 8 chars w/o spaces and initial :
     xor ecx, ecx
 .loadRead:
     call batReadChar
     jz .lblDone
-    inc rdi ;Inc the fp
-    cmp byte [rdx], CR
+    mov al, byte [rdx]  ;Get the char read into al
+    inc qword [rbp + batBlockHdr.qBatOff] ;Inc the fp for each char read
+    cmp al, CR
     je .lblDoneCR
-    cmp byte [rdx], LF
+    cmp al, LF
     je .lblDone
-    cmp byte [rdx], SPC
+    cmp al, SPC
     je .loadRead
+    call isALdelimiter
+    jz .pullEol ;If we have a delimiter char, pull it
     inc rdx ;Inc the storage pointer
     inc ecx ;Inc the count
     cmp ecx, 8  ;Once we read 8 chars, readthru to end of line
@@ -2733,7 +2748,7 @@ goto:
 .pullEol:
     call batReadChar
     jz .lblDone
-    inc rdi ;Inc the fp
+    inc qword [rbp + batBlockHdr.qBatOff] ;Inc the fp for each char read
     cmp byte [rdx], CR
     je .lblDoneCR
     cmp byte [rdx], LF
@@ -2745,15 +2760,52 @@ goto:
     jz .lblDone
     cmp byte [rdx], LF
     jne .lblDone    ;No LF
-    inc rdi ;Else include the LF in the count to go past
+;Else include the LF in the count to go past
+    inc qword [rbp + batBlockHdr.qBatOff] 
 .lblDone:
 ;Check what we have to see if it is possible to form a label
-    mov byte [fcb1 + fcb.driveNum], cl  ;Store the len in the drive letter
-    mov qword [rsi + batBlockHdr.qBatOff], rdi  ;Set to the next line
-
+    lea rdx, qword [r8 + fcb2]
+    mov byte [rdx + fcb.driveNum], cl  ;Store the len in the drive letter
+    call .ucChars    ;Now we UC the chars in the fcb pointed to by rdx
+;Now compare the strings (trailing space padding)
+    lea rsi, qword [rdx]
+    lodsb   ;Get the count into al and move rsi to filename
+    movzx ecx, al   ;Move the count into ecx
+    lea rdi, qword [r8 + fcb1 + fcb.filename]
+    cmp byte [rdi - 1], cl  ;If the counts are not equal, skip the cmp
+    jne .notLabelLp
+    repe cmpsb  ;Now do a string cmp
+    jne .notLabelLp
+    ;Here if the label is found. Bat FP points to the next line to read.
+    call batClose   ;Close the handle
+    jmp remark.go   ;Now behave like rem to get the next line!
 .eof:
 ;Print label not found, end batch mode and return
     lea rdx, badLbl
     call printString
     call batFinish  ;Kill the batch processor
+    return
+
+.ucChars:
+;Input: rdx -> Buffer where the first byte gives number of chars to UC
+;Output: The rdx[0] bytes from rdx[1] are UC'd
+    push rax
+    push rcx
+    push rsi
+
+    lea rsi, qword [rdx + 1]    ;Start of string to uppercase
+    movzx ecx, byte [rdx]       ;Get byte count to uppercase
+.ucclp:
+    lodsb   ;Get the char
+    push rax    ;Push it on stack
+    mov eax, 1213h  ;Get DOS to UC it
+    int 2Fh
+    mov byte [rsi - 1], al  ;Replace the char with it's UC'd version
+    pop rax     ;Balance stack
+    dec ecx     
+    jnz .ucclp  ;Go again if we havent exhausted all chars
+    
+    pop rsi
+    pop rcx
+    pop rax
     return
