@@ -2835,6 +2835,24 @@ goto:
 
 forCmd:
     return
-    
+
 ifCmd:
+    mov byte [ifNot], 0     ;Reset not state
+    lea rsi, qword [r8 + cmdLine]
+    call skipDelimiters
+    lea rdi, qword [r8 + fcb1]
+    mov eax, 2901h   ;Parse the word, move rsi past it
+    int 21h
+    cmp byte [rdi + 3], SPC ;The fourth char should be clean!
+    jne .noNot
+    mov rbx, rsi    ;Save ptr to the next word in the string
+    lea rsi, notString
+    mov ecx, 3
+    repe cmpsb
+    mov rsi, rbx
+    jne .noNot
+    mov byte [ifNot], 1
+.noNot:
+
+
     return

@@ -69,8 +69,10 @@ badSpec db "Invalid path or file name",CR,LF,"$"
 badArgs db "Invalid number of parameters",CR,LF,"$"
 devWriteErr db "Error writing to device"
 backSpace   db BSP," ",BSP,NUL
-noMemMsg  db "Program too big to fit in memory",CR,LF,"$"
-
+noMemMsg    db "Program too big to fit in memory",CR,LF,"$"
+notString   db "NOT"
+ErrlvlStr   db "ERRORLEVEL"
+ExistStr    db "EXIST"
 
 memSys  db CR,LF,"              Total system memory: $"
 memDOS  db CR,LF,"               Memory used by DOS: $"

@@ -26,7 +26,9 @@ inLdr       equ 80h ;Up if in loader
 failDrv     db -1   ;0 based drive number. Used to identify if drv bad
 echoFlg     db 1    ;Global Echo flag, starts up! 1 means on
 errHdls     dw -1   ;Set to the STDIO handles. Non -1 => Handles swapped
-
+;==============================================================================
+; Do not split the blocks below!
+;++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 cmdLineStatePtr:
 pipeFlag    db 0    ;If set, we fired up a pipe for this command line
 pipeSTDIN   dw -1   ;The handle to replace STDIN with once all piping complete
@@ -38,7 +40,7 @@ redirOut    db 0    ;If 1, we are redirecting output to a file, destructively
 ;                    If 2, we are redirecting output to a file, by appending
 redirSTDIN  dw -1   ;The handle to replace STDIN with once redir complete
 redirSTDOUT dw -1   ;The handle to replace STDOUT with once all redir complete
-
+;------------------------------------------------------------------------------
 cmdStatePtr:   ;Symbol to use for clearing command state variables
 arg1Flg     db 0    ;Set if there was a first argument
 arg1Off     db 0    ;Offset into cmdBuffer to the argument
@@ -51,14 +53,15 @@ arg2FCBret  db 0    ;AL on return from parse filename for argument 2
 switchFnd   db 0    ;Set if a switch char is found
 cmdStateL equ $ - cmdStatePtr
 cmdLineStateL equ $ - cmdLineStatePtr
-
-;Batch state variables. Batch changes current dir to dir of batch file!
+;------------------------------------------------------------------------------
+;++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+;Batch state variables.
 bbPtr       dq 0    ;Ptr to the batch block
 batFile     db fileSpecZL dup (0)   ;Path to bat to execute. Qual with path!
 batYNstr    db 2,1," ",CR           ;String for buffered Y/N input
+ifNot       db 0                    ;Set when a NOT is found in IF.
 
 ;Structs and strings
-
 cmdFcb      db 10h dup (0) ;Internal "fcb" for parsing the command name
 cmdFFBlock  db ffBlock_size dup (0) ;Internal Find First Block to use as default DTA
 
