@@ -1,61 +1,10 @@
 ;Main Batch processing routines go here!
 
 batLaunch:
-;Preps and launches a batch file! Called with rdx pointing to the filespec :)
-    mov ebx, bbMaxAlloc << 4    ;Convert to paragraphs
-    mov eax, 4800h
-    int 21h
-    jnc .bbAlloced
-    call badNoMemError  ;Print not enough mem error
-    jmp  redirPipeFailureCommon.noPrint ;Clean up all redir and ret to cmdline
-.bbAlloced:
-    mov qword [bbPtr], rax  ;Save the ptr here!
-    mov rbx, rax
-    mov rdi, rbx
-    xor eax, eax
-    mov ecx, bbMaxAlloc     
-    rep stosb               ;Clean the arena
-    mov rdi, rbx            ;Point back to the head
-    mov al, byte [echoFlg]
-    mov byte [rbx + batBlockHdr.bEchoFlg], al
-    mov eax, -1
-    mov ecx, 5
-    lea rdi, qword [rbx + batBlockHdr.wArgs]    ;Init the wArgs to no params!
-    rep stosd   ;Store in dwords for speed. Leave rdi pointing at .cmdLine
-    mov word [rbx + batBlockHdr.wArgs], 0   ;Arg %0 starts at offset 0!
-    lea rsi, cmdPathSpec
-    call strcpy     ;Leave rdi past the terminating null
-    movzx ecx, byte [r8 + cmdLineCnt]  ;Get char cnt for copy
-    lea rsi, qword [r8 + cmdLine]   ;Get copy source
-    push rdi    ;Save the ptr to the start of cmd tail in batblock
-    rep movsb   ;Copy the command tail over
-    ;Since this copy is shorter than the space we have, we already have a free
-    ; terminating null. All good!
-    pop rsi 
-    ;Now analyse the command line to get the word offsets. Get at most 10
-    mov ecx, 1  ;Start with argument 1
-.bbFndLp:
-    call skipDelimiters ;Skip leading delimiters, leave rsi at char1
-    call .bbCheckEndOfCmdLine   ;Is this the end of the command?
-    je .bbArgsDone      ;Yes
-    ;Add the entry to the table!
-    mov rax, rsi
-    lea rdx, qword [rbx + batBlockHdr.cmdLine]  ;Get addr of start of cmdline
-    sub rax, rdx    ;Now get the difference in ax
-    mov word [rbx + batBlockHdr.wArgs + rcx], ax    ;Store this offset here
-    
-    inc ecx
-    cmp ecx, 10         ;Did we just process %9?
-    je .bbArgsDone
-.bbFndLp2:
-    lodsb   ;Getch
-    call isALdelimiter  ;If this is a delimiter, we are at the end of the command
-    je .bbFndLp
-    call .bbCheckEndOfCmdLine
-    jne .bbFndLp2   ;If not end of cmdline, see if next char delim
-.bbArgsDone:
-;Now copy the batch name, need to figure the full path to it.
-    lea rsi, cmdPathSpec
+;Start by creating the FQPath name and building a command line
+; where the arguments are CR terminated.
+;Then work out how much memory to allocate and allocate it.
+    lea rsi, cmdPathSpec    ;Path here is null terminated.
     lea rdi, batFile
     mov ax, word [rsi]  ;Get the first two chars
     cmp ah, ":"
@@ -77,7 +26,7 @@ batLaunch:
     mov dl, al
     push rsi        ;Save remaining char source
     mov rsi, rdi    ;rdi is where we want to store the file name
-    mov eax, 4700h  ;Get Current Directory
+    mov eax, 4700h  ;Get Current Directory (null terminated)
     int 21h
     pop rsi
     jnc .bbRelPathOk
@@ -118,6 +67,76 @@ batLaunch:
     mov rdi, rsi
     mov eax, 1211h  ;Normalise the path :)
     int 2fh
+;Now batFile has the FQpathname, construct the new CR delimited command line.
+    lea rsi, cmdBuffer + 2
+    lea rdi, cmdBuffer + 1  ;Overwrite count byte as we will null terminate
+.copyCmdline:
+    call skipDelimiters ;Find start of argument
+.cclp:
+    lodsb
+    call isALdelimiter  ;If we hit delimiter, replace with CR, goto next arg
+    jne .ccstore
+    mov al, CR  
+    stosb
+    jmp short .copyCmdline
+.ccstore:
+    stosb   
+    cmp al, CR  ;Did we just store a CR
+    jne .cclp   ;Keep getting chars if so
+    xor eax, eax    ;Else store a terminating null now
+    stosb
+    lea rdi, cmdBuffer + 1    ;Get back the ptr to the head of the new string
+    call strlen     ;Get the new string length in ecx
+    mov ebx, ecx    ;Save len in eax (include null)
+    lea rdi, batFile
+    call strlen     ;Get the filename len in ecx
+    add ebx, ecx
+    add ebx, batBlockHdr_size   ;Get the size to allocate for block
+    mov ecx, ebx    ;Save the size in bytes in ecx for the cleaning below
+    add ebx, 0Fh    ;Round up to nearest paragraph!
+    shr ebx, 4      ;Convert to paragraphs
+    mov eax, 4800h
+    int 21h
+    jnc .bbAlloced
+    call badNoMemError  ;Print not enough mem error
+    jmp  redirPipeFailureCommon.noPrint ;Clean up all redir and ret to cmdline
+.bbAlloced:
+;Now init the batblock with all the data we need
+    mov qword [bbPtr], rax  ;Save the ptr here!
+    mov rbx, rax
+    mov rdi, rbx
+    xor eax, eax
+    rep stosb   ;Clean the block with nulls
+    mov rdi, rbx            ;Point back to the head of the block
+    mov al, byte [echoFlg]
+    mov byte [rbx + batBlockHdr.bEchoFlg], al
+    mov eax, -1
+    mov ecx, 5
+    lea rdi, qword [rbx + batBlockHdr.wArgs]    ;Init the wArgs to no params!
+    rep stosd   ;Store in dwords for speed. Leave rdi pointing at .cmdLine    
+    lea rsi, batFile
+    call strcpy ;Copy the string and the terminating null
+    lea rsi, cmdBuffer + 1
+    push rdi    ;Save the ptr to where we will store the cmdline
+    call strcpy ;Copy the command tail and the terminating null
+    pop rdi     ;Get the pointer to the copied cmdline in rdi
+    xor esi, esi    ;Use esi as argument counter
+    xor ecx, ecx
+    dec ecx ;Init ecx to large number for repne below (stupid hack will work)
+.bbFndLp:
+    cmp byte [rdi], 0   ;Is this the end of the cmdline?
+    je .bbArgsDone      
+;Else add the entry to the table! rbx -> batBlock
+    mov rax, rdi
+    sub rax, rbx    ;Now get distance from head of batBlock to this arg in ax
+    mov word [rbx + 2*rsi + batBlockHdr.wArgs], ax    ;and store it!
+    inc esi
+    cmp esi, 10         ;Did we just process %9?
+    je .bbArgsDone
+    mov al, CR  ;Scan for the next CR and move rdi past it!
+    repne scasb
+    jmp short .bbFndLp   ;If not end of cmdline, see if next char delim
+.bbArgsDone:
 ;Now deactivate any redirs. Do redir out as cleanupRedirs somewhat ignores it.
 ;Do the handle close as deleting the file without closing the handle is asking 
 ; for SHARING trouble...
@@ -125,14 +144,6 @@ batLaunch:
     call cleanupRedirs      ;Now liquidate remaining redirs and pipes
     or byte [statFlg1], inBatch ;Fire up the batch processor!
     jmp commandMain         ;Now we start reading the batch file!
-
-.bbCheckEndOfCmdLine:
-;Input: rsi -> Char to check 
-;Output: ZF=ZE if we hit a CR or a <NUL>
-    cmp byte [rsi], 0
-    rete
-    cmp byte [rsi], CR
-    return
 
 batFinish:
 ;This is the procedure called after we've processed the last batch line
@@ -264,10 +275,15 @@ batExpandVar:
 ;   Substitution string is placed in buffer if necessary.
 ;       rsi -> Char after the terminal % of the source envvar name.
 ;       rdi -> Space for the next char to copy.
-    mov al, byte [rsi + 1]  ;Is this a parameter like %x ?
-    call isALdelimiter
-    rete    ;Do nothing, keep copying
-    cmp byte [rsi], "%" ;If immediately followed by %, then return it
+    movzx eax, byte [rsi]  ;Is this a parameter like %[0-9]?
+    cmp al, "0"
+    jb .notRep  ;If definitely not a number, keep going
+    cmp al, "9"
+    jb .repParm ;If a number, its a replacable parameter :)
+.notRep:
+    cmp al, CR          
+    rete
+    cmp al, "%" ;If immediately followed by %, then return it
     rete
 ;Now do the env var search. Start by scanning for the terminating
 ; % of the var name. If we strike a delimiter char first, 
@@ -277,7 +293,12 @@ batExpandVar:
 .envVarLp:
     lodsb
     call isALdelimiter  ;Exit if a delimiter is hit first.
+.lpExit:
+    cmove rsi, rdi  ;If a delim found, return rsi to the char past the % sign.
+    cmove rdi, rbx  ;And return rdi to where it was beforehand :)
     rete
+    cmp al, CR      ;If we are at the end of the line too, exit!
+    je .lpExit
     cmp al, "%"         ;Did we find a terminating % found.
     jne .envVarLp
 ;Fall here if we find the terminating % of the var name. rsi -> past %
@@ -296,8 +317,9 @@ batExpandVar:
 
     push rsi        ;Save the ptr to the first char past the envvar
     mov rsi, rbx    ;Point rsi to where to copy the envvar
-    call strlen ;Get the string length of the envvar value in ecx
-    dec ecx     ;Drop 0 from count
+    call strlen     ;Get the string length of the envvar value in ecx
+.copyVar:
+    dec ecx         ;Drop 0 from count
     xchg rdi, rsi   ;Swap pointers for the copy
     movzx ebx, byte [rbp + 1] ;Get the count of chars already in the string
     push rcx
@@ -313,6 +335,24 @@ batExpandVar:
 .exit:
     pop rsi     ;Get back the ptr to the first char past the envvar name
     return
+.repParm:
+    sub eax, "0"
+    inc rsi ;Move the ptr past the replacable parameter value
+    mov rbx, qword [bbPtr]
+    movzx edx, word [rbx + batBlockHdr.wArgs + 2*rax]   ;Get off from cmdLine
+    cmp edx, 0FFFFh   ;If there is no var, copy nothing and exit!
+    rete
+    push rsi        ;Save ptr to source of next chars 
+    lea rsi, qword [rbx + rdx]  ;Save ptr to head of string to copy in rsi
+    xor ecx, ecx
+    dec ecx
+    mov al, CR      ;Now scan for the terminating CR
+    xchg rsi, rdi   ;Save dest ptr in rsi and point to string to cpy in rdi
+    push rdi        ;Save the head of the string for copy
+    repne scasb     ;Get the length of the string with terminating CR
+    pop rdi         ;Point back to head of string
+    not ecx         ;Convert to one less than the length (drops the CR)
+    jmp short .copyVar
 
 batCleanup:
 ;This function is called after the last line has been processed by the 

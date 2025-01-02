@@ -2673,8 +2673,36 @@ remark:
     pop rbx ;Realign the stack back :)
     call getSetMainState
     jmp commandMain.inputGetAgain   ;Clean any redirs and get input
+    
 shift:
+;If not in batch, immediately return!
+    test byte [statFlg1], inBatch
+    retz
+    mov rbx, qword [bbPtr]  ;Get the batch block
+    lea rdi, qword [rbx + batBlockHdr.wArgs]
+    lea rsi, qword [rdi + 2]    ;Source from one word ahead
+    mov ecx, 9
+    xor eax, eax
+.lp:
+    lodsw
+    stosw
+    cmp eax, 0FFFFh   ;Once we xfer a -1 word, no more args on cmd line
+    retz
+    dec ecx
+    jnz .lp
+;Now we gotta scan for one more cmdline argument
+    mov word [rbx + batBlockHdr.wArgs + 2*9], -1   ;Init a -1 at the end
+    mov al, CR
+    xor ecx, ecx
+    dec ecx ;
+    lea rdi, qword [rbx + rax]  ;rax has the last offset
+    repne scasb ;Find CR which terminated old last argument, go past it
+    cmp byte [rdi], 0   ;If this is the terminating null, leave as -1
+    rete
+    sub rdi, rbx    ;Get the offset from batBlockHdr
+    mov word [rbx + batBlockHdr.wArgs + 2*9], di    ;Store the difference
     return
+    
 forCmd:
     return
 ifCmd:

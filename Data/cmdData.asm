@@ -56,7 +56,6 @@ cmdLineStateL equ $ - cmdLineStatePtr
 bbPtr       dq 0    ;Ptr to the batch block
 batFile     db fileSpecZL dup (0)   ;Path to bat to execute. Qual with path!
 batYNstr    db 2,1," ",CR           ;String for buffered Y/N input
-;batCallPtr  dq 0    ;Ptr to the call state block
 
 ;Structs and strings
 
