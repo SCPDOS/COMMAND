@@ -1328,25 +1328,25 @@ Real              Virtual           Name
             3F4E              3F4E  ..@270._base
             3F69              3F69  ..@272._base
             3F72              3F72  ..@273._ret
-            3F73              3F73  forCmd
-            3F73              3F73  ..@274._ret
-            3F74              3F74  ifCmd
-            3F74              3F74  ..@275._ret
-            3F75              3F75  goto
-            3F7C              3F7C  ..@277._base
-            3F88              3F88  ..@279._base
-            3FA7              3FA7  goto.startCopy
-            3FBC              3FBC  goto.endCopy
-            3FDC              3FDC  goto.notLabelLp
-            3FED              3FED  goto.findLbl
-            4003              4003  goto.loadRead
-            4030              4030  goto.pullEol
-            4047              4047  goto.lblDoneCR
-            4057              4057  goto.lblDone
-            4088              4088  goto.eof
-            4099              4099  ..@280._ret
-            409A              409A  goto.ucChars
-            40A4              40A4  goto.ucclp
+            3F73              3F73  goto
+            3F7A              3F7A  ..@275._base
+            3F86              3F86  ..@277._base
+            3FA5              3FA5  goto.startCopy
+            3FBA              3FBA  goto.endCopy
+            3FDA              3FDA  goto.notLabelLp
+            3FEB              3FEB  goto.findLbl
+            4001              4001  goto.loadRead
+            402E              402E  goto.pullEol
+            4045              4045  goto.lblDoneCR
+            4055              4055  goto.lblDone
+            4086              4086  goto.eof
+            4097              4097  ..@278._ret
+            4098              4098  goto.ucChars
+            40A2              40A2  goto.ucclp
+            40B6              40B6  ..@279._ret
+            40B7              40B7  forCmd
+            40B7              40B7  ..@280._ret
+            40B8              40B8  ifCmd
             40B8              40B8  ..@281._ret
             40B9              40B9  printDate
             4104              4104  ..@282._ret

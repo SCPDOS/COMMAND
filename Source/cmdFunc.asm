@@ -2642,7 +2642,6 @@ echo:
     int 21h
     jmp printCRLF   ;Needs to be a proper CRLF to insert a CRLF at the end!
 
-
 pauza:  ;Well... pause is an instruction in english 0:)
 ;Thank you authors of MSDOS Encyclopedia for confusing an argument to this command
 ; with just... the actual command tail being echoed with the command -_-
@@ -2673,7 +2672,7 @@ remark:
     pop rbx ;Realign the stack back :)
     call getSetMainState
     jmp commandMain.inputGetAgain   ;Clean any redirs and get input
-    
+
 shift:
 ;If not in batch, immediately return!
     test byte [statFlg1], inBatch
@@ -2703,10 +2702,6 @@ shift:
     mov word [rbx + batBlockHdr.wArgs + 2*9], di    ;Store the difference
     return
     
-forCmd:
-    return
-ifCmd:
-    return
 goto:
 ;If not in batch, immediately return!
     test byte [statFlg1], inBatch
@@ -2836,4 +2831,10 @@ goto:
     pop rsi
     pop rcx
     pop rax
+    return
+
+forCmd:
+    return
+    
+ifCmd:
     return

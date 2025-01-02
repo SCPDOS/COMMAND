@@ -1296,7 +1296,7 @@
     96 00000867 113F                <1>     dw remark - startLbl
     97                              <1> 
     98 00000869 04474F544F          <1>     db 4, "GOTO"
-    99 0000086E 753F                <1>     dw goto - startLbl
+    99 0000086E 733F                <1>     dw goto - startLbl
    100                              <1> ;-----------------------------
    101                              <1> ; Commands left to implement 
    102                              <1> ;-----------------------------
@@ -1304,10 +1304,10 @@
    104 00000876 263F                <1>     dw shift - startLbl
    105                              <1> 
    106 00000878 03464F52            <1>     db 3, "FOR"
-   107 0000087C 733F                <1>     dw forCmd - startLbl
+   107 0000087C B740                <1>     dw forCmd - startLbl
    108                              <1> 
    109 0000087E 024946              <1>     db 2, "IF"
-   110 00000881 743F                <1>     dw ifCmd - startLbl
+   110 00000881 B840                <1>     dw ifCmd - startLbl
    111                              <1> ;-----------------------------
    112 00000883 FF                  <1>     db -1   ;End of table
     15                                  %include "./Data/cmdStr.asm"
@@ -6830,35 +6830,34 @@
   2642 00003EC0 CD21                <1>     int 21h
   2643 00003EC2 E945040000          <1>     jmp printCRLF   ;Needs to be a proper CRLF to insert a CRLF at the end!
   2644                              <1> 
-  2645                              <1> 
-  2646                              <1> pauza:  ;Well... pause is an instruction in english 0:)
-  2647                              <1> ;Thank you authors of MSDOS Encyclopedia for confusing an argument to this command
-  2648                              <1> ; with just... the actual command tail being echoed with the command -_-
-  2649 00003EC7 F605C8C1FFFFFF      <1>     test byte [echoFlg], -1
-  2650 00003ECE 7528                <1>     jnz .echoTail
-  2651                              <1> ;Since we havent echoed the command out, type the tail out manually
-  2652 00003ED0 498DB081000000      <1>     lea rsi, qword [r8 + cmdLine]  ;Goto command line
-  2653 00003ED7 E882060000          <1>     call skipDelimiters ;Skip leading delims
-  2654 00003EDC 4889F2              <1>     mov rdx, rsi
-  2655 00003EDF 410FB68880000000    <1>     movzx ecx, byte [r8 + cmdLineCnt]  ;Get the count
-  2656 00003EE7 BB01000000          <1>     mov ebx, 1  ;Echo to STDOUT 
-  2657 00003EEC B800400000          <1>     mov eax, 4000h  ;Write
-  2658 00003EF1 CD21                <1>     int 21h
-  2659 00003EF3 E814040000          <1>     call printCRLF
-  2660                              <1> .echoTail:
-  2661 00003EF8 488D154ACBFFFF      <1>     lea rdx, pauseMes
-  2662 00003EFF E80F040000          <1>     call printString
-  2663 00003F04 B800080000          <1>     mov eax, 0800h  ;CON input w/o echo. Triggers ^C
-  2664 00003F09 CD21                <1>     int 21h
-  2665 00003F0B E8FC030000          <1>     call printCRLF
-  2666                              <1>     return
+  2645                              <1> pauza:  ;Well... pause is an instruction in english 0:)
+  2646                              <1> ;Thank you authors of MSDOS Encyclopedia for confusing an argument to this command
+  2647                              <1> ; with just... the actual command tail being echoed with the command -_-
+  2648 00003EC7 F605C8C1FFFFFF      <1>     test byte [echoFlg], -1
+  2649 00003ECE 7528                <1>     jnz .echoTail
+  2650                              <1> ;Since we havent echoed the command out, type the tail out manually
+  2651 00003ED0 498DB081000000      <1>     lea rsi, qword [r8 + cmdLine]  ;Goto command line
+  2652 00003ED7 E882060000          <1>     call skipDelimiters ;Skip leading delims
+  2653 00003EDC 4889F2              <1>     mov rdx, rsi
+  2654 00003EDF 410FB68880000000    <1>     movzx ecx, byte [r8 + cmdLineCnt]  ;Get the count
+  2655 00003EE7 BB01000000          <1>     mov ebx, 1  ;Echo to STDOUT 
+  2656 00003EEC B800400000          <1>     mov eax, 4000h  ;Write
+  2657 00003EF1 CD21                <1>     int 21h
+  2658 00003EF3 E814040000          <1>     call printCRLF
+  2659                              <1> .echoTail:
+  2660 00003EF8 488D154ACBFFFF      <1>     lea rdx, pauseMes
+  2661 00003EFF E80F040000          <1>     call printString
+  2662 00003F04 B800080000          <1>     mov eax, 0800h  ;CON input w/o echo. Triggers ^C
+  2663 00003F09 CD21                <1>     int 21h
+  2664 00003F0B E8FC030000          <1>     call printCRLF
+  2665                              <1>     return
     13                              <2> %%_ret:
     14 00003F10 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-  2667                              <1> remark:
-  2668                              <1> ;If in a batch file, do nothing. Else, go through normal loop.
-  2669 00003F11 F6057CC1FFFF08      <1>     test byte [statFlg1], inBatch
-  2670                              <1>     retz
+  2666                              <1> remark:
+  2667                              <1> ;If in a batch file, do nothing. Else, go through normal loop.
+  2668 00003F11 F6057CC1FFFF08      <1>     test byte [statFlg1], inBatch
+  2669                              <1>     retz
     41                              <2> cret z
     19                              <3> %%_base:
     20                              <3> %assign baseVar %%_base-$$
@@ -6879,16 +6878,16 @@
     35                              <3>  return
     36                              <3> %%a:
     37                              <3>  %endif
-  2671                              <1> .go:
-  2672 00003F1A 5B                  <1>     pop rbx
-  2673 00003F1B 5B                  <1>     pop rbx ;Realign the stack back :)
-  2674 00003F1C E88CDBFFFF          <1>     call getSetMainState
-  2675 00003F21 E9FBD1FFFF          <1>     jmp commandMain.inputGetAgain   ;Clean any redirs and get input
-  2676                              <1>     
-  2677                              <1> shift:
-  2678                              <1> ;If not in batch, immediately return!
-  2679 00003F26 F60567C1FFFF08      <1>     test byte [statFlg1], inBatch
-  2680                              <1>     retz
+  2670                              <1> .go:
+  2671 00003F1A 5B                  <1>     pop rbx
+  2672 00003F1B 5B                  <1>     pop rbx ;Realign the stack back :)
+  2673 00003F1C E88CDBFFFF          <1>     call getSetMainState
+  2674 00003F21 E9FBD1FFFF          <1>     jmp commandMain.inputGetAgain   ;Clean any redirs and get input
+  2675                              <1> 
+  2676                              <1> shift:
+  2677                              <1> ;If not in batch, immediately return!
+  2678 00003F26 F60567C1FFFF08      <1>     test byte [statFlg1], inBatch
+  2679                              <1>     retz
     41                              <2> cret z
     19                              <3> %%_base:
     20                              <3> %assign baseVar %%_base-$$
@@ -6909,16 +6908,16 @@
     35                              <3>  return
     36                              <3> %%a:
     37                              <3>  %endif
-  2681 00003F2F 488B1D75C1FFFF      <1>     mov rbx, qword [bbPtr]  ;Get the batch block
-  2682 00003F36 488D7B1B            <1>     lea rdi, qword [rbx + batBlockHdr.wArgs]
-  2683 00003F3A 488D7702            <1>     lea rsi, qword [rdi + 2]    ;Source from one word ahead
-  2684 00003F3E B909000000          <1>     mov ecx, 9
-  2685 00003F43 31C0                <1>     xor eax, eax
-  2686                              <1> .lp:
-  2687 00003F45 66AD                <1>     lodsw
-  2688 00003F47 66AB                <1>     stosw
-  2689 00003F49 3DFFFF0000          <1>     cmp eax, 0FFFFh   ;Once we xfer a -1 word, no more args on cmd line
-  2690                              <1>     retz
+  2680 00003F2F 488B1D75C1FFFF      <1>     mov rbx, qword [bbPtr]  ;Get the batch block
+  2681 00003F36 488D7B1B            <1>     lea rdi, qword [rbx + batBlockHdr.wArgs]
+  2682 00003F3A 488D7702            <1>     lea rsi, qword [rdi + 2]    ;Source from one word ahead
+  2683 00003F3E B909000000          <1>     mov ecx, 9
+  2684 00003F43 31C0                <1>     xor eax, eax
+  2685                              <1> .lp:
+  2686 00003F45 66AD                <1>     lodsw
+  2687 00003F47 66AB                <1>     stosw
+  2688 00003F49 3DFFFF0000          <1>     cmp eax, 0FFFFh   ;Once we xfer a -1 word, no more args on cmd line
+  2689                              <1>     retz
     41                              <2> cret z
     19                              <3> %%_base:
     20                              <3> %assign baseVar %%_base-$$
@@ -6939,17 +6938,17 @@
     35                              <3>  return
     36                              <3> %%a:
     37                              <3>  %endif
-  2691 00003F50 FFC9                <1>     dec ecx
-  2692 00003F52 75F1                <1>     jnz .lp
-  2693                              <1> ;Now we gotta scan for one more cmdline argument
-  2694 00003F54 66C7432DFFFF        <1>     mov word [rbx + batBlockHdr.wArgs + 2*9], -1   ;Init a -1 at the end
-  2695 00003F5A B00D                <1>     mov al, CR
-  2696 00003F5C 31C9                <1>     xor ecx, ecx
-  2697 00003F5E FFC9                <1>     dec ecx ;
-  2698 00003F60 488D3C03            <1>     lea rdi, qword [rbx + rax]  ;rax has the last offset
-  2699 00003F64 F2AE                <1>     repne scasb ;Find CR which terminated old last argument, go past it
-  2700 00003F66 803F00              <1>     cmp byte [rdi], 0   ;If this is the terminating null, leave as -1
-  2701                              <1>     rete
+  2690 00003F50 FFC9                <1>     dec ecx
+  2691 00003F52 75F1                <1>     jnz .lp
+  2692                              <1> ;Now we gotta scan for one more cmdline argument
+  2693 00003F54 66C7432DFFFF        <1>     mov word [rbx + batBlockHdr.wArgs + 2*9], -1   ;Init a -1 at the end
+  2694 00003F5A B00D                <1>     mov al, CR
+  2695 00003F5C 31C9                <1>     xor ecx, ecx
+  2696 00003F5E FFC9                <1>     dec ecx ;
+  2697 00003F60 488D3C03            <1>     lea rdi, qword [rbx + rax]  ;rax has the last offset
+  2698 00003F64 F2AE                <1>     repne scasb ;Find CR which terminated old last argument, go past it
+  2699 00003F66 803F00              <1>     cmp byte [rdi], 0   ;If this is the terminating null, leave as -1
+  2700                              <1>     rete
     49                              <2> cret e
     19                              <3> %%_base:
     20                              <3> %assign baseVar %%_base-$$
@@ -6970,27 +6969,17 @@
     35                              <3>  return
     36                              <3> %%a:
     37                              <3>  %endif
-  2702 00003F6B 4829DF              <1>     sub rdi, rbx    ;Get the offset from batBlockHdr
-  2703 00003F6E 66897B2D            <1>     mov word [rbx + batBlockHdr.wArgs + 2*9], di    ;Store the difference
-  2704                              <1>     return
+  2701 00003F6B 4829DF              <1>     sub rdi, rbx    ;Get the offset from batBlockHdr
+  2702 00003F6E 66897B2D            <1>     mov word [rbx + batBlockHdr.wArgs + 2*9], di    ;Store the difference
+  2703                              <1>     return
     13                              <2> %%_ret:
     14 00003F72 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-  2705                              <1>     
-  2706                              <1> forCmd:
-  2707                              <1>     return
-    13                              <2> %%_ret:
-    14 00003F73 C3                  <2>  ret
-    15                              <2> %assign retOff %%_ret-$$
-  2708                              <1> ifCmd:
-  2709                              <1>     return
-    13                              <2> %%_ret:
-    14 00003F74 C3                  <2>  ret
-    15                              <2> %assign retOff %%_ret-$$
-  2710                              <1> goto:
-  2711                              <1> ;If not in batch, immediately return!
-  2712 00003F75 F60518C1FFFF08      <1>     test byte [statFlg1], inBatch
-  2713                              <1>     retz
+  2704                              <1>     
+  2705                              <1> goto:
+  2706                              <1> ;If not in batch, immediately return!
+  2707 00003F73 F6051AC1FFFF08      <1>     test byte [statFlg1], inBatch
+  2708                              <1>     retz
     41                              <2> cret z
     19                              <3> %%_base:
     20                              <3> %assign baseVar %%_base-$$
@@ -6999,7 +6988,7 @@
     23                              <3>  %ifdef currSegVBase
     24                              <3>  j%+1 short (retOff+currSegVBase)
     25                              <3>  %else
-    26 00003F7C 74(74)              <3>  j%+1 short retOff
+    26 00003F7A 74(72)              <3>  j%+1 short retOff
     27                              <3>  %endif
     28                              <3>  %else
     29                              <3>  j%-1 short %%a
@@ -7011,9 +7000,9 @@
     35                              <3>  return
     36                              <3> %%a:
     37                              <3>  %endif
-  2714 00003F7E 488B2D26C1FFFF      <1>     mov rbp, qword [bbPtr]
-  2715 00003F85 4885ED              <1>     test rbp, rbp
-  2716                              <1>     retz
+  2709 00003F7C 488B2D28C1FFFF      <1>     mov rbp, qword [bbPtr]
+  2710 00003F83 4885ED              <1>     test rbp, rbp
+  2711                              <1>     retz
     41                              <2> cret z
     19                              <3> %%_base:
     20                              <3> %assign baseVar %%_base-$$
@@ -7022,7 +7011,7 @@
     23                              <3>  %ifdef currSegVBase
     24                              <3>  j%+1 short (retOff+currSegVBase)
     25                              <3>  %else
-    26 00003F88 74(74)              <3>  j%+1 short retOff
+    26 00003F86 74(72)              <3>  j%+1 short retOff
     27                              <3>  %endif
     28                              <3>  %else
     29                              <3>  j%-1 short %%a
@@ -7034,132 +7023,144 @@
     35                              <3>  return
     36                              <3> %%a:
     37                              <3>  %endif
-  2717                              <1> ;Start by copying the command line label to fcb1
-  2718 00003F8A 498DB081000000      <1>     lea rsi, qword [r8 + cmdLine]
-  2719 00003F91 498D785D            <1>     lea rdi, qword [r8 + fcb1 + fcb.filename]  ;Use fcb1 for the command line
-  2720 00003F95 E8C4050000          <1>     call skipDelimiters     ;Go to the first argument on cmdline
-  2721 00003F9A B908000000          <1>     mov ecx, 8
-  2722 00003F9F 803E3A              <1>     cmp byte [rsi], ":" ;If we the first char of the cmdline lbl is :, skip
-  2723 00003FA2 7503                <1>     jne .startCopy
-  2724 00003FA4 48FFC6              <1>     inc rsi
-  2725                              <1> .startCopy:
-  2726 00003FA7 AC                  <1>     lodsb
-  2727 00003FA8 3C20                <1>     cmp al, SPC         ;Skip any spaces
-  2728 00003FAA 74FB                <1>     je .startCopy       
-  2729 00003FAC 3C0D                <1>     cmp al, CR          ;If CR, exit copy
-  2730 00003FAE 740C                <1>     je .endCopy
-  2731 00003FB0 E8B7050000          <1>     call isALdelimiter  ;If delimiter char, exit copy
-  2732 00003FB5 7405                <1>     jz .endCopy
-  2733 00003FB7 AA                  <1>     stosb           
-  2734 00003FB8 FFC9                <1>     dec ecx             ;Decrement counter
-  2735 00003FBA 75EB                <1>     jnz .startCopy
-  2736                              <1> .endCopy:
-  2737                              <1> ;Now search the batch file for the label.
-  2738 00003FBC F7D9                <1>     neg ecx
-  2739 00003FBE 81C108000000        <1>     add ecx, 8      ;Get the number of chars copied into ecx
-  2740 00003FC4 498D505C            <1>     lea rdx, qword [r8 + fcb1]
-  2741 00003FC8 880A                <1>     mov byte [rdx + fcb.driveNum], cl    ;Store the count in drivenum
-  2742 00003FCA E8CB000000          <1>     call .ucChars   ;Now we UC the chars in the string
-  2743 00003FCF 48C7451300000000    <1>     mov qword [rbp + batBlockHdr.qBatOff], 0    ;Reset the file ptr
-  2744 00003FD7 E889DFFFFF          <1>     call batOpen    ;Open the batch file. Handle in ebx.
-  2745                              <1> ;File opened from the start. Now start byte by byte read.
-  2746                              <1> .notLabelLp:
-  2747 00003FDC F605B1C0FFFF10      <1>     test byte [statFlg1], batchEOF  
-  2748 00003FE3 0F859F000000        <1>     jnz .eof    ;If we hit an ^Z while processing file, don't loop again
-  2749 00003FE9 498D506D            <1>     lea rdx, [r8 + fcb2 + fcb.filename]  ;fcb2 for the bat search buffer
-  2750                              <1> .findLbl:
-  2751                              <1> ;Keep searching for a label
-  2752 00003FED E8A7DFFFFF          <1>     call batReadChar
-  2753 00003FF2 0F8490000000        <1>     jz .eof
-  2754 00003FF8 48FF4513            <1>     inc qword [rbp + batBlockHdr.qBatOff] ;Inc the fp for each char read
-  2755 00003FFC 803A3A              <1>     cmp byte [rdx], ":"
-  2756 00003FFF 75EC                <1>     jne .findLbl 
-  2757                              <1> ;Here we found a candidate label. Take 8 chars w/o spaces and initial :
-  2758 00004001 31C9                <1>     xor ecx, ecx
-  2759                              <1> .loadRead:
-  2760 00004003 E891DFFFFF          <1>     call batReadChar
-  2761 00004008 744D                <1>     jz .lblDone
-  2762 0000400A 8A02                <1>     mov al, byte [rdx]  ;Get the char read into al
-  2763 0000400C 48FF4513            <1>     inc qword [rbp + batBlockHdr.qBatOff] ;Inc the fp for each char read
-  2764 00004010 3C0D                <1>     cmp al, CR
-  2765 00004012 7433                <1>     je .lblDoneCR
-  2766 00004014 3C0A                <1>     cmp al, LF
-  2767 00004016 743F                <1>     je .lblDone
-  2768 00004018 3C20                <1>     cmp al, SPC
-  2769 0000401A 74E7                <1>     je .loadRead
-  2770 0000401C E84B050000          <1>     call isALdelimiter
-  2771 00004021 740D                <1>     jz .pullEol ;If we have a delimiter char, pull it
-  2772 00004023 48FFC2              <1>     inc rdx ;Inc the storage pointer
-  2773 00004026 FFC1                <1>     inc ecx ;Inc the count
-  2774 00004028 81F908000000        <1>     cmp ecx, 8  ;Once we read 8 chars, readthru to end of line
-  2775 0000402E 75D3                <1>     jne .loadRead
-  2776                              <1> .pullEol:
-  2777 00004030 E864DFFFFF          <1>     call batReadChar
-  2778 00004035 7420                <1>     jz .lblDone
-  2779 00004037 48FF4513            <1>     inc qword [rbp + batBlockHdr.qBatOff] ;Inc the fp for each char read
-  2780 0000403B 803A0D              <1>     cmp byte [rdx], CR
-  2781 0000403E 7407                <1>     je .lblDoneCR
-  2782 00004040 803A0A              <1>     cmp byte [rdx], LF
-  2783 00004043 7412                <1>     je .lblDone
-  2784 00004045 EBE9                <1>     jmp short .pullEol
-  2785                              <1> .lblDoneCR:
-  2786                              <1> ;Read a CR, check if the next char is an LF and scan past it.
-  2787 00004047 E84DDFFFFF          <1>     call batReadChar
-  2788 0000404C 7409                <1>     jz .lblDone
-  2789 0000404E 803A0A              <1>     cmp byte [rdx], LF
-  2790 00004051 7504                <1>     jne .lblDone    ;No LF
-  2791                              <1> ;Else include the LF in the count to go past
-  2792 00004053 48FF4513            <1>     inc qword [rbp + batBlockHdr.qBatOff] 
-  2793                              <1> .lblDone:
-  2794                              <1> ;Check what we have to see if it is possible to form a label
-  2795 00004057 498D506C            <1>     lea rdx, qword [r8 + fcb2]
-  2796 0000405B 880A                <1>     mov byte [rdx + fcb.driveNum], cl  ;Store the len in the drive letter
-  2797 0000405D E838000000          <1>     call .ucChars    ;Now we UC the chars in the fcb pointed to by rdx
-  2798                              <1> ;Now compare the strings (trailing space padding)
-  2799 00004062 488D32              <1>     lea rsi, qword [rdx]
-  2800 00004065 AC                  <1>     lodsb   ;Get the count into al and move rsi to filename
-  2801 00004066 0FB6C8              <1>     movzx ecx, al   ;Move the count into ecx
-  2802 00004069 498D785D            <1>     lea rdi, qword [r8 + fcb1 + fcb.filename]
-  2803 0000406D 384FFF              <1>     cmp byte [rdi - 1], cl  ;If the counts are not equal, skip the cmp
-  2804 00004070 0F8566FFFFFF        <1>     jne .notLabelLp
-  2805 00004076 F3A6                <1>     repe cmpsb  ;Now do a string cmp
-  2806 00004078 0F855EFFFFFF        <1>     jne .notLabelLp
-  2807                              <1>     ;Here if the label is found. Bat FP points to the next line to read.
-  2808 0000407E E80EDFFFFF          <1>     call batClose   ;Close the handle
-  2809 00004083 E992FEFFFF          <1>     jmp remark.go   ;Now behave like rem to get the next line!
-  2810                              <1> .eof:
-  2811                              <1> ;Print label not found, end batch mode and return
-  2812 00004088 488D159DCBFFFF      <1>     lea rdx, badLbl
-  2813 0000408F E87F020000          <1>     call printString
-  2814 00004094 E88EDCFFFF          <1>     call batFinish  ;Kill the batch processor
-  2815                              <1>     return
+  2712                              <1> ;Start by copying the command line label to fcb1
+  2713 00003F88 498DB081000000      <1>     lea rsi, qword [r8 + cmdLine]
+  2714 00003F8F 498D785D            <1>     lea rdi, qword [r8 + fcb1 + fcb.filename]  ;Use fcb1 for the command line
+  2715 00003F93 E8C6050000          <1>     call skipDelimiters     ;Go to the first argument on cmdline
+  2716 00003F98 B908000000          <1>     mov ecx, 8
+  2717 00003F9D 803E3A              <1>     cmp byte [rsi], ":" ;If we the first char of the cmdline lbl is :, skip
+  2718 00003FA0 7503                <1>     jne .startCopy
+  2719 00003FA2 48FFC6              <1>     inc rsi
+  2720                              <1> .startCopy:
+  2721 00003FA5 AC                  <1>     lodsb
+  2722 00003FA6 3C20                <1>     cmp al, SPC         ;Skip any spaces
+  2723 00003FA8 74FB                <1>     je .startCopy       
+  2724 00003FAA 3C0D                <1>     cmp al, CR          ;If CR, exit copy
+  2725 00003FAC 740C                <1>     je .endCopy
+  2726 00003FAE E8B9050000          <1>     call isALdelimiter  ;If delimiter char, exit copy
+  2727 00003FB3 7405                <1>     jz .endCopy
+  2728 00003FB5 AA                  <1>     stosb           
+  2729 00003FB6 FFC9                <1>     dec ecx             ;Decrement counter
+  2730 00003FB8 75EB                <1>     jnz .startCopy
+  2731                              <1> .endCopy:
+  2732                              <1> ;Now search the batch file for the label.
+  2733 00003FBA F7D9                <1>     neg ecx
+  2734 00003FBC 81C108000000        <1>     add ecx, 8      ;Get the number of chars copied into ecx
+  2735 00003FC2 498D505C            <1>     lea rdx, qword [r8 + fcb1]
+  2736 00003FC6 880A                <1>     mov byte [rdx + fcb.driveNum], cl    ;Store the count in drivenum
+  2737 00003FC8 E8CB000000          <1>     call .ucChars   ;Now we UC the chars in the string
+  2738 00003FCD 48C7451300000000    <1>     mov qword [rbp + batBlockHdr.qBatOff], 0    ;Reset the file ptr
+  2739 00003FD5 E88BDFFFFF          <1>     call batOpen    ;Open the batch file. Handle in ebx.
+  2740                              <1> ;File opened from the start. Now start byte by byte read.
+  2741                              <1> .notLabelLp:
+  2742 00003FDA F605B3C0FFFF10      <1>     test byte [statFlg1], batchEOF  
+  2743 00003FE1 0F859F000000        <1>     jnz .eof    ;If we hit an ^Z while processing file, don't loop again
+  2744 00003FE7 498D506D            <1>     lea rdx, [r8 + fcb2 + fcb.filename]  ;fcb2 for the bat search buffer
+  2745                              <1> .findLbl:
+  2746                              <1> ;Keep searching for a label
+  2747 00003FEB E8A9DFFFFF          <1>     call batReadChar
+  2748 00003FF0 0F8490000000        <1>     jz .eof
+  2749 00003FF6 48FF4513            <1>     inc qword [rbp + batBlockHdr.qBatOff] ;Inc the fp for each char read
+  2750 00003FFA 803A3A              <1>     cmp byte [rdx], ":"
+  2751 00003FFD 75EC                <1>     jne .findLbl 
+  2752                              <1> ;Here we found a candidate label. Take 8 chars w/o spaces and initial :
+  2753 00003FFF 31C9                <1>     xor ecx, ecx
+  2754                              <1> .loadRead:
+  2755 00004001 E893DFFFFF          <1>     call batReadChar
+  2756 00004006 744D                <1>     jz .lblDone
+  2757 00004008 8A02                <1>     mov al, byte [rdx]  ;Get the char read into al
+  2758 0000400A 48FF4513            <1>     inc qword [rbp + batBlockHdr.qBatOff] ;Inc the fp for each char read
+  2759 0000400E 3C0D                <1>     cmp al, CR
+  2760 00004010 7433                <1>     je .lblDoneCR
+  2761 00004012 3C0A                <1>     cmp al, LF
+  2762 00004014 743F                <1>     je .lblDone
+  2763 00004016 3C20                <1>     cmp al, SPC
+  2764 00004018 74E7                <1>     je .loadRead
+  2765 0000401A E84D050000          <1>     call isALdelimiter
+  2766 0000401F 740D                <1>     jz .pullEol ;If we have a delimiter char, pull it
+  2767 00004021 48FFC2              <1>     inc rdx ;Inc the storage pointer
+  2768 00004024 FFC1                <1>     inc ecx ;Inc the count
+  2769 00004026 81F908000000        <1>     cmp ecx, 8  ;Once we read 8 chars, readthru to end of line
+  2770 0000402C 75D3                <1>     jne .loadRead
+  2771                              <1> .pullEol:
+  2772 0000402E E866DFFFFF          <1>     call batReadChar
+  2773 00004033 7420                <1>     jz .lblDone
+  2774 00004035 48FF4513            <1>     inc qword [rbp + batBlockHdr.qBatOff] ;Inc the fp for each char read
+  2775 00004039 803A0D              <1>     cmp byte [rdx], CR
+  2776 0000403C 7407                <1>     je .lblDoneCR
+  2777 0000403E 803A0A              <1>     cmp byte [rdx], LF
+  2778 00004041 7412                <1>     je .lblDone
+  2779 00004043 EBE9                <1>     jmp short .pullEol
+  2780                              <1> .lblDoneCR:
+  2781                              <1> ;Read a CR, check if the next char is an LF and scan past it.
+  2782 00004045 E84FDFFFFF          <1>     call batReadChar
+  2783 0000404A 7409                <1>     jz .lblDone
+  2784 0000404C 803A0A              <1>     cmp byte [rdx], LF
+  2785 0000404F 7504                <1>     jne .lblDone    ;No LF
+  2786                              <1> ;Else include the LF in the count to go past
+  2787 00004051 48FF4513            <1>     inc qword [rbp + batBlockHdr.qBatOff] 
+  2788                              <1> .lblDone:
+  2789                              <1> ;Check what we have to see if it is possible to form a label
+  2790 00004055 498D506C            <1>     lea rdx, qword [r8 + fcb2]
+  2791 00004059 880A                <1>     mov byte [rdx + fcb.driveNum], cl  ;Store the len in the drive letter
+  2792 0000405B E838000000          <1>     call .ucChars    ;Now we UC the chars in the fcb pointed to by rdx
+  2793                              <1> ;Now compare the strings (trailing space padding)
+  2794 00004060 488D32              <1>     lea rsi, qword [rdx]
+  2795 00004063 AC                  <1>     lodsb   ;Get the count into al and move rsi to filename
+  2796 00004064 0FB6C8              <1>     movzx ecx, al   ;Move the count into ecx
+  2797 00004067 498D785D            <1>     lea rdi, qword [r8 + fcb1 + fcb.filename]
+  2798 0000406B 384FFF              <1>     cmp byte [rdi - 1], cl  ;If the counts are not equal, skip the cmp
+  2799 0000406E 0F8566FFFFFF        <1>     jne .notLabelLp
+  2800 00004074 F3A6                <1>     repe cmpsb  ;Now do a string cmp
+  2801 00004076 0F855EFFFFFF        <1>     jne .notLabelLp
+  2802                              <1>     ;Here if the label is found. Bat FP points to the next line to read.
+  2803 0000407C E810DFFFFF          <1>     call batClose   ;Close the handle
+  2804 00004081 E994FEFFFF          <1>     jmp remark.go   ;Now behave like rem to get the next line!
+  2805                              <1> .eof:
+  2806                              <1> ;Print label not found, end batch mode and return
+  2807 00004086 488D159FCBFFFF      <1>     lea rdx, badLbl
+  2808 0000408D E881020000          <1>     call printString
+  2809 00004092 E890DCFFFF          <1>     call batFinish  ;Kill the batch processor
+  2810                              <1>     return
     13                              <2> %%_ret:
-    14 00004099 C3                  <2>  ret
+    14 00004097 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-  2816                              <1> 
-  2817                              <1> .ucChars:
-  2818                              <1> ;Input: rdx -> Buffer where the first byte gives number of chars to UC
-  2819                              <1> ;Output: The rdx[0] bytes from rdx[1] are UC'd
-  2820 0000409A 50                  <1>     push rax
-  2821 0000409B 51                  <1>     push rcx
-  2822 0000409C 56                  <1>     push rsi
-  2823                              <1> 
-  2824 0000409D 488D7201            <1>     lea rsi, qword [rdx + 1]    ;Start of string to uppercase
-  2825 000040A1 0FB60A              <1>     movzx ecx, byte [rdx]       ;Get byte count to uppercase
-  2826                              <1> .ucclp:
-  2827 000040A4 AC                  <1>     lodsb   ;Get the char
-  2828 000040A5 50                  <1>     push rax    ;Push it on stack
-  2829 000040A6 B813120000          <1>     mov eax, 1213h  ;Get DOS to UC it
-  2830 000040AB CD2F                <1>     int 2Fh
-  2831 000040AD 8846FF              <1>     mov byte [rsi - 1], al  ;Replace the char with it's UC'd version
-  2832 000040B0 58                  <1>     pop rax     ;Balance stack
-  2833 000040B1 FFC9                <1>     dec ecx     
-  2834 000040B3 75EF                <1>     jnz .ucclp  ;Go again if we havent exhausted all chars
-  2835                              <1>     
-  2836 000040B5 5E                  <1>     pop rsi
-  2837 000040B6 59                  <1>     pop rcx
-  2838 000040B7 58                  <1>     pop rax
-  2839                              <1>     return
+  2811                              <1> 
+  2812                              <1> .ucChars:
+  2813                              <1> ;Input: rdx -> Buffer where the first byte gives number of chars to UC
+  2814                              <1> ;Output: The rdx[0] bytes from rdx[1] are UC'd
+  2815 00004098 50                  <1>     push rax
+  2816 00004099 51                  <1>     push rcx
+  2817 0000409A 56                  <1>     push rsi
+  2818                              <1> 
+  2819 0000409B 488D7201            <1>     lea rsi, qword [rdx + 1]    ;Start of string to uppercase
+  2820 0000409F 0FB60A              <1>     movzx ecx, byte [rdx]       ;Get byte count to uppercase
+  2821                              <1> .ucclp:
+  2822 000040A2 AC                  <1>     lodsb   ;Get the char
+  2823 000040A3 50                  <1>     push rax    ;Push it on stack
+  2824 000040A4 B813120000          <1>     mov eax, 1213h  ;Get DOS to UC it
+  2825 000040A9 CD2F                <1>     int 2Fh
+  2826 000040AB 8846FF              <1>     mov byte [rsi - 1], al  ;Replace the char with it's UC'd version
+  2827 000040AE 58                  <1>     pop rax     ;Balance stack
+  2828 000040AF FFC9                <1>     dec ecx     
+  2829 000040B1 75EF                <1>     jnz .ucclp  ;Go again if we havent exhausted all chars
+  2830                              <1>     
+  2831 000040B3 5E                  <1>     pop rsi
+  2832 000040B4 59                  <1>     pop rcx
+  2833 000040B5 58                  <1>     pop rax
+  2834                              <1>     return
+    13                              <2> %%_ret:
+    14 000040B6 C3                  <2>  ret
+    15                              <2> %assign retOff %%_ret-$$
+  2835                              <1> 
+  2836                              <1> forCmd:
+  2837                              <1>     return
+    13                              <2> %%_ret:
+    14 000040B7 C3                  <2>  ret
+    15                              <2> %assign retOff %%_ret-$$
+  2838                              <1>     
+  2839                              <1> ifCmd:
+  2840                              <1>     return
     13                              <2> %%_ret:
     14 000040B8 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
