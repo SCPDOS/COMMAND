@@ -246,7 +246,6 @@ dir:
     cmp byte [rsi + 3], 0   ;Is this a null path?
     je .wcSearchPattern     ;Move the ptr to end of path and add search patt.
 .notNull:
-    call setDTA ;Set the DTA
     mov ecx, dirDirectory   ;Dir, normal and read only files!
     mov eax, 4E00h ;Find first
     int 21h
@@ -322,7 +321,6 @@ dir:
     return
 
 .searchForFile:
-    call setDTA
     mov ecx, dirDirectory   ;Search for normal, ro and dir
     lea rdx, dirSrchDir
     mov eax, 4E00h ;Find first
@@ -551,7 +549,6 @@ copy:
     mov byte [destSpec], 0
     mov qword [srcPtr], 0
     mov qword [destPtr], 0
-    call setDTA
     mov eax, 5400h  ;Get verify flag
     int 21h
     mov byte [verifyFlg], al    ;Save verify flag!
@@ -1161,7 +1158,6 @@ copyMain:
 erase:
     test byte [arg1Flg], -1
     jz badArgError
-    call setDTA     ;Start by resetting the DTA
     call buildCommandPath   ;Get the relative path to the file
 .dirLp:
     lea rdi, searchSpec
@@ -1784,7 +1780,6 @@ rename:
     mov byte [rbx - 1], al  ;Now replace the null with a pathsep again!
 .noPath:
     ;Now we have where to copy the files to, we can start our work!
-    call setDTA
     lea rdx, searchSpec
     xor ecx, ecx    ;Rename works on normal and read only files only!
     mov eax, 4E00h  ;Find first!
@@ -1892,7 +1887,6 @@ volume:
     movzx eax, byte [r8 + fcb1 + fcb.driveNum] ;Get the 1-based drive number
     dec eax ;Convert to 0 based number
 .dirEP: ;Must be called with VALID 0 based drive number in al  
-    call setDTA     ;Ensure we have our DTA set correctly, preserving all regs
     lea rdx, volFcb
     inc eax ;Get 1 based drive number
     mov ebx, eax    ;Save the drive number in ebx

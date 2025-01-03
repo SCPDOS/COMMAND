@@ -49,8 +49,8 @@ commandMain:
 ;First check we had something typed in of length greater than 0
     cmp byte [inBuffer + 1], 0  ;Check input length valid
     je .inputGetCmdlineAgain  ;If not, keep looping input
-    ;Copy over the input text
 .goSingle:
+;Copy over the input text
     lea rsi, inBuffer   ;This buffer is used for all input so copy command line
     lea rdi, cpyBuffer
     mov ecx, cmdBufferL     ;Copy the buffer over to manipulate
@@ -393,11 +393,12 @@ doCommandLine:
     pop rcx
     pop rsi
     jne .gotoNextEntry
-    ;Here it was found both strings are equal
+    ;Here it was found both strings are equal.
     lea rdi, qword [rbx + rcx + 1]  ;make rdi point to offset from startLbl
     movzx rbx, word [rdi]
     lea rdi, startLbl
     add rbx, rdi
+    call setDTA     ;Set the DTA back to us before we proceed!
     call rbx        ;Call the internal function!
 ;xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ;!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -873,10 +874,13 @@ int2Eh:
     test byte [statFlg1], inSingle
     jnz int2EcheckReentry 
 .multiJoin:
-    or byte [statFlg1], inSingle ;Set the bits! Gets the lock!
-    mov qword [int2Ersp], rsp   ;Save the far stack pointer 
-    mov rsp, qword [stackTop]    ;Set to use the internal stack
-    mov eax, 5100h ;Get Current PSP in rdx
+    or byte [statFlg1], inSingle    ;Set the bits! Gets the lock!
+    mov qword [int2Ersp], rsp       ;Save the far stack pointer 
+    mov eax, 2F00h  ;Get the current DTA in rbx
+    int 21h
+    mov qword [int2Edta], rbx       ;We set the dta in the main loop later
+    mov rsp, qword [stackTop]       ;Set to use the internal stack
+    mov eax, 5100h  ;Get Current PSP in rdx
     int 21h
     mov qword [int2Epsp], rbx
     push rdx    ;Save on the stack
@@ -896,7 +900,10 @@ int2ERet:
     call clearCommandLineState  ;Be a good citizen, leave it as we found it!
     mov rsp, qword [int2Ersp]
     mov rbx, qword [int2Epsp] ;Get Old current PSP in rbx
-    mov eax, 5000h ;Set Current PSP
+    mov eax, 5000h  ;Set Current PSP
+    int 21h
+    mov rdx, qword [int2Edta]
+    mov eax, 1A00h  ;Set the DTA back to where it was upon return
     int 21h
     movzx eax, word [returnCode]    ;Get the return code in eax
     and byte [statFlg1], ~inSingle  ;Clear that we are in single mode

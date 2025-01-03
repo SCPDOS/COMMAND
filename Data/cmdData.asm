@@ -6,6 +6,7 @@ returnCode  dw 0    ;Return Code from a child process
 pspPtr      dq 0    ;Internal pointer to the task PSP
 int2Epsp    dq 0    ;
 int2Ersp    dq 0    ;Save the far Int 2E entry stack pointer!
+int2Edta    dq 0    ;
 numHdls     dw 20   ;Get number of handles permitted
 pathSep     db "\"  ;Default path sep
 switchChar  db "/"  ;Default switch char
