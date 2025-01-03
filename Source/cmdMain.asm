@@ -398,9 +398,23 @@ doCommandLine:
     movzx rbx, word [rdi]
     lea rdi, startLbl
     add rbx, rdi
-    mov byte [returnCode], 0 ;Reset the retcode before executing function!
     call rbx        ;Call the internal function!
-    jmp short appRet    ;Now once we are done, goto appRet!
+;xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+;!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+;No need for the below because the retcode is 
+; zeroed when we it from DOS.
+;!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+;    mov byte [returnCode], 0 
+;!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ;jmp short appRet    ;Now once we are done, goto appRet!
+;xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+;This new exit preserves the retcode, and now allows for internal
+; commands to implement retcodes which we don't use for now.
+;I doubt we need to reset the stackptr as to get here, the stack has to
+; have been balanced which means when we pop, we go back to okRet anyway...
+    mov rsp, qword [stackTop]   ;Reset stack ptr! Unlikely needed!
+    jmp commandMain.okRet   
 .gotoNextEntry:
     add rbx, 3      ;Go past the first count byte and the address word
     add rbx, rcx    ;Go past the length of the command name too
@@ -409,10 +423,10 @@ doCommandLine:
 appRet:  ;Return point from a task, jumped to from internal functions
 ;Reset our PSP vectors (and IVT copies) in the event they got mangled.
 ;Can depend on RSP here because I fixed DOS.
-    mov rsp, qword [stackTop]   ;Reset stack ptr
     call resetIDTentries
-    mov eax, 4D00h              ;Get retcode, will be 0 for internal commands
+    mov eax, 4D00h              ;Get retcode, sets to 0 for internal commands
     int 21h
+    mov rsp, qword [stackTop]   ;Reset stack ptr! Unlikely needed!
     mov word [returnCode], ax
     test ah, ah     ;Regular exit
     jz commandMain.okRet

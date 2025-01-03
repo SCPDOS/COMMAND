@@ -59,7 +59,10 @@ cmdLineStateL equ $ - cmdLineStatePtr
 bbPtr       dq 0    ;Ptr to the batch block
 batFile     db fileSpecZL dup (0)   ;Path to bat to execute. Qual with path!
 batYNstr    db 2,1," ",CR           ;String for buffered Y/N input
-ifNot       db 0                    ;Set when a NOT is found in IF.
+ifFlg       db 0                    ;Flags for IF
+ifReset     equ 0                   ;Value to reset the flags
+ifNot       equ 1                   ;Set if NOT encountered
+ifCond      equ 2                   ;Set if condition encountered              
 
 ;Structs and strings
 cmdFcb      db 10h dup (0) ;Internal "fcb" for parsing the command name

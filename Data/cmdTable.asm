@@ -97,16 +97,46 @@ functionTable:
 
     db 4, "GOTO"
     dw goto - startLbl
-;-----------------------------
-; Commands left to implement 
-;-----------------------------
+
     db 5, "SHIFT"
     dw shift - startLbl
-
-    db 3, "FOR"
-    dw forCmd - startLbl
 
     db 2, "IF"
     dw ifCmd - startLbl
 ;-----------------------------
+; Commands left to implement 
+;-----------------------------
+    db 3, "FOR"
+    dw forCmd - startLbl
+;-----------------------------
     db -1   ;End of table
+
+;Easy table to use, 13 entries, 3 bytes per entry
+pTbl:
+    db "B", 
+    dw putPipeInPrompt - pTbl     ;Pipe char
+    db "D", 
+    dw printFmtDate - pTbl        ;Current date
+    db "E", 
+    dw putEscInPrompt - pTbl      ;ANSI Escape char
+    db "G", 
+    dw putGTinPrompt - pTbl       ;Greater than char
+    db "H", 
+    dw putBSPinPrompt - pTbl      ;Backspace
+    db "L", 
+    dw putLTinPrompt - pTbl       ;Less than char
+    db "N", 
+    dw putDriveInPrompt - pTbl    ;Current drive letter
+    db "P", 
+    dw putCWDInPrompt - pTbl      ;Current drive and path
+    db "Q", 
+    dw putEquInPrompt - pTbl      ;Equals char
+    db "T", 
+    dw printFmtTime - pTbl        ;Current time in hh:mm:ss.hh fmt
+    db "V", 
+    dw putVersionInPrompt - pTbl  ;DOS version number
+    db "_", 
+    dw printCRLF - pTbl           ;CRLF pair
+    db "$", 
+    dw putMoneyInPrompt - pTbl    ;Dollar sign
+pTblL equ $ - pTbl

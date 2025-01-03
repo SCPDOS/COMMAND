@@ -70,9 +70,9 @@ badArgs db "Invalid number of parameters",CR,LF,"$"
 devWriteErr db "Error writing to device"
 backSpace   db BSP," ",BSP,NUL
 noMemMsg    db "Program too big to fit in memory",CR,LF,"$"
-notString   db "NOT"
-ErrlvlStr   db "ERRORLEVEL"
-ExistStr    db "EXIST"
+notString   db "NOT",0
+errlvlStr   db "ERRORLEVEL",0
+existStr    db "EXIST",0
 
 memSys  db CR,LF,"              Total system memory: $"
 memDOS  db CR,LF,"               Memory used by DOS: $"

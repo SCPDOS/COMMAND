@@ -64,9 +64,7 @@ batLaunch:
 .bbCpName:
     call strcpy ;Copy the remaining portion
     lea rsi, batFile
-    mov rdi, rsi
-    mov eax, 1211h  ;Normalise the path :)
-    int 2fh
+    call normalisePath  ;Normalise the path :)
 ;Now batFile has the FQpathname, construct the new CR delimited command line.
     lea rsi, cmdBuffer + 2
     lea rdi, cmdBuffer + 1  ;Overwrite count byte as we will null terminate

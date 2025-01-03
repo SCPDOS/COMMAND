@@ -2233,7 +2233,12 @@ launchChild:
     mov eax, 5900h      ;Get extended error
     xor ebx, ebx
     int 21h
-    mov word [returnCode], ax   ;Error code from EXEC
+;!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+; The below doesnt make any sense. Retcode is
+; is not the DOS error code.
+;!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ;mov word [returnCode], ax   ;Error code from EXEC
+;!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     cmp al, errAccDen   ;Access denied?
     je badAccError
     cmp al, errMCBbad   ;If MCB bad error, freeze PC
@@ -2820,11 +2825,8 @@ goto:
     movzx ecx, byte [rdx]       ;Get byte count to uppercase
 .ucclp:
     lodsb   ;Get the char
-    push rax    ;Push it on stack
-    mov eax, 1213h  ;Get DOS to UC it
-    int 2Fh
+    call ucChar
     mov byte [rsi - 1], al  ;Replace the char with it's UC'd version
-    pop rax     ;Balance stack
     dec ecx     
     jnz .ucclp  ;Go again if we havent exhausted all chars
     
@@ -2833,26 +2835,138 @@ goto:
     pop rax
     return
 
-forCmd:
+ifCmd:
+;Use the fact we parse the first two words into the FCBs to check 
+; for NOT and then the condition word
+    mov byte [ifFlg], ifReset ;Reset not state
+    lea rsi, qword [r8 + cmdLine]
+    call .getNextArg    ;Skip leading delimiters
+    mov rbx, rsi        ;Save the possible start of string ptr (if string)
+    call .makeAsciizAdv ;Move rsi to next word, rdi -> ASCIZ string
+    push rsi    ;Save ptr to the next word on stack
+    lea rsi, notString
+    call .strcmp
+    pop rsi
+    jne .chkErlvl
+    or byte [ifFlg], ifNot  ;Set not on
+    mov rbx, rsi    ;Save the start of string ptr (if string)
+    call .makeAsciizAdv     ;Goto next word
+.chkErlvl:
+    push rsi    ;rsi points to the argument
+    lea rsi, errlvlStr
+    call .strcmp
+    pop rsi
+    je .errorLvl
+    push rsi
+    lea rsi, existStr
+    call .strcmp
+    pop rsi
+    je .exist
+;Here we check condition string1==string2
+;rsi points to the start of the string to check condition of
+    mov rsi, rbx    ;Get back the start of the string
+    mov rdi, rsi    ;Move rdi to the start of the string
+    xor ecx, ecx    ;String length cnt
+.scCheck:
+    lodsb
+    cmp al, "="
+    je .scEqFnd
+    call isALdelimiter
+    je badSyntaxError
+    cmp al, CR
+    je badSyntaxError
+    inc ecx         ;One more char to count
+    jmp short .scCheck
+.scEqFnd:
+    lodsb   ;Move rsi to the char past this equal sign
+    cmp al, "=" ;Is the second char an equal too?
+    jne badSyntaxError
+    repe cmpsb  ;Compare the strings, leave rsi past string 2
+    jnz .cndMiss
+.cndHit:
+    or byte [ifFlg], ifCond ;The default condition was hit
+.cndMiss:
+    movzx eax, byte [ifFlg]
+    mov ebx, eax
+    shr ebx, 1      ;Get bit 1 to bit 0
+    and eax, 1      ;Isolate bit 0
+    xor eax, ebx    ;xor the condition hit bit with not. If 1, execute!
+    retz            ;Else return silently!
+;Now rsi points to delims before the command. 
+; Skip the delims and copy the argument!
+    call skipDelimiters    ;Now go to the next argument (No need for CR check)
+    lea rdi, qword [inBuffer + 2]
+    xor ecx, ecx
+.cpExitLp:
+    lodsb
+    stosb
+    inc ecx ;Add a new char to the count
+    cmp al, CR
+    jne .cpExitLp
+    dec ecx ;Drop CR from count
+    mov byte [inBuffer + 1], cl
+    pop rax ;Balance the stack
+    pop rax
+    jmp commandMain.batProceed    ;And execute the command now!
+.exist:
+;Here we do the check for file existance
+    call .makeAsciizAdv
+    mov ecx, dirDirectory    ;Search for normal, RO and dir
+    mov rdx, rdi    ;Move the ptr to rdx
+    mov eax, 4E00h  ;Find first
+    int 21h
+    jnc .cndHit
+    jmp short .cndMiss
+.errorLvl:
+;Here we do the check for error level
+    call .makeAsciizAdv
+    xchg rdi, rsi
+    call getNum     ;Get value in eax
+    cmp eax, 255    ;Value can't be bigger than 255
+    ja badSyntaxError
+    xchg rdi, rsi
+    cmp al, byte [returnCode]
+    je .cndHit
+    jmp .cndMiss
+;------------------------
+;      If routines
+;------------------------
+.makeAsciizAdv:
+;Input: rsi -> Non delimiter char string
+;Output: rsi -> Next substring past delimiters
+;       rdi -> ASCIIZ version of the string we just passed
+    pop rax ;Align the stack so if we hit a CR its .getNextArg doesnt crash
+    call .makeArgAsciz      ;Get in rdi -> ASCIZ argument. rsi -> terminator
+    call .getNextArg        ;rsi -> Command
+    jmp rax                 ;Go to this address now
+
+.makeArgAsciz:
+;Creates a null terminated string in the search spec.
+;Input: rsi -> String to copy with null terminator
+;Ouput: rsi -> Terminator
+;       rdi -> Search Spec with filled ASCIZ string
+    push rax    ;Preserve rax
+    call copyArgumentToSearchSpec
+    pop rax
+    lea rdi, searchSpec
+    dec rsi     ;Point back to the delimiter char
     return
 
-ifCmd:
-    mov byte [ifNot], 0     ;Reset not state
-    lea rsi, qword [r8 + cmdLine]
-    call skipDelimiters
-    lea rdi, qword [r8 + fcb1]
-    mov eax, 2901h   ;Parse the word, move rsi past it
-    int 21h
-    cmp byte [rdi + 3], SPC ;The fourth char should be clean!
-    jne .noNot
-    mov rbx, rsi    ;Save ptr to the next word in the string
-    lea rsi, notString
-    mov ecx, 3
-    repe cmpsb
-    mov rsi, rbx
-    jne .noNot
-    mov byte [ifNot], 1
-.noNot:
+.getNextArg:
+;Moves rsi to the first next element. If a CR is encountered, it exits
+;Input: rsi -> String
+;Output: rsi -> First non delimiter char after initial position
+    call skipDelimiters     ;Preserves rax
+    cmp byte [rsi], CR
+    retne
+    pop rax ;Pop the return address off the stack
+    jmp badSyntaxError  ;And jump error out
+
+.strcmp:
+    mov eax, 121Eh
+    int 2fh
+    return
 
 
+forCmd:
     return

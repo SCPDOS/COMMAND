@@ -223,7 +223,7 @@ printPrompt:
 .escapeChar:
     lodsb       ;Get the next char now that we are escaping
     call ucChar ;Uppercase this char in al
-    lea rbx, .pTbl
+    lea rbx, pTbl
     mov ecx, pTblL / 3  ;3 bytes per entry
 .escapeLp:
     cmp byte [rbx], al  ;Are we at the right entry?
@@ -233,43 +233,13 @@ printPrompt:
     jnz .escapeLp
     jmp short .promptLp  ;Output nothing if invalid
 .escapeFnd:
-    lea rax, .pTbl              ;Get the table addr
+    lea rax, pTbl              ;Get the table addr
     movzx ebx, word [rbx + 1]   ;Get the word offset from the table
     add rax, rbx                ;Add these
     push rsi    ;Ensure rsi remains unchanged
     call rax    ;Call indirectly the function to output the chars
     pop rsi
     jmp short .promptLp
-
-;Easy table to use, 13 entries, 3 bytes per entry
-.pTbl:
-    db "B", 
-    dw putPipeInPrompt - .pTbl     ;Pipe char
-    db "D", 
-    dw printFmtDate - .pTbl        ;Current date
-    db "E", 
-    dw putEscInPrompt - .pTbl      ;ANSI Escape char
-    db "G", 
-    dw putGTinPrompt - .pTbl       ;Greater than char
-    db "H", 
-    dw putBSPinPrompt - .pTbl      ;Backspace
-    db "L", 
-    dw putLTinPrompt - .pTbl       ;Less than char
-    db "N", 
-    dw putDriveInPrompt - .pTbl    ;Current drive letter
-    db "P", 
-    dw putCWDInPrompt - .pTbl      ;Current drive and path
-    db "Q", 
-    dw putEquInPrompt - .pTbl      ;Equals char
-    db "T", 
-    dw printFmtTime - .pTbl        ;Current time in hh:mm:ss.hh fmt
-    db "V", 
-    dw putVersionInPrompt - .pTbl  ;DOS version number
-    db "_", 
-    dw printCRLF - .pTbl           ;CRLF pair
-    db "$", 
-    dw putMoneyInPrompt - .pTbl    ;Dollar sign
-pTblL equ $ - .pTbl
 
 printCRLFecho:
     test byte [echoFlg], -1
