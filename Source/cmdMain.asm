@@ -69,6 +69,7 @@ commandMain:
     ;ZF here indicates if we are at the end of the command or nots
     call setupRedirandPipes ;Setup/advance pipes and redir as appropriate
     call analyseCmdline     ;Setup cmdName and fcb for cmdBuffer portion
+    call setDTA             ;Set the DTA back to us before we proceed!
     call doCommandLine      ;This preps and executes the command portion.
 .okRet:                     ;Normal return point for processing
     call advanceRedir       ;Now advance and end redir if needed
@@ -398,7 +399,6 @@ doCommandLine:
     movzx rbx, word [rdi]
     lea rdi, startLbl
     add rbx, rdi
-    call setDTA     ;Set the DTA back to us before we proceed!
     call rbx        ;Call the internal function!
 ;xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ;!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

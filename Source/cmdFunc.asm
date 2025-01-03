@@ -2146,8 +2146,7 @@ launchChild:
     ;COMMAND.COM on DOS 3.3 doesn't honour the extension. If there exists a 
     ;foo.com and a foo.exe in the same dir and you type foo.exe it launches 
     ;foo.com. We will not honour this behaviour as this kinda sucks!
-    ;We know the drive we are on is valid so no need to double check that!
-    call setDTA         
+    ;We know the drive we are on is valid so no need to double check that!      
     ;Now we rebuild the cmdFcb from the last path componant.
     lea rdi, cmdPathSpec
     mov rsi, rdi
