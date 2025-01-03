@@ -2079,7 +2079,7 @@ type:
     jz badArgError
     test byte [arg2Flg], -1
     jnz badArgError         ;If this set, error
-    mov r8, [pspPtr]
+    mov r8, [pPSP]
     lea rsi, qword [r8 + cmdLine]
     movzx eax, byte [arg1Off]
     add rsi, rax    ;Point rsi to this argument

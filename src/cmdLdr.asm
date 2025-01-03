@@ -1,4 +1,14 @@
 cmdLdr:
+;Start by copying the loader forwards to make space for the BSS
+    lea rsi, cmdLdr
+    lea rdi, section.init.vstart + initOffset
+    mov ecx, initLen
+    rep movsb
+    lea rdi, startInit + initOffset
+    push rdi
+    ret ;Goto next instruction but reallocated!
+
+startInit:
 ;First check if the version is ok. If not, return.
     mov ah, 30h
     int 21h
@@ -10,34 +20,25 @@ cmdLdr:
 .exitBad:
     int 20h ;Exit to caller or DOS to print bad command interpreter line
 .okVersion:
-;If ok then store self as parent in the PSP, to prevent accidental closure
+;Now the version is ok we store self as parent in the PSP, 
+; to prevent accidental closure
     or byte [statFlg1], inLdr   ;Ok now we start our special work
-    mov qword [pspPtr], r8      ;Store PSP ptr in internal var 
-;Call for simple internationalisation data
-    mov eax, 3700h  ;Get switchchar in dl
-    int 21h
-    cmp al, -1
-    je .skipSwitch
-    mov byte [switchChar], dl   ;Store the switchChar in var
-    cmp dl, "-" ;Is the switchChar Unix?
-    jne .skipSwitch
-    mov byte [pathSep], "/" ;Swap default path separator to UNIX style
-.skipSwitch:
-    mov eax, 3800h  ;Get current country data
-    lea rdx, ctryData
-    int 21h ;Write the data to the internal country table 
+    mov qword [pPSP], r8        ;Store PSP ptr in internal var 
+    lea rsp, stackTop           ;And set the stack pointer to our stack
+    lea rdi, section.bss.start
+    mov ecx, bssLen
+    xor eax, eax
+    rep stosb
 ;Now eject all the unneeded space, to make space for allocating.
 ;Thus the allocations in the parsing should never fail (but still may)
-    lea rsp, initEoA
-    mov rbx, rsp
-    neg r8  ;Convert r8 to -r8
-    lea rbx, qword [rbx + r8]    ;Get # of bytes for COMMAND.COM and stack
+    lea rbx, endOfInitAlloc
+    sub rbx, r8 ;Convert to number of bytes (Could get assembler to do this)
+    add ebx, 0Fh    ;Round up paragraph
     shr ebx, 4  ;Convert to paragraphs
     mov eax, 4A00h ;Realloc
-    neg r8  ;Convert -r8 to r8
     int 21h
-    jc .exitBad 
-    mov r8, r9  ;Reset r8 to point to the psp
+    jc .exitBad
+    call resetNation
 ;Now space has been made, time to parse the command tail
     call parseCmdLine   ;Now parse the command tail.
     call doEnv          ;Now enact the command tail actions
@@ -101,8 +102,6 @@ cmdLdr:
     int 21h ;Print init string
     xor edx, edx        ;Indicate we DONT want to do Autoexec processing
 .prepStart:
-    call computeStackPtr    ;Returns the stack ptr in rbx and var
-    mov rsp, rbx        ;Move the stack pointer to this address
     and byte [statFlg1], ~inLdr    ;Special work complete :-)
     jmp commandStart    ;We jump with rbx = base address to jettison
 .singleCom:
@@ -114,15 +113,6 @@ cmdLdr:
     dec edx             ;Pretend that we want to process Autoexec
     jmp short .prepStart
 
-computeStackPtr:
-    ;Now we add the stack to the alloc and paragraph align
-    lea rbx, endOfAlloc
-    add rbx, stackSize
-    add rbx, 11h    ;Go one para up
-    shr rbx, 4      ;Round to this new para boundary
-    shl rbx, 4
-    mov qword [stackTop], rbx   ;Save this value of the stack ptr in var
-    return
 
 parseCmdLine:
 ;COMMAND [drive:][path][device][/E:n][/P][/C string]
@@ -444,4 +434,4 @@ badCmdDir:  db "Specified COMMAND search directory bad",CR,LF,"$"
 badEnvSz:   db "Invalid Environment Size",CR,LF,"$"
 initNewSpec db 0    ;Set if a new comspec found and copied
 initNewDev  db 0    ;Set if a new device found and copied
-initEnvSz       dw 0  ;Max 7FFFh (32768) bytes. Default to 160. 0 means no /E:
+initEnvSz   dw 0    ;Max 7FFFh (32768) bytes. Default to 160. 0 means no /E:

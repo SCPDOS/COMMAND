@@ -1,13 +1,11 @@
 commandStart:
 ;Jumped to with edx=0 means no autoexec. edx=-1 means autoexec.
-    ;Resize Allocation, jump here with endpointer in rbx
-    ;Ideally would have this jettisoned too but cannot guarantee
-    ; that the jump to safety won't be gobbled up when multitasking
-    neg r8  ;Convert r8 to -r8
-    lea rbx, qword [rbx + r8]    ;Get # of bytes for COMMAND.COM and stack
+;Now resize the allocation
+    lea rbx, endOfAlloc
+    sub rbx, r8 ;Get # of bytes for COMMAND.COM and stack
+    add ebx, 0Fh    ;Round up paragraph
     shr ebx, 4  ;Convert to paragraphs
-    mov ah, 4Ah ;Realloc
-    neg r8  ;Convert -r8 to r8
+    mov eax, 4A00h ;Realloc
     int 21h
     test edx, edx   ;If zero, no autoexec or single command
     jz commandMain
@@ -23,7 +21,7 @@ commandStart:
     mov byte [rdi - 1], CR  ;Store a CR over the terminating null
     jmp short commandMain.batProceed
 commandMain:
-    mov rsp, qword [stackTop]    ;Reset internal stack pointer pos
+    lea rsp, stackTop   ;Reset internal stack pointer pos
     call getSetMainState
 .inputMain:         ;Only reset once per line!
     test byte [statFlg1], inSingle   ;If we here in single mode, time to exit
@@ -64,7 +62,7 @@ commandMain:
     cmp byte [rsi], "|"     ;If the first non-delim is a pipe, syntax error!
     je hardSynErr
 .pipeLoop:
-    mov r8, qword [pspPtr]  ;Point back to home segment
+    mov r8, qword [pPSP]  ;Point back to home segment
     call makeCmdString      ;Makes the CR delimited command in psp
     ;ZF here indicates if we are at the end of the command or nots
     call setupRedirandPipes ;Setup/advance pipes and redir as appropriate
@@ -282,8 +280,20 @@ analyseCmdline:
     lea rdi, cmdPathSpec
     call findLastPathComponant  ;Point rdi to last path componant
     call strlen ;Get the length of the null terminated final path componant
+    cmp byte [rdi + 1], ":"
+    jne .noDrivePath
+    mov al, byte [pathSep]
+    cmp byte [rdi + 2], al
+    je .noDrivePath
+    ;Here if the filename is an FCB name A:12345678.9AB<NUL> (15 chars)
+    cmp ecx, 15
+    ja .exitBad
+    jmp short .proceedCp
+.noDrivePath:
+;Normal paths come here
     cmp ecx, fileNameZL ;11 chars + ext sep + null terminator
     ja .exitBad     ;Return error
+.proceedCp:
     mov rsi, rdi
     lea rdi, cmdName
     dec ecx ;Minus the terminating null
@@ -414,7 +424,7 @@ doCommandLine:
 ; commands to implement retcodes which we don't use for now.
 ;I doubt we need to reset the stackptr as to get here, the stack has to
 ; have been balanced which means when we pop, we go back to okRet anyway...
-    mov rsp, qword [stackTop]   ;Reset stack ptr! Unlikely needed!
+    lea rsp, stackTop   ;Reset stack ptr! Unlikely needed!
     jmp commandMain.okRet   
 .gotoNextEntry:
     add rbx, 3      ;Go past the first count byte and the address word
@@ -422,12 +432,14 @@ doCommandLine:
     jmp short .nextEntry
 
 appRet:  ;Return point from a task, jumped to from internal functions
-;Reset our PSP vectors (and IVT copies) in the event they got mangled.
-;Can depend on RSP here because I fixed DOS.
+;Can depend on RSP here because DOS stack bug fixed.
+    lea rsp, stackTop   ;Reset stack ptr anyway.
+;Start by resetting our PSP vectors (and IVT copies) in the event 
+; they got mangled.
     call resetIDTentries
+    call resetNation    ;Reset switchchar and nation if exernal cmd fired!
     mov eax, 4D00h              ;Get retcode, sets to 0 for internal commands
     int 21h
-    mov rsp, qword [stackTop]   ;Reset stack ptr! Unlikely needed!
     mov word [returnCode], ax
     test ah, ah     ;Regular exit
     jz commandMain.okRet
@@ -847,12 +859,12 @@ pullCommandline:
     return
 
 getSetMainState:
-;Resets the buffers lengths, sets stringops and gets the pspptr in r8
+;Resets the buffers lengths, sets stringops and gets the pPSP in r8
     cld ;Ensure stringops are done the right way
     mov byte [inBuffer], inLen      ;Reset the buffer length
     mov byte [cpyBuffer], inLen     ;Reset the buffer length
     mov byte [cmdBuffer], inLen     ;Reset the buffer length
-    mov r8, qword [pspPtr]              ;Reset the pspPtr
+    mov r8, qword [pPSP]              ;Reset the pPSP
     return
 
 
@@ -879,12 +891,12 @@ int2Eh:
     mov eax, 2F00h  ;Get the current DTA in rbx
     int 21h
     mov qword [int2Edta], rbx       ;We set the dta in the main loop later
-    mov rsp, qword [stackTop]       ;Set to use the internal stack
+    lea rsp, stackTop               ;Set to use the internal stack
     mov eax, 5100h  ;Get Current PSP in rdx
     int 21h
     mov qword [int2Epsp], rbx
     push rdx    ;Save on the stack
-    mov rbx, qword [pspPtr] ;Get the psp for this COMMAND.COM
+    mov rbx, qword [pPSP] ;Get the psp for this COMMAND.COM
     mov eax, 5000h ;Set this version of COMMAND.COM as the current PSP
     int 21h
     mov r8, rbx ;Set to point to the command.com psp
@@ -895,6 +907,7 @@ int2Eh:
     rep movsq   ;Zoom zoom copy command line over
     call getSetMainState    ;Ensure the buffers have their lengths set
     cmp byte [inBuffer + 1], 0
+    call resetNation        ;Now ensure internationalisation is up to date
     jne commandMain.goSingle    ;Proceed if we have anything to execute
 int2ERet:
     call clearCommandLineState  ;Be a good citizen, leave it as we found it!

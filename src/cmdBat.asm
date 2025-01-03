@@ -246,7 +246,6 @@ batPreprocess:
     lodsb   ;Get char and advance source ptr
     cmp al, "%" ;Did we get a envvar symbol?
     jne .rawcp
-    ;breakpoint
     call batExpandVar   ;Advances rsi to next char and rdi past envvar
     jmp short .check  
 .rawcp:

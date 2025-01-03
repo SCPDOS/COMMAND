@@ -763,7 +763,7 @@ cpDelimPathToBufz:
 buildCommandPath:
 ;Copies the first argument into a null delimited path in the searchSpec buffer.
     movzx eax, byte [arg1Off]
-    mov r8, [pspPtr]
+    mov r8, [pPSP]
     lea rsi, qword [r8 + cmdLine]
     add rsi, rax    ;Go to the start of the command
 copyArgumentToSearchSpec:
@@ -1004,6 +1004,22 @@ setDTA:
 
 getDTA:
     lea rdx, cmdFFBlock
+    return
+
+resetNation:
+;(Re)sets the country and switchar data
+    mov eax, 3700h  ;Get switchchar in dl
+    int 21h
+    cmp al, -1
+    je .skipSwitch
+    mov byte [switchChar], dl   ;Store the switchChar in var
+    cmp dl, "-" ;Is the switchChar Unix?
+    jne .skipSwitch
+    mov byte [pathSep], "/" ;Swap default path separator to UNIX style
+.skipSwitch:
+    mov eax, 3800h  ;Get current country data
+    lea rdx, ctryData
+    int 21h ;Write the data to the internal country table 
     return
 
 resetIDTentries:
