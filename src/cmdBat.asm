@@ -4,6 +4,21 @@ batLaunch:
 ;Start by creating the FQPath name and building a command line
 ; where the arguments are CR terminated.
 ;Then work out how much memory to allocate and allocate it.
+
+;Start by saving the command line
+    lea rsi, inBuffer
+    lea rdi, batCmdline
+    mov ecx, cmdBufferL
+    rep movsb
+;Now check if we are executing AUTOEXEC.BAT. If so, 
+; we suppress F3 recalling of the command
+    lea rsi, autoSpec + 3   ;Just check the name
+    lea rdi, cmdFcb + fcb.filename
+    mov ecx, 8  ;Only check filename as the extension here must be BAT
+    repe cmpsb
+    jne .notAutoexec
+    mov byte [batCmdline + 1], 0    ;Set the count byte to 0
+.notAutoexec:
     lea rsi, cmdPathSpec    ;Path here is null terminated.
     lea rdi, batFile
     mov ax, word [rsi]  ;Get the first two chars
@@ -365,7 +380,7 @@ batCleanup:
 ; needs to check for these things. Not a big deal as normally we'll 
 ; just have a null pointer.
 ;-----------------------------------------------------------------------
-;Finally free this batch header
+;Finally free this batch header...
     push r8
     mov r8, rbx
     mov eax, 4900h
@@ -374,6 +389,11 @@ batCleanup:
     call cleanupRedirs  ;Clean up all redirections, close files etc
     mov qword [bbPtr], 0    
     and byte [statFlg1], ~(inBatch|batchEOF)   ;Oh bye bye batch mode!
+;... and copy the batch command line back to its resting place.
+    lea rsi, batCmdline
+    lea rdi, inBuffer
+    mov ecx, cmdBufferL
+    rep movsb
     return
 
 batOpen:

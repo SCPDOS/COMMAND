@@ -17,11 +17,12 @@ inLdrDT     equ 40h ;Up if in the Date / Time part of Loader
 inLdr       equ 80h ;Up if in loader
 ;Batch state variables.
 bbPtr       dq ?                    ;Ptr to the batch block
-batFile     db fileSpecZL dup (?)   ;Path to bat to execute. Qual with path!
+batFile     db fileSpecZL dup (?)   ;Path to bat to execute. Qual with 
 ifFlg       db ?                    ;Flags for IF
 ifReset     equ 0                   ;Value to reset the flags
 ifNot       equ 1                   ;Set if NOT encountered
-ifCond      equ 2                   ;Set if condition encountered              
+ifCond      equ 2                   ;Set if condition encountered     
+batCmdline  db cmdBufferL dup (?)   ;Stores original commandline
 
 ;Structs and strings
 ctryData    db countryStruc_size dup (?)    ;Length of the country table

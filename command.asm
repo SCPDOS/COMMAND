@@ -24,21 +24,24 @@ Segment cmd align=1 valign=1
 %include "./src/int23h.asm"
 %include "./src/int24h.asm"
 
-Segment bss nobits valign=cmdAlign vfollows=cmd
+Segment bss nobits align=cmdAlign follows=cmd
 %include "./dat/cmdBss.asm"
+    alignb 10h
 bssLen equ ($ - $$)
 
-Segment stack1 nobits valign=16 vfollows=bss
-    dq 200 dup (?)  ;4Kb stack, para aligned
+Segment stack nobits align=16 follows=bss
+    dq 200 dup (?)  ;1.6K stack, para aligned
 stackTop:   ;Top of the stack
     dq ?    ;Extra paragraph
     dq ?
 endOfAlloc: ;Symbol to free from once init is over!
-stack1Len equ ($ - $$)
+stackLen equ ($ - $$)
 
-Segment init align=cmdAlign valign=cmdAlign follows=cmd vfollows=stack1
+Segment init align=cmdAlign valign=cmdAlign follows=cmd vfollows=stack
 %define currSegVBase section.init.vstart
 %include "./src/cmdLdr.asm"
 endOfInitAlloc: ;Symbol to free during init
 initLen equ ($ - $$)
-initOffset  equ bssLen + stack1Len  ;Amount of space to make for bss/stack
+
+;Amount of space to make for bss/stack
+initOffset  equ bssLen + stackLen  
