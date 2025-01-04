@@ -36,7 +36,7 @@ commandMain:
     call clearCommandLineState      ;Cleans all handles 5->MAX
 .inputGetCmdlineAgain:
     test byte [forFlg], -1  ;If we are in a FOR loop, proceed with for
-    je forProceed
+    jne forProceed
     test byte [statFlg1], inBatch   ;If batch on, get the next line to execute
     jnz batNextLine
     call printPrompt    ;Ok we are gonna get more input, output prompt
@@ -426,6 +426,7 @@ doCommandLine:
 ; commands to implement retcodes which we don't use for now.
 ;I doubt we need to reset the stackptr as to get here, the stack has to
 ; have been balanced which means when we pop, we go back to okRet anyway...
+.inRet:
     lea rsp, stackTop   ;Reset stack ptr! Unlikely needed!
     jmp commandMain.okRet   
 .gotoNextEntry:

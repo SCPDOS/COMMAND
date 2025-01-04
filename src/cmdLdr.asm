@@ -1,10 +1,13 @@
 cmdLdr:
 ;Start by copying the loader forwards to make space for the BSS
+;This section needs to use r8 as the base pointer for the copy.
+;DO NOT USE RIP RELATIVE ADDRESSING AS RIP IS ASSUMED TO BE AT
+; VIRTUAL START.
     lea rsi, cmdLdr
-    lea rdi, section.init.vstart + initOffset
+    lea rdi, qword [r8 + section.init.vstart]
     mov ecx, initLen
     rep movsb
-    lea rdi, startInit + initOffset
+    lea rdi, qword [r8 + startInit]
     push rdi
     ret ;Goto next instruction but reallocated!
 

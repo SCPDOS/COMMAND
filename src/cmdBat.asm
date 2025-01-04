@@ -4,7 +4,6 @@ batLaunch:
 ;Start by creating the FQPath name and building a command line
 ; where the arguments are CR terminated.
 ;Then work out how much memory to allocate and allocate it.
-
 ;Start by saving the command line
     lea rsi, inBuffer
     lea rdi, batCmdline
@@ -296,7 +295,13 @@ batExpandVar:
     cmp al, CR          
     rete
     cmp al, "%" ;If immediately followed by %, then return it
-    rete
+    jne .notSecond
+;Here we escape the second %. We cant enter here if we dont have space 
+; at least 1 char, so store it immediately.
+    stosb
+    inc byte [rbp + 1]
+    return
+.notSecond:
 ;Now do the env var search. Start by scanning for the terminating
 ; % of the var name. If we strike a delimiter char first, 
 ; we stop the expansion for the envvar.
@@ -382,7 +387,7 @@ batCleanup:
 ; needs to check for these things. Not a big deal as normally we'll 
 ; just have a null pointer.
 ;-----------------------------------------------------------------------
-    call forFree
+    ;call forFree
 ;Finally free this batch header...
     push r8
     mov r8, rbx

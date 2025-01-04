@@ -775,8 +775,6 @@ goto:
     return
 
 ifCmd:
-;Use the fact we parse the first two words into the FCBs to check 
-; for NOT and then the condition word
     mov byte [ifFlg], ifReset ;Reset not state
     lea rsi, qword [r8 + cmdLine]
     call getNextArg    ;Skip leading delimiters
@@ -904,35 +902,45 @@ forCmd:
     call strcmp
     pop rsi
     jne .forBadSynExit
-    call makeAsciizAdv  ;Move rsi to the first list element
-    push rsi
-    lea rsi, listOpenStr
-    call strcmp
-    pop rsi
+;Need special handling now as "(" might be appended to element
+    lodsb   ;Get the byte, advance rsi past it 
+    cmp al, byte [listOpenStr]
     jne .forBadSynExit
+    call getNextArg
     ;rsi points to the first list element
 .argCpy:
     call makeAsciizAdv  ;Move rsi to the next list element
-    push rsi
-    lea rsi, listClosStr
-    call strcmp
-    pop rsi
+;Now we check if this is just a ")"
+    movzx eax, word [rdi]   ;Get this word
+    cmp ax, word [listClosStr]  ;Was this ")"<NUL> ?
     je .argCpyEnd
 ;Here we have a list element, rsi points to next entry in list
     inc byte [rbp + forBlk.bListc]  ;We have one more argument
     mov rbx, qword [rbp + forBlk.pLstCurr]  ;Get ptr to space for list element
     test rbx, rbx
     jnz .inProgress
-    ;Here we have the first argument
+;Here we have the first list element
     lea rbx, qword [rbp + forBlk.sListBlk]   ;Start writing here
 .inProgress:
+;Now check if this command is terminated with a ). If it is, end of list.
+    push rdi
+    call strlen ;Get the string length 
+    sub ecx, 2     ;Drop terminating null
+    add rdi, rcx    ;Point to the final char
+    movzx eax, word [rdi]   ;Get this char
+    cmp ax, word [listClosStr]  ;Was this ")"<NUL> ?
+    jne .notEnd
+    mov byte [rdi], 0   ;Overwrite with a null over the ")"
+.notEnd:
+    pop rdi
     push rsi
     mov rsi, rdi    ;Source ASCIZ from the buffer we built in
     mov rdi, rbx    ;Write here
     call strcpy     ;Copy and advance pointers with terminating null
-    mov qword [rbp + forBlk.sListBlk], rdi  ;Store next arg here
+    mov qword [rbp + forBlk.pLstCurr], rdi  ;Store next arg here
     pop rsi
-    jmp short .argCpy
+    cmp ax, word [listClosStr]  ;Check again
+    jne .argCpy ;If not equal, we loop again
 .argCpyEnd:
 ;rsi points to DO command here. 
 ;Parsed all arguments, store ptr to head of asciiz list for processing
@@ -942,6 +950,7 @@ forCmd:
     call strcmp
     pop rsi
     jne .forBadSynExit
+    mov qword [rbp + forBlk.pLstCurr], 0 ;Signal to start from first arg
 ;Now we copy the command, rsi points to the command string
     lea rdi, qword [rbp + forBlk.sCmdLine]
 .cmdLp:
@@ -966,21 +975,22 @@ forProceed:
     test byte [rbp + forBlk.bCmdWC], -1 ;If entry has WC, keep using
     jne .ctnFor
 ;Here we go for a new entry! Check if we are at the start of the list.
-    cmp qword [rbp + forBlk.pLstCurr], 0    ;If null, just starting
-    je .getNextListElement
+    test qword [rbp + forBlk.pLstCurr], -1    ;If null, just starting
+    jnz .getNextListElement
 ;Here if we are starting a new for command.
     lea rsi, qword [rbp + forBlk.sListBlk]  ;First arg is here
     jmp short .useString
 .getNextListElement:
-;Els get the ptr and advance it!
+;Else get the ptr and advance it!
     mov byte [rbp + forBlk.bCmdWC], 0   ;Turn off wildcard if on
     mov rsi, qword [rbp + forBlk.pLstCurr]  ;Get last processed arg ptr
+    mov rdi, rsi    ;Need for strlen
     call strlen
     add rsi, rcx    ;Goto next arg!
     movzx ecx, byte [rbp + forBlk.bListc]
     inc byte [rbp + forBlk.bArgNum] ;We've gone to the next arg
     cmp byte [rbp + forBlk.bArgNum], cl
-    je forFree  ;Once equal, we have processed all args. Game over!
+    je forEnd  ;Once equal, we have processed all args. Game over!
 .useString:
 ;Now update the pointer in the block!
     mov qword [rbp + forBlk.pLstCurr], rsi  ;Now working on this arg.
@@ -993,7 +1003,7 @@ forProceed:
     cmp al, "*"
     je .wcFnd
     cmp al, "?"
-    je .wcFnd
+    jne .wcCheck
 .wcFnd:
     mov byte [rbp + forBlk.bCmdWC], -1  ;We have wildcards!
 .wcCheckEnd:
@@ -1004,9 +1014,10 @@ forProceed:
 ;rsi now can be trashed!
     mov ecx, dirDirectory
     mov eax, 4E00h  ;Find first
-.searchAgain:
+.searchAgain:   ;Need rdi -> Path for below
+    mov rdx, rdi    ;Move the pointer to rdx for search. 
     int 21h 
-    jc .getNextListElement  ;Get next list element. rsi -> searchspec
+    jc .getNextListElement  ;Get next list element.
     cmp byte [rbp + forBlk.bCmdWC], -1  ;If no WC, use sNameBuf as is!
     jne .copyCommand
 ;Else, we must replace the wildcards. Cannot be in path as find first
@@ -1036,7 +1047,7 @@ forProceed:
     cmp al, CR
     jz .ccLpEnd     ;Exit if CR terminator found!
     cmp ecx, inLen  ;If we are at space for CR w/o it then string too long.
-    je .longString  ;Try next argument instead.
+    je .ccLpEnd     ;Truncate here
     inc ecx         ;Else, add one more char
     stosb           ;And shove it!
     jmp short .ccLp
@@ -1068,6 +1079,9 @@ forProceed:
     stosb       ;Store the terminating CR
     mov byte [inBuffer + 1], cl ;Store var count here
     jmp commandMain.goSingle    ;And do it! :)
+forEnd:
+    call forFree
+    jmp doCommandLine.inRet ;Go to the internal command return
 
 forFree:
 ;Reset FOR state. Frees the for block and clears the vars.

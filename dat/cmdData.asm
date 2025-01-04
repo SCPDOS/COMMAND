@@ -1,7 +1,7 @@
 ;Static Data Area for COMMAND.COM    
 startLbl:   ;Start symbol, this is the entry point
 pPSP:       ;Internal pointer to the task PSP
-    jmp cmdLdr - initOffset  ;This instruction is 5 bytes
+    jmp cmdLdrE
     db 3 dup (0CCh) ;So add three bytes to turn it into a variable after use
 numHdls     dw 20   ;Get number of handles permitted
 pathSep     db "\"  ;Default path sep
