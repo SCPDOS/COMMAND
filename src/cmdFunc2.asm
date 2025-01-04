@@ -178,6 +178,8 @@ launchChild:
 ;!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     cmp al, errAccDen   ;Access denied?
     je badAccError
+    cmp al, errNoMem    ;If not enough memory, print so
+    je badNoMemError    
     cmp al, errMCBbad   ;If MCB bad error, freeze PC
     je freezePC
     jmp badCmdError     ;If something goes wrong, error out
@@ -777,26 +779,26 @@ ifCmd:
 ; for NOT and then the condition word
     mov byte [ifFlg], ifReset ;Reset not state
     lea rsi, qword [r8 + cmdLine]
-    call .getNextArg    ;Skip leading delimiters
+    call getNextArg    ;Skip leading delimiters
     mov rbx, rsi        ;Save the possible start of string ptr (if string)
-    call .makeAsciizAdv ;Move rsi to next word, rdi -> ASCIZ string
+    call makeAsciizAdv ;Move rsi to next word, rdi -> ASCIZ string
     push rsi    ;Save ptr to the next word on stack
     lea rsi, notString
-    call .strcmp
+    call strcmp
     pop rsi
     jne .chkErlvl
     or byte [ifFlg], ifNot  ;Set not on
     mov rbx, rsi    ;Save the start of string ptr (if string)
-    call .makeAsciizAdv     ;Goto next word
+    call makeAsciizAdv     ;Goto next word
 .chkErlvl:
     push rsi    ;rsi points to the argument
     lea rsi, errlvlStr
-    call .strcmp
+    call strcmp
     pop rsi
     je .errorLvl
     push rsi
     lea rsi, existStr
-    call .strcmp
+    call strcmp
     pop rsi
     je .exist
 ;Here we check condition string1==string2
@@ -847,7 +849,7 @@ ifCmd:
     jmp commandMain.batProceed    ;And execute the command now!
 .exist:
 ;Here we do the check for file existance
-    call .makeAsciizAdv
+    call makeAsciizAdv
     mov ecx, dirDirectory    ;Search for normal, RO and dir
     mov rdx, rdi    ;Move the ptr to rdx
     mov eax, 4E00h  ;Find first
@@ -856,7 +858,7 @@ ifCmd:
     jmp short .cndMiss
 .errorLvl:
 ;Here we do the check for error level
-    call .makeAsciizAdv
+    call makeAsciizAdv
     xchg rdi, rsi
     call getNum     ;Get value in eax
     cmp eax, 255    ;Value can't be bigger than 255
@@ -865,45 +867,221 @@ ifCmd:
     cmp al, byte [returnCode]
     je .cndHit
     jmp .cndMiss
-;------------------------
-;      If routines
-;------------------------
-.makeAsciizAdv:
-;Input: rsi -> Non delimiter char string
-;Output: rsi -> Next substring past delimiters
-;       rdi -> ASCIIZ version of the string we just passed
-    pop rax ;Align the stack so if we hit a CR its .getNextArg doesnt crash
-    call .makeArgAsciz      ;Get in rdi -> ASCIZ argument. rsi -> terminator
-    call .getNextArg        ;rsi -> Command
-    jmp rax                 ;Go to this address now
-
-.makeArgAsciz:
-;Creates a null terminated string in the search spec.
-;Input: rsi -> String to copy with null terminator
-;Ouput: rsi -> Terminator
-;       rdi -> Search Spec with filled ASCIZ string
-    push rax    ;Preserve rax
-    call copyArgumentToSearchSpec
-    pop rax
-    lea rdi, searchSpec
-    dec rsi     ;Point back to the delimiter char
-    return
-
-.getNextArg:
-;Moves rsi to the first next element. If a CR is encountered, it exits
-;Input: rsi -> String
-;Output: rsi -> First non delimiter char after initial position
-    call skipDelimiters     ;Preserves rax
-    cmp byte [rsi], CR
-    retne
-    pop rax ;Pop the return address off the stack
-    jmp badSyntaxError  ;And jump error out
-
-.strcmp:
-    mov eax, 121Eh
-    int 2fh
-    return
-
 
 forCmd:
+;FOR %<var> IN (list) DO command
+;Allocate a FOR block, parse the for command line and fill in the forBlk.
+; Works by writing a new version of the commandline for each element in the
+; list. If %<arg> in the command, it just executes the command n times where 
+; n is the number of elements in the list.
+    test byte [forFlg], -1
+    jnz badForError
+    mov ebx, ((forBlk_size + 0Fh) >> 4) ;Get paras to allocate
+    mov eax, 4800h  ;ALLOC
+    int 21h
+    jc badNoMemError
+    mov byte [forFlg], -1   ;Set var
+    mov qword [pForBlk], rax    ;Save the ptr to the ForBlk
+    mov rbp, rax            ;Move forblk ptr to rbp
+;Clean the memory block for use
+    mov rdi, rax
+    xor eax, eax
+    mov ecx, forBlk_size
+    rep stosb
+;Now we parse the command line.
+    lea rsi, qword [r8 + cmdLine]
+    call getNextArg ;Move rsi to the next word (%<VAR>)
+    call makeAsciizAdv  ;Moves rdi to the buffer. rsi to IN
+    cmp byte [rdi], "%"
+    jne .forBadSynExit
+    cmp byte [rdi + 2], 0
+    jne .forBadSynExit
+    movzx eax, byte [rdi + 1]
+    mov byte [rbp + forBlk.bLpVar], al  ;Store the loopchar
+    call makeAsciizAdv  ;Moves rdi to the buffer. rsi to "("
+    push rsi
+    lea rsi, inStr
+    call strcmp
+    pop rsi
+    jne .forBadSynExit
+    call makeAsciizAdv  ;Move rsi to the first list element
+    push rsi
+    lea rsi, listOpenStr
+    call strcmp
+    pop rsi
+    jne .forBadSynExit
+    ;rsi points to the first list element
+.argCpy:
+    call makeAsciizAdv  ;Move rsi to the next list element
+    push rsi
+    lea rsi, listClosStr
+    call strcmp
+    pop rsi
+    je .argCpyEnd
+;Here we have a list element, rsi points to next entry in list
+    inc byte [rbp + forBlk.bListc]  ;We have one more argument
+    mov rbx, qword [rbp + forBlk.pLstCurr]  ;Get ptr to space for list element
+    test rbx, rbx
+    jnz .inProgress
+    ;Here we have the first argument
+    lea rbx, qword [rbp + forBlk.sListBlk]   ;Start writing here
+.inProgress:
+    push rsi
+    mov rsi, rdi    ;Source ASCIZ from the buffer we built in
+    mov rdi, rbx    ;Write here
+    call strcpy     ;Copy and advance pointers with terminating null
+    mov qword [rbp + forBlk.sListBlk], rdi  ;Store next arg here
+    pop rsi
+    jmp short .argCpy
+.argCpyEnd:
+;rsi points to DO command here. 
+;Parsed all arguments, store ptr to head of asciiz list for processing
+    call makeAsciizAdv  ;Move rsi to the command string
+    push rsi
+    lea rsi, doStr
+    call strcmp
+    pop rsi
+    jne .forBadSynExit
+;Now we copy the command, rsi points to the command string
+    lea rdi, qword [rbp + forBlk.sCmdLine]
+.cmdLp:
+    lodsb
+    stosb
+    cmp al, CR
+    jne .cmdLp
+    cmp byte [rbp + forBlk.bListc], 0  ;If the count of args 0, syntax error
+    jne forProceed    ;Else go!!
+.forBadSynExit:
+    call forFree
+    jmp badSyntaxError
+
+forProceed:
+;Start by getting the forblk pointer and set the FFblock immediately
+    mov rbp, qword [pForBlk]    ;Get the ptr to the for block
+    lea rdx, qword [rbp + forBlk.sFFBuffer]
+    mov eax, 1A00h  ;Set the DTA to the FFblock dta
+    int 21h
+;Now we ascertain whether or not we need a new list entry or use existing
+.longString:
+    test byte [rbp + forBlk.bCmdWC], -1 ;If entry has WC, keep using
+    jne .ctnFor
+;Here we go for a new entry! Check if we are at the start of the list.
+    cmp qword [rbp + forBlk.pLstCurr], 0    ;If null, just starting
+    je .getNextListElement
+;Here if we are starting a new for command.
+    lea rsi, qword [rbp + forBlk.sListBlk]  ;First arg is here
+    jmp short .useString
+.getNextListElement:
+;Els get the ptr and advance it!
+    mov byte [rbp + forBlk.bCmdWC], 0   ;Turn off wildcard if on
+    mov rsi, qword [rbp + forBlk.pLstCurr]  ;Get last processed arg ptr
+    call strlen
+    add rsi, rcx    ;Goto next arg!
+    movzx ecx, byte [rbp + forBlk.bListc]
+    inc byte [rbp + forBlk.bArgNum] ;We've gone to the next arg
+    cmp byte [rbp + forBlk.bArgNum], cl
+    je forFree  ;Once equal, we have processed all args. Game over!
+.useString:
+;Now update the pointer in the block!
+    mov qword [rbp + forBlk.pLstCurr], rsi  ;Now working on this arg.
+;Now scan string for wildcards
+    push rsi
+.wcCheck:
+    lodsb
+    test al, al 
+    jz .wcCheckEnd
+    cmp al, "*"
+    je .wcFnd
+    cmp al, "?"
+    je .wcFnd
+.wcFnd:
+    mov byte [rbp + forBlk.bCmdWC], -1  ;We have wildcards!
+.wcCheckEnd:
+;Here we copy the argument to the buffer (for possible expansion)
+    pop rsi ;Pop back the head of the string to copy over
+    lea rdi, qword [rbp + forBlk.sNameBuf]
+    call strcpy2    ;Copy w/o moving the pointers
+;rsi now can be trashed!
+    mov ecx, dirDirectory
+    mov eax, 4E00h  ;Find first
+.searchAgain:
+    int 21h 
+    jc .getNextListElement  ;Get next list element. rsi -> searchspec
+    cmp byte [rbp + forBlk.bCmdWC], -1  ;If no WC, use sNameBuf as is!
+    jne .copyCommand
+;Else, we must replace the wildcards. Cannot be in path as find first
+; doesn't resolve wildcards in path componants, only filename.
+    call findLastPathComponant  ;Point rdi to the last path componant
+;We don't need rsi pointing to the string anymore.
+    lea rsi, qword [rbp + forBlk.sFFBuffer + ffBlock.asciizName]
+    call strcpy2    ;Copy w/o moving pointers
+    jmp short .copyCommand
+.ctnFor:
+;If we searched a filespec with a wildcard, we come here for the next
+; in the series. forBlk.sNameBuf is not corrupted while executing a command
+    mov eax, 4F00h  ;Find Next file for the file found in FFBuffer
+    lea rdi, qword [rbp + forBlk.sNameBuf]  ;Need for getting last pathcomp
+    jmp short .searchAgain  ;We have a WC, get next file!
+.copyCommand:
+;We substitute the string in forBlk.sNameBuf into the command line when we
+; hit a matching %<var>
+    lea rsi, qword [rbp + forBlk.sCmdLine]  ;Copy the command line
+    lea rdi, qword [inBuffer + 2]   ;We will be writing to this buffer
+    xor ecx, ecx    ;Keep track of chars we copy over
+.ccLp:
+    lodsb
+    cmp al, "%"     
+    je .ccMeta      ;Go if metachar found!
+.ccLp1:
+    cmp al, CR
+    jz .ccLpEnd     ;Exit if CR terminator found!
+    cmp ecx, inLen  ;If we are at space for CR w/o it then string too long.
+    je .longString  ;Try next argument instead.
+    inc ecx         ;Else, add one more char
+    stosb           ;And shove it!
+    jmp short .ccLp
+.ccMeta:
+    lodsb           ;Get the next char
+    cmp al, byte [rbp + forBlk.bLpVar]  ;Compare if this is a var
+    jne .ccLp1  ;If not a var, strip the % and store the char directly
+;Else, here we expand!
+    push rsi
+    push rdi
+    mov edx, ecx    ;Save current char count in edx
+    lea rdi, qword [rbp + forBlk.sNameBuf]
+    call strlen     ;Get replacement char count to ecx
+    dec ecx         ;Drop the terminating null from the count
+    add edx, ecx    ;Get their sum
+    cmp edx, inLen  ;Position 128 is saved for CR. sum must be less
+    jb .ccOk
+    pop rdi
+    pop rsi
+    jmp .longString     ;Get the next argument!
+.ccOk:
+    mov rsi, rdi    ;Source from the name buffer
+    pop rdi         ;Now get the original position to write the string in
+    rep movsb       ;Copy over the string
+    pop rsi         ;And keep sourcing cha
+    mov ecx, edx    ;Get the current count of chars back into ecx
+    jmp short .ccLp ;And get the next char
+.ccLpEnd:
+    stosb       ;Store the terminating CR
+    mov byte [inBuffer + 1], cl ;Store var count here
+    jmp commandMain.goSingle    ;And do it! :)
+
+forFree:
+;Reset FOR state. Frees the for block and clears the vars.
+    push rax
+    push r8
+    mov r8, qword [pForBlk]
+    test r8, r8
+    jz .exit
+    mov eax, 4900h  ;Free block!
+    int 21h
+.exit:
+    xor eax, eax
+    mov qword [pForBlk], rax
+    mov byte [forFlg], al
+    pop r8
+    pop rax
     return

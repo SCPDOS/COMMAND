@@ -371,6 +371,8 @@ batCleanup:
 ; batch interpreter! Cleans up all the batch resources. Also called if 
 ; CTRLC called during a batch job and the user wants to kill the batch.
     mov rbx, qword [bbPtr]
+    test rbx, rbx
+    jz .exit    ;Skip any references using this pointer
     mov al, byte [rbx + batBlockHdr.bEchoFlg]   ;Reset the echo flag
     mov byte [echoFlg], al
 ;-----------------------------------------------------------------------
@@ -380,12 +382,14 @@ batCleanup:
 ; needs to check for these things. Not a big deal as normally we'll 
 ; just have a null pointer.
 ;-----------------------------------------------------------------------
+    call forFree
 ;Finally free this batch header...
     push r8
     mov r8, rbx
     mov eax, 4900h
     int 21h
     pop r8
+.exit:
     call cleanupRedirs  ;Clean up all redirections, close files etc
     mov qword [bbPtr], 0    
     and byte [statFlg1], ~(inBatch|batchEOF)   ;Oh bye bye batch mode!

@@ -10,6 +10,10 @@ badDiskFull:
     cmovnz rdx, rcx ;Swap error messages if pipe flag is on
     call badCmn     ;Print the string
     jmp redirPipeFailureCommon.noPrint  ;Now close pipes and fully reset!
+badForError:    
+    call forFree        ;Free all FOR variables
+    lea rdx, forNest
+    jmp short badCmn    
 badNoMemError:
     lea rdx, noMemMsg
     jmp short badCmn

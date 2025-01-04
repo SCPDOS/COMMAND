@@ -35,6 +35,8 @@ commandMain:
 .inputGetAgain:
     call clearCommandLineState      ;Cleans all handles 5->MAX
 .inputGetCmdlineAgain:
+    test byte [forFlg], -1  ;If we are in a FOR loop, proceed with for
+    je forProceed
     test byte [statFlg1], inBatch   ;If batch on, get the next line to execute
     jnz batNextLine
     call printPrompt    ;Ok we are gonna get more input, output prompt

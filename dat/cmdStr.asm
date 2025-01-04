@@ -73,6 +73,10 @@ noMemMsg    db "Program too big to fit in memory",CR,LF,"$"
 notString   db "NOT",0
 errlvlStr   db "ERRORLEVEL",0
 existStr    db "EXIST",0
+inStr       db "IN",0
+doStr       db "DO",0
+listOpenStr db "(",0
+listClosStr db ")",0
 
 memSys  db CR,LF,"              Total system memory: $"
 memDOS  db CR,LF,"               Memory used by DOS: $"

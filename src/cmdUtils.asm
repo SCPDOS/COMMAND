@@ -1035,6 +1035,47 @@ resetIDTentries:
     int 21h
     return
 
+;------------------------
+;   For/If routines
+;------------------------
+makeAsciizAdv:
+;Input: rsi -> Non delimiter char string
+;Output: rsi -> Next substring past delimiters
+;       rdi -> ASCIIZ version of the string we just passed
+    pop rax ;Align the stack so if we hit a CR its getNextArg doesnt crash
+    call makeArgAsciz      ;Get in rdi -> ASCIZ argument. rsi -> terminator
+    call getNextArg        ;rsi -> Command
+    jmp rax                 ;Go to this address now
+
+makeArgAsciz:
+;Creates a null terminated string in the search spec.
+;Input: rsi -> String to copy with null terminator
+;Ouput: rsi -> Terminator
+;       rdi -> Search Spec with filled ASCIZ string
+    push rax    ;Preserve rax
+    call copyArgumentToSearchSpec
+    pop rax
+    lea rdi, searchSpec
+    dec rsi     ;Point back to the delimiter char
+    return
+
+getNextArg:
+;Moves rsi to the first next element. If a CR is encountered, it exits
+;Input: rsi -> String
+;Output: rsi -> First non delimiter char after initial position
+    call skipDelimiters     ;Preserves rax
+    cmp byte [rsi], CR
+    retne
+    call forFree    ;Harmless if used in IF. Registers preserved.
+    pop rax ;Pop the return address off the stack
+    jmp badSyntaxError  ;And jump error out
+
+strcmp:
+    mov eax, 121Eh
+    int 2fh
+    return
+
+
 ;-------------------------------
 ; Environment utility functions
 ;-------------------------------

@@ -43,6 +43,18 @@ bbEchoOff   equ 0
 bbMaxAlloc  equ batBlockHdr_size + cmdBufferL + 1 ;Add 1 for good measure :)
 batNoEchoChar   equ "@" ;If a line starts with this, no echo!
 
+struc forBlk
+;forBlk.sListv is double null terminated at the end of the string
+    .bListc     db ?    ;Number of elements in the list
+    .sListBlk   db cmdBufferL dup (?)   ;Null terminated entries of list.
+    .bCmdWC     db ?    ;Set if the list entry has a wildcard
+    .bArgNum    db ?    ;Number of the current argument
+    .pLstCurr   dq ?    ;Ptr to current list element we are treating
+    .sCmdLine   db cmdBufferL dup (?)   ;Copy of cmd to execute with %<var> 
+    .sNameBuf   db fullDirPathZL dup (?)    ;Used for building a search spec.
+    .sFFBuffer  db ffBlock_size dup (?) ;ffblock for searching list elements
+    .bLpVar     db ?    ;Char of loop var
+endstruc
 
 
 struc drvHdr  ;Device Driver Header for character and block devices
