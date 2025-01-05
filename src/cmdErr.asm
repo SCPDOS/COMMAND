@@ -48,7 +48,7 @@ badFnf:
 badDirError:
     lea rdx, badDir
 badCmn:
-    jmp printString     ;This will be made nuanced later, to agree with DOS
+    jmp printString
 badCmdError:
     lea rdx, badCmd
     jmp short badCmn

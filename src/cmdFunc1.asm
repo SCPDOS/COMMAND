@@ -973,6 +973,33 @@ copyMain:
     mov eax, 121Eh  ;Cmpr ASCII strings
     int 2Fh
     jnz .notSameFile
+;Now we check if we are in a concat mode. 
+; If in Concat and we are on the first file, just move the file pointer 
+; to the end of the file and return.
+; If in Concat and we are not on the first file, print content of 
+; destination lost and return.
+; Else, exist bad.
+;Concat is defined as (mod3Cpy or wcSrc) and oneDest
+    movzx eax, byte [bCpFlg]   ;Get the flags
+    mov ecx, eax        ;Copy the flags
+    and ecx, oneDest    ;Isolate for AND
+    jz .sameNameExit    ;If not set, not in Concat mode
+    and eax, mod3Cpy | wcSrc   ;Compute the OR
+    mov ecx, eax
+    and eax, mod3Cpy    ;Save this bit
+    and ecx, wcSrc      ;And this bit
+    or eax, ecx         ;Construct a single vale.
+    jz .sameNameExit    ;If neither bit was set, we don't have condition.
+    lea rdx, destSpec   ;Prepare rdx to the destination
+    test dword [dCpCnt], -1 ;Is this the first file?
+    jnz .notFirstLost   ;If not, we skip this file from copy!
+    call .openFile      ;Moving the fp suffices for the copy
+    return
+.notFirstLost:
+    lea rdx, filLostErr
+    call printString    ;Print this string and skip this file
+    return
+.sameNameExit:
     mov al, -1  ;Same filename error!
 .badExit:
     push rax
@@ -1097,7 +1124,8 @@ copyMain:
 ;If this is more than file 0, we open
     cmp dword [dCpCnt], 0
     je .createFile
-    ;Now we open the file instead and append to the end
+;Now we open the file instead and append to the end
+.openFile:
     mov eax, 3D02h  ;Open the file in exclusive read/write mode
     int 21h
     retc
