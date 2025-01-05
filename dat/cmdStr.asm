@@ -58,6 +58,7 @@ badDev  db "Invalid device",CR,LF,"$"
 badLbl  db "Label not found",CR,LF,"$"  ;Used in BAT
 syntaxErr   db "Syntax error",CR,LF,"$"
 forNest db CR,"FOR cannot be nested",CR,LF,"$"    ;Used in BAT
+forStr  db "FOR",0
 pipeErr db "Intermediate file error during pipe",CR,LF,"$"
 binDevErr   db "Cannot do binary reads from a device",CR,LF,"$"
 offMes  db "off",CR,LF,"$"

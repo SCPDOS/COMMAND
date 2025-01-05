@@ -50,7 +50,8 @@ struc forBlk
     .bCmdWC     db ?    ;Set if the list entry has a wildcard
     .bArgNum    db ?    ;Number of the current argument
     .pLstCurr   dq ?    ;Ptr to current list element we are treating
-    .sCmdLine   db cmdBufferL dup (?)   ;Copy of cmd to execute with %<var> 
+    .pCmd       dq ?    ;Ptr to command string
+    .sCmdLine   db cmdBufferL dup (?)   ;Copy of cmdline to execute with %<var> 
     .sNameBuf   db fullDirPathZL dup (?)    ;Used for building a search spec.
     .sFFBuffer  db ffBlock_size dup (?) ;ffblock for searching list elements
     .bLpVar     db ?    ;Char of loop var

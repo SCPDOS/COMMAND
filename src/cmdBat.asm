@@ -232,7 +232,7 @@ batNextLine:
     push rdx
     call printPrompt    ;Now output prompt
     pop rdx
-    movzx ecx, byte [batCpyBuffer + 1]    ;Get the number of chars to print
+    movzx ecx, byte [rdx - 1]    ;Get the number of chars to print
     mov ebx, 1  ;STDOUT
     mov eax, 4000h  ;Write woo!
     int 21h

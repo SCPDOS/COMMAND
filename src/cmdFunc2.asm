@@ -886,9 +886,25 @@ forCmd:
     xor eax, eax
     mov ecx, forBlk_size
     rep stosb
+;Clean any pre-established redirs
+    call cleanupRedirs  ;Preserves rbp
+;Now copy the command line to the block :)
+    lea rsi, inBuffer   ;Start reading what we typed in
+    lea rdi, qword [rbp + forBlk.sCmdLine]
+    push rdi
+    mov ecx, cmdBufferL
+    rep movsb   ;And copy!
+    pop rsi     ;Now source the command line from our copy! :)
 ;Now we parse the command line.
-    lea rsi, qword [r8 + cmdLine]
-    call getNextArg ;Move rsi to the next word (%<VAR>)
+    add rsi, 2  ;Now skip the buffer length bytes
+    call getNextArg     ;Moves rdi to the FOR. Guaranteed to be so! 
+.findForLp:
+    call makeAsciizAdv  ;Move rsi to the next word (%<VAR>) [LAZY!]
+    push rsi
+    lea rsi, forStr
+    call strcmp
+    pop rsi
+    jne .findForLp  ;We are guaranteed to have a FOR in the command line
     call makeAsciizAdv  ;Moves rdi to the buffer. rsi to IN
     cmp byte [rdi], "%"
     jne .forBadSynExit
@@ -950,16 +966,12 @@ forCmd:
     call strcmp
     pop rsi
     jne .forBadSynExit
+    mov qword [rbp + forBlk.pCmd], rsi  ;Store ptr to head of cmd string :)
     mov qword [rbp + forBlk.pLstCurr], 0 ;Signal to start from first arg
-;Now we copy the command, rsi points to the command string
-    lea rdi, qword [rbp + forBlk.sCmdLine]
-.cmdLp:
-    lodsb
-    stosb
-    cmp al, CR
-    jne .cmdLp
-    cmp byte [rbp + forBlk.bListc], 0  ;If the count of args 0, syntax error
-    jne forProceed    ;Else go!!
+    cmp byte [rbp + forBlk.bListc], 0   ;If the count of args 0, syntax error
+    je .forBadSynExit
+    call printCRLF  ;Else print CRLF to indicate command accepted 
+    jmp short forProceed    ;And go!!!!
 .forBadSynExit:
     call forFree
     jmp badSyntaxError
@@ -1036,7 +1048,7 @@ forProceed:
 .copyCommand:
 ;We substitute the string in forBlk.sNameBuf into the command line when we
 ; hit a matching %<var>
-    lea rsi, qword [rbp + forBlk.sCmdLine]  ;Copy the command line
+    mov rsi, qword [rbp + forBlk.pCmd]  ;Copy the command line
     lea rdi, qword [inBuffer + 2]   ;We will be writing to this buffer
     xor ecx, ecx    ;Keep track of chars we copy over
 .ccLp:
@@ -1080,8 +1092,31 @@ forProceed:
     mov byte [inBuffer + 1], cl ;Store var count here
     jmp commandMain.goSingle    ;And do it! :)
 forEnd:
+    lea rsi, qword [rbp + forBlk.sCmdLine]
+    lea rdi, inBuffer
+    mov ecx, cmdBufferL
+    rep movsb   ;Zoom zoom copy the cmdline back home :)
     call forFree
-    jmp doCommandLine.inRet ;Go to the internal command return
+    lea rsp, stackTop   ;Reset stack ptr! Unlikely needed!
+;Since we flushed buffers and reset cmdprocessor state before entering
+; we can jump directly to get input. There cannot be any redirections as
+; redirections are interpreted as part of the command that was looped on.
+    jmp commandMain.inputGetAgain
+
+forPrintCmd:
+    pushfq
+    test byte [forFlg], -1
+    jz .exit    ;If not in a for, return
+    call printPrompt    ;Now output prompt
+    lea rdx, qword [r8 + cmdLine]   ;Get pre-pull cmdline!
+    movzx ecx, byte [rdx - 1]    ;Get the number of chars to print
+    mov ebx, 1  ;STDOUT
+    mov eax, 4000h  ;Write woo!
+    int 21h
+    call printCRLFecho  ;Only print if ECHO ON. Note we have accepted input!
+.exit:
+    popfq
+    return
 
 forFree:
 ;Reset FOR state. Frees the for block and clears the vars.

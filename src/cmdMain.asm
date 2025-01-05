@@ -67,6 +67,7 @@ commandMain:
     mov r8, qword [pPSP]  ;Point back to home segment
     call makeCmdString      ;Makes the CR delimited command in psp
     ;ZF here indicates if we are at the end of the command or nots
+    call forPrintCmd        ;Print cmd if in a FOR loop. Flag preserved.
     call setupRedirandPipes ;Setup/advance pipes and redir as appropriate
     call analyseCmdline     ;Setup cmdName and fcb for cmdBuffer portion
     call setDTA             ;Set the DTA back to us before we proceed!
@@ -426,7 +427,6 @@ doCommandLine:
 ; commands to implement retcodes which we don't use for now.
 ;I doubt we need to reset the stackptr as to get here, the stack has to
 ; have been balanced which means when we pop, we go back to okRet anyway...
-.inRet:
     lea rsp, stackTop   ;Reset stack ptr! Unlikely needed!
     jmp commandMain.okRet   
 .gotoNextEntry:
