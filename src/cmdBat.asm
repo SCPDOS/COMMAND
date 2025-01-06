@@ -7,8 +7,8 @@ batLaunch:
 ;First First check that we are not already in a batch file!
 ;If we are, deallocate it's block before proceeding unless in CALL.
 
-    ;test byte [callFlg], -1 ;Skip this if in a call
-    ;jnz .noBat
+    test byte [callFlg], -1 ;Skip this if in a call
+    jnz .noBat
     mov rbx, qword [bbPtr]
     test rbx, rbx
     jz .noBat   
@@ -169,17 +169,20 @@ batLaunch:
 batFinish:
 ;This is the procedure called after we've processed the last batch line
     call printPrompt    ;Add this to emulate what DOS does
-    ;mov rax, qword [bbPtr]
-    ;mov rax, qword [rax + batBlockHdr.pLink]
-    ;push rax    ;Save the ptr on the stack
+    mov rax, qword [bbPtr]
+    mov rax, qword [rax + batBlockHdr.pLink]
+    push rax    ;Save the ptr on the stack
     call batCleanup     ;Cleanup the batch and batch state vars etc etc
-    ;pop rax
-    ;test rax, rax   ;If the link ptr is 0, we start again :)
-    ;jz commandMain
+    pop rax
+    test rax, rax   ;If the link ptr is 0, we start again :)
+    jz commandMain
+    ;jmp commandMain     ;And start again :)
     ;Else, we prepare to go back a command block
-    ;or byte [statFlg1], inBatch ;We're going back in
-    ;jmp 
-    jmp commandMain     ;And start again :)
+    mov qword [bbPtr], rax
+    or byte [statFlg1], inBatch ;We're going back in
+    and byte [statFlg1], batchEOF   ;Clear EOF flag (is an optimisation)
+    jmp commandMain
+    ;And read the next command from the previous batch file!
 batNextLine:
 ;Read the next line from the file and sets if we are done with copying
     test byte [statFlg1], batchEOF ;Did we hit EOF?

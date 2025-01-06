@@ -19,7 +19,7 @@ commandStart:
     lea rdi, cLineBuffer + 2
     call strcpy
     mov byte [rdi - 1], CR  ;Store a CR over the terminating null
-    jmp short commandMain.batProceed
+    jmp commandMain.batProceed
 commandMain:
     lea rsp, stackTop   ;Reset internal stack pointer pos
     call getSetMainState
@@ -39,7 +39,7 @@ commandMain:
     jne forProceed
     test byte [statFlg1], inBatch   ;If batch on, get the next line to execute
     jnz batNextLine
-;    mov byte [callFlg], 0   ;If we need to get input from cmdline, no more call!
+    mov byte [callFlg], 0   ;If we need to get input from cmdline, no more call!
     call printPrompt    ;Ok we are gonna get more input, output prompt
     lea rdx, inBuffer
     mov eax, 0A00h      ;Do Buffered input

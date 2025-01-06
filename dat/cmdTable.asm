@@ -103,11 +103,12 @@ functionTable:
 
     db 2, "IF"
     dw ifCmd - startLbl
-;-----------------------------
-; Commands left to implement 
-;-----------------------------
+
     db 3, "FOR"
     dw forCmd - startLbl
+
+    db 4, "CALL"
+    dw callCmd - startLbl
 ;-----------------------------
     db -1   ;End of table
 

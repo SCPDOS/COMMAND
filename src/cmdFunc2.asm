@@ -1135,20 +1135,16 @@ forFree:
     pop rax
     return
 
-;callFunc:
-;    lea rdx, qword [r8 + cmdLine] 
-;    mov rsi, rdx
-;    lea rdi, inBuffer + 2
-;    call skipDelimiters
-;    add rsi, 4      ;Skip the CALL command
-;    mov rdx, rsi    ;Get byte count into buffer
-;    sub rdx, rcx    ;This gives us number of chars to subtract from cnt
-;    movzx ecx, byte [r8 + cmdLineCnt]   ;Get copy count
-;    sub ecx, edx    
-;    mov byte [inBuffer + 1], cl
-;    rep movsb
-;    mov byte [callFlg], -1  ;In a call!
-;    call batKillRedir       ;Liquidates all redirs and deletes presetup files
-;    pop rax                 ;Realign stack
-;    pop rax
-;    jmp commandMain.batProceed
+callCmd:
+    jmp badCmdError ;Currently report bad command :)
+    lea rsi, qword [r8 + cmdLine]   ;Copy the command tail!
+    lea rdi, cLineBuffer + 2
+    movzx ecx, byte [r8 + cmdLineCnt]  ;Get the count of chars
+    mov byte [rdi - 1], cl
+    inc ecx         ;Include the CR in the copy!
+    rep movsb
+    mov byte [callFlg], -1  ;In a call!
+    call batKillRedir       ;Liquidates all redirs and deletes presetup files
+    pop rax                 ;Realign stack
+    pop rax
+    jmp commandMain.batProceed

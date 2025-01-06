@@ -22,7 +22,7 @@ ifFlg       db ?                    ;Flags for IF
 ifReset     equ 0                   ;Value to reset the flags
 ifNot       equ 1                   ;Set if NOT encountered
 ifCond      equ 2                   ;Set if condition encountered 
-;callFlg     db ?                    ;Set to -1 in a call!
+callFlg     db ?                    ;Set to -1 in a call!
 ;nestCnt     db ?                    ;Incremented each time a call is made
 ;                                    Max nesting, 10
 ;FOR state variables
