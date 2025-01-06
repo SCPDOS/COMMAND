@@ -914,6 +914,7 @@ int2Eh:
     jne commandMain.goSingle    ;Proceed if we have anything to execute
 int2ERet:
     call clearCommandLineState  ;Be a good citizen, leave it as we found it!
+    mov byte [inBuffer + 1], 0  ;Clean this byte to disable F3 recall
     mov rsp, qword [int2Ersp]
     mov rbx, qword [int2Epsp] ;Get Old current PSP in rbx
     mov eax, 5000h  ;Set Current PSP
