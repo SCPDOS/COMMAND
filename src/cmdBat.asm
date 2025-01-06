@@ -387,7 +387,7 @@ batCleanup:
 ; needs to check for these things. Not a big deal as normally we'll 
 ; just have a null pointer.
 ;-----------------------------------------------------------------------
-    ;call forFree
+    call forFree
 ;Finally free this batch header...
     push r8
     mov r8, rbx
