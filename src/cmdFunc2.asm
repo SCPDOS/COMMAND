@@ -1136,7 +1136,7 @@ forFree:
     return
 
 callCmd:
-    jmp badCmdError ;Currently report bad command :)
+    ;jmp badCmdError ;Currently report bad command :)
     lea rsi, qword [r8 + cmdLine]   ;Copy the command tail!
     lea rdi, cLineBuffer + 2
     movzx ecx, byte [r8 + cmdLineCnt]  ;Get the count of chars
@@ -1148,3 +1148,19 @@ callCmd:
     pop rax                 ;Realign stack
     pop rax
     jmp commandMain.batProceed
+
+callClean:
+;Frees everything but the last one. 
+;There must be a pointer in bbPtr!
+;Returns with rbx -> Last pointer
+    ;return
+    ;breakpoint
+    mov rbx, qword [bbPtr]
+    mov rax, qword [rbx + batBlockHdr.pLink]
+    test rax, rax
+    retz
+    push rax    ;Save the prev ptr
+    call batFree
+    pop qword [bbPtr]   ;Pop it into var
+    jmp short callClean
+    

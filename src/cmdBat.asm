@@ -6,12 +6,11 @@ batLaunch:
 ;Then work out how much memory to allocate and allocate it.
 ;First First check that we are not already in a batch file!
 ;If we are, deallocate it's block before proceeding unless in CALL.
-
-    test byte [callFlg], -1 ;Skip this if in a call
-    jnz .noBat
     mov rbx, qword [bbPtr]
     test rbx, rbx
     jz .noBat   
+    test byte [callFlg], -1 ;Skip this if in a call
+    jnz .noBat
     call batFree            ;Free batch block
     mov qword [bbPtr], 0    ;Mark as free. Can leave flags alone!
 .noBat:
@@ -63,6 +62,8 @@ batLaunch:
     repne scasb ;Find the terminating null
     dec rdi ;Now point to the terminating null
     mov al, byte [pathSep]
+    cmp byte [rdi - 1], al
+    je .bbCpName    ;Dont store a pathsep over root!
     stosb   ;Store this pathsep over the original null
     ;Now we are ready to copy the command line passed to us by the user
     ; to rdi. rsi points to where to source the rest of the chars
@@ -125,13 +126,18 @@ batLaunch:
 ;Now init the batblock with all the data we need
     mov rbx, rax    ;Move ptr here
     xchg qword [bbPtr], rax  ;Save the ptr here too and get prev ptr!
-    mov qword [rbx + batBlockHdr.pLink], rax    ;Save prev ptr here (0 if not call)
+    push rax    ;Save the previous pointer on the stack
     mov rdi, rbx
     xor eax, eax
     rep stosb   ;Clean the block with nulls
+    or byte [statFlg1], inBatch ;Fire up the batch processor now!
+
+    pop qword [rbx + batBlockHdr.pLink]    ;Get prev ptr here (0 if not call)
     mov rdi, rbx            ;Point back to the head of the block
     mov al, byte [echoFlg]
     mov byte [rbx + batBlockHdr.bEchoFlg], al
+    mov al, byte [statFlg1]
+    mov byte [rbx + batBlockHdr.bStatFlg], al
     mov eax, -1
     mov ecx, 5
     lea rdi, qword [rbx + batBlockHdr.wArgs]    ;Init the wArgs to no params!
@@ -163,7 +169,6 @@ batLaunch:
 ;Do the handle close as deleting the file without closing the handle is asking 
 ; for SHARING trouble...
     call batKillRedir      ;Fully remove all redirs and files before starting
-    or byte [statFlg1], inBatch ;Fire up the batch processor!
     jmp commandMain         ;Now we start reading the batch file!
 
 batFinish:
@@ -176,11 +181,13 @@ batFinish:
     pop rax
     test rax, rax   ;If the link ptr is 0, we start again :)
     jz commandMain
-    ;jmp commandMain     ;And start again :)
     ;Else, we prepare to go back a command block
     mov qword [bbPtr], rax
-    or byte [statFlg1], inBatch ;We're going back in
-    and byte [statFlg1], batchEOF   ;Clear EOF flag (is an optimisation)
+    ;And place the original states back
+    mov bl, byte [rax + batBlockHdr.bEchoFlg]
+    mov byte [echoFlg], bl
+    mov bl, byte [rax + batBlockHdr.bStatFlg]
+    mov byte [statFlg1], bl
     jmp commandMain
     ;And read the next command from the previous batch file!
 batNextLine:
@@ -405,15 +412,12 @@ batCleanup:
     mov rbx, qword [bbPtr]
     test rbx, rbx
     jz .exit    ;Skip any references using this pointer
+;Restore the state from the current block
+    call callClean
     mov al, byte [rbx + batBlockHdr.bEchoFlg]   ;Reset the echo flag
     mov byte [echoFlg], al
-;-----------------------------------------------------------------------
-;===Now free the FOR and CALL blocks... oops havent implemented yet!!===
-; FOR blocks are generally cleaned up by the FOR command. CALL too. 
-; But since this is the routine called by the error handler too, it 
-; needs to check for these things. Not a big deal as normally we'll 
-; just have a null pointer.
-;-----------------------------------------------------------------------
+    mov al, byte [rbx + batBlockHdr.bStatFlg]
+    mov byte [statFlg1], al
     call forFree
     call batFree
 .exit:
@@ -451,7 +455,9 @@ batOpen:
 ; Thus this never returns fail.
     push rax
     push rdx
-    lea rdx, batFile
+    mov rax, qword [bbPtr]
+    lea rdx, qword [rax + batBlockHdr.cmdLine]
+    ;lea rdx, batFile
 .batOpen:
     mov eax, 3D00h  ;Open for read only
     int 21h

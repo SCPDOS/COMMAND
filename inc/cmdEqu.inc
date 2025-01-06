@@ -28,7 +28,7 @@ struc batBlockHdr
     .bEchoFlg   db ?    ;Echo flag on entry to batch. 1 if echo on!
     .pLink      dq ?    ;Pointer to the previous batch block when CALLed
 ;    .pForBlk    dq ?    ;Pointer to the active FOR block
-    .bBatFlg    db ?    ;Indicates type of command currently active
+    .bStatFlg   db ?    ;Indicates type of command currently active
 .qBatOff:
     .dBatOffLo  dd ?    ;LSEEK Low dword of the batch offset
     .dBatOffHi  dd ?    ;LSEEK High dword of the batch offset (0 unless net FS)
