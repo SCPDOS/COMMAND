@@ -26,8 +26,8 @@ cmdLine     equ psp.progTail
 struc batBlockHdr
     .zero       db ?    ;Always null
     .bEchoFlg   db ?    ;Echo flag on entry to batch. 1 if echo on!
-    .pCallBlk   dq ?    ;Pointer to the previous batch block when CALLed
-    .pForBlk    dq ?    ;Pointer to the active FOR block
+    .pLink      dq ?    ;Pointer to the previous batch block when CALLed
+;    .pForBlk    dq ?    ;Pointer to the active FOR block
     .bBatFlg    db ?    ;Indicates type of command currently active
 .qBatOff:
     .dBatOffLo  dd ?    ;LSEEK Low dword of the batch offset

@@ -887,7 +887,7 @@ forCmd:
     mov ecx, forBlk_size
     rep stosb
 ;Clean any pre-established redirs
-    call cleanupRedirs  ;Preserves rbp
+    call batKillRedir   ;Preserves rbp
 ;Now copy the command line to the block :)
     lea rsi, inBuffer   ;Start reading what we typed in
     lea rdi, qword [rbp + forBlk.sCmdLine]
@@ -1134,3 +1134,21 @@ forFree:
     pop r8
     pop rax
     return
+
+;callFunc:
+;    lea rdx, qword [r8 + cmdLine] 
+;    mov rsi, rdx
+;    lea rdi, inBuffer + 2
+;    call skipDelimiters
+;    add rsi, 4      ;Skip the CALL command
+;    mov rdx, rsi    ;Get byte count into buffer
+;    sub rdx, rcx    ;This gives us number of chars to subtract from cnt
+;    movzx ecx, byte [r8 + cmdLineCnt]   ;Get copy count
+;    sub ecx, edx    
+;    mov byte [inBuffer + 1], cl
+;    rep movsb
+;    mov byte [callFlg], -1  ;In a call!
+;    call batKillRedir       ;Liquidates all redirs and deletes presetup files
+;    pop rax                 ;Realign stack
+;    pop rax
+;    jmp commandMain.batProceed

@@ -4,7 +4,18 @@ batLaunch:
 ;Start by creating the FQPath name and building a command line
 ; where the arguments are CR terminated.
 ;Then work out how much memory to allocate and allocate it.
-;Start by saving the command line
+;First First check that we are not already in a batch file!
+;If we are, deallocate it's block before proceeding unless in CALL.
+
+    ;test byte [callFlg], -1 ;Skip this if in a call
+    ;jnz .noBat
+    mov rbx, qword [bbPtr]
+    test rbx, rbx
+    jz .noBat   
+    call batFree            ;Free batch block
+    mov qword [bbPtr], 0    ;Mark as free. Can leave flags alone!
+.noBat:
+;Now start by saving the command line
     lea rsi, inBuffer
     lea rdi, batCmdline
     mov ecx, cmdBufferL
@@ -111,11 +122,13 @@ batLaunch:
     int 21h
     jnc .bbAlloced
     call badNoMemError  ;Print not enough mem error
-    jmp  redirPipeFailureCommon.noPrint ;Clean up all redir and ret to cmdline
+    call batCleanup ;Clean up all redir and ret to cmdline
+    jmp commandMain
 .bbAlloced:
 ;Now init the batblock with all the data we need
-    mov qword [bbPtr], rax  ;Save the ptr here!
-    mov rbx, rax
+    mov rbx, rax    ;Move ptr here
+    xchg qword [bbPtr], rax  ;Save the ptr here too and get prev ptr!
+    mov qword [rbx + batBlockHdr.pLink], rax    ;Save prev ptr here (0 if not call)
     mov rdi, rbx
     xor eax, eax
     rep stosb   ;Clean the block with nulls
@@ -152,15 +165,23 @@ batLaunch:
 ;Now deactivate any redirs. Do redir out as cleanupRedirs somewhat ignores it.
 ;Do the handle close as deleting the file without closing the handle is asking 
 ; for SHARING trouble...
-    call cleanRedirOut      ;Liquidates redirout if needed
-    call cleanupRedirs      ;Now liquidate remaining redirs and pipes
+    call batKillRedir      ;Fully remove all redirs and files before starting
     or byte [statFlg1], inBatch ;Fire up the batch processor!
     jmp commandMain         ;Now we start reading the batch file!
 
 batFinish:
 ;This is the procedure called after we've processed the last batch line
     call printPrompt    ;Add this to emulate what DOS does
+    ;mov rax, qword [bbPtr]
+    ;mov rax, qword [rax + batBlockHdr.pLink]
+    ;push rax    ;Save the ptr on the stack
     call batCleanup     ;Cleanup the batch and batch state vars etc etc
+    ;pop rax
+    ;test rax, rax   ;If the link ptr is 0, we start again :)
+    ;jz commandMain
+    ;Else, we prepare to go back a command block
+    ;or byte [statFlg1], inBatch ;We're going back in
+    ;jmp 
     jmp commandMain     ;And start again :)
 batNextLine:
 ;Read the next line from the file and sets if we are done with copying
@@ -388,12 +409,7 @@ batCleanup:
 ; just have a null pointer.
 ;-----------------------------------------------------------------------
     call forFree
-;Finally free this batch header...
-    push r8
-    mov r8, rbx
-    mov eax, 4900h
-    int 21h
-    pop r8
+    call batFree
 .exit:
     call cleanupRedirs  ;Clean up all redirections, close files etc
     mov qword [bbPtr], 0    
@@ -403,6 +419,20 @@ batCleanup:
     lea rdi, inBuffer
     mov ecx, cmdBufferL
     rep movsb
+    return
+batFree:
+;Frees the batch block in rbx
+    push r8
+    mov r8, rbx
+    mov eax, 4900h
+    int 21h
+    pop r8
+    return
+
+batKillRedir:
+;Used to kill redir state on entering a BAT file, FOR or CALL command
+    call cleanRedirOut      ;Liquidates redirout if needed
+    call cleanupRedirs      ;Now liquidate remaining redirs and pipes
     return
 
 batOpen:

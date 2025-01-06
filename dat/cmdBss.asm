@@ -23,6 +23,9 @@ ifReset     equ 0                   ;Value to reset the flags
 ifNot       equ 1                   ;Set if NOT encountered
 ifCond      equ 2                   ;Set if condition encountered     
 batCmdline  db cmdBufferL dup (?)   ;Stores original commandline
+;callFlg     db ?                    ;Set to -1 in a call!
+;nestCnt     db ?                    ;Incremented each time a call is made
+;                                    Max nesting, 10
 ;FOR state variables
 forFlg      db ?                    ;For flag. Set if in a forloop
 pForBlk     dq ?                    ;Ptr to the for block

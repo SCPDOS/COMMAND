@@ -39,6 +39,7 @@ commandMain:
     jne forProceed
     test byte [statFlg1], inBatch   ;If batch on, get the next line to execute
     jnz batNextLine
+;    mov byte [callFlg], 0   ;If we need to get input from cmdline, no more call!
     call printPrompt    ;Ok we are gonna get more input, output prompt
     lea rdx, inBuffer
     mov eax, 0A00h      ;Do Buffered input
