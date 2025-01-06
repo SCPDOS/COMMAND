@@ -59,6 +59,7 @@ batLaunch:
 ;Now move rdi to the terminating null   
     xor eax, eax
     xor ecx, ecx
+    dec ecx
     repne scasb ;Find the terminating null
     dec rdi ;Now point to the terminating null
     mov al, byte [pathSep]
@@ -417,7 +418,7 @@ batCleanup:
     mov qword [bbPtr], 0    
     and byte [statFlg1], ~(inBatch|batchEOF)   ;Oh bye bye batch mode!
     return
-    
+
 batFree:
 ;Frees the batch block in rbx
     push r8
