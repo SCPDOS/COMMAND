@@ -1091,10 +1091,7 @@ copyMain:
     jnz .notAscii
 .doAscii:
 ;Now scan the buffer for a EOF. If we find, we stop the copy at that char
-    push rdx
-    movzx edx, word [srcHdlInfo]
-    test dx, 80h    ;Is this a chardev?
-    pop rdx
+    test word [srcHdlInfo], 80H ;Is this a chardev?
     jnz .charDev
     jecxz .exitCleanup  ;We read no bytes from disk so can't scan for an EOF!
 .charDev:
