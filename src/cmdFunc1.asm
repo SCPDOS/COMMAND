@@ -547,6 +547,10 @@ copy:
 .bufOk:
     mov qword [cpBufPtr], rax   ;Save ptr to xfr area
     mov word [wCpBufSz], cx     ;Save buffer size
+    call copyParse      ;Do Mode 3 prescan
+    jc badSyntaxError
+    test ecx, ecx   
+    jz badSyntaxError
 ;Go to the end of the cmd line and search backwards for the destination first
     lea rsi, qword [r8 + cmdLine]
     movzx ecx, byte [r8 + cmdLineCnt]
@@ -610,7 +614,7 @@ copy:
 ;Now start with source processing!! Clear the binSrc bit in bCpFlg
     and byte [bCpFlg], ~binSrc  ;Mightve been accidentally set by dest flags
     lea rsi, qword [r8 + cmdLine]
-.srcLp:
+.srcLp: ;Jump to with rsi pointing to portion of the cmdline to scan
     call skipDelimiters 
     mov al, byte [switchChar]
     cmp byte [rsi], al
@@ -641,7 +645,6 @@ copy:
     call cpDelimPathToBufz      ;Copy this over! rsi points past delimiter
     pop rdi
     ;Now go forwards and pick up any more switches.
-    ;Also any "+" signs here!!
     dec rsi ;Point back to the first delimiter
 .swSrcSwPost:
     call skipDelimiters ;Skips trailing delimiters
@@ -675,7 +678,19 @@ copy:
     call normalisePath
     lea rdi, destSpec
     call normalisePath
+    push rdi
+    test byte [bCpFlg], mod3Cpy
+    jz .notm3
+;Now we scan for a + in the src spc and if one is found, overwrite it with a <NUL>
+    mov rdi, rsi    ;Get the src string in rdi
+    call strlen 
+    mov al, "+"
+    repne scasb 
+    jne .notm3  ;If not equal, exit
+    mov byte [rdi - 1], 0
+.notm3:
 ;Now establish if the source is a directory or not!
+    pop rdi ;Get back the destspec ptr
     test byte [bCpFlg], wcSrc
     jnz .checkDestDir   ;Skip check if source has wildcards
     lea rdx, srcSpec
@@ -858,18 +873,40 @@ copy:
     jnc .mod1Lp         ;If no more files, we are done! Fall thru!
 
 .copyDone:
+    test byte [bCpFlg], mod3Cpy ;If not mode 3, just exit!
+    jz .cdNotM3
+;Else, we advance the pointers and jump again!
+    mov rsi, qword [pNextFspec]
+    cmp rsi, qword [pLastFspec] ;Did we check the last section?
+    je .cdNotM3                 ;If yes, we are done!
+.cdM3lp:
+    call copyParse.gotoVar      ;Else move rsi to the var
+    cmp al, CR
+    je .cdNotM3
+    cmp al, "+"
+    je .cdPlus
+    call copyParse.skipVar  ;Go to the end of the var (guaranteed @ a +)
+    cmp al, CR
+    je .cdNotM3
+    jmp short .cdM3lp
+.cdPlus:
+    inc rsi ;Go past the + sign
+    mov qword [pNextFspec], rsi ;Store this ptr
+    and byte [bCpFlg], mod3Cpy|oneDest|ascDes   ;Clear flags except 4 dest
+    jmp .srcLp
+.cdNotM3:
     call .copyCleanup   ;Clean up resources!
     mov eax, dword [dCpCnt] ;Get number of files copied
     mov ecx, 9  ;Maximum copy 9,999,999 files... ofc thats ok
     call printDecimalValLB   ;n File(s) copied
     lea rdx, copyOk
-    mov ah, 09h
+    mov eax, 0900h
     int 21h    
     return
 
 .prntFilespec:
 ;Prints the filespec to STDOUT. If the path is 
-    test byte [bCpFlg], wcSrc   ;If no wildcard, then don't print name
+    test byte [bCpFlg], wcSrc|mod3Cpy   ;If no wc or mode 3 don't print name
     retz
     lea rdx, srcSpec
     mov rdi, rdx
@@ -1044,9 +1081,23 @@ copyMain:
     int 21h
     jc .badExit
     mov ecx, eax    ;Save the binary # of bytes read
+    test byte [bCpFlg], mod3Cpy
+    jnz .doMod3BinCheck
     test byte [bCpFlg], ascSrc  ;Are we copying in ascii mode
     jz .notAscii
+    jmp short .doAscii
+.doMod3BinCheck:
+    test byte [bCpFlg], binSrc
+    jnz .notAscii
+.doAscii:
 ;Now scan the buffer for a EOF. If we find, we stop the copy at that char
+    push rdx
+    movzx edx, word [srcHdlInfo]
+    test dx, 80h    ;Is this a chardev?
+    pop rdx
+    jnz .charDev
+    jecxz .exitCleanup  ;We read no bytes from disk so can't scan for an EOF!
+.charDev:
     push rax        ;Save the original char count
     mov rdi, rdx    ;rdx keeps the buffer ptr
     mov al, EOF
@@ -1151,6 +1202,60 @@ copyMain:
     mov word [destHdl], ax
     movzx ebx, ax
     return
+
+copyParse:
+;Checks to see if we are in mode 3. If we are, sets up the 
+; mode 3 variables. Ignores switches making life so much better.
+    lea rsi, qword [r8 + cmdLine]
+    mov qword [pNextFspec], rsi     ;Setup this var here
+    xor ecx, ecx    ;Use as a filespec counter in a "+ +" region
+.cp1:
+    call .gotoVar   ;Goto filespec. Move rsi->First non-terminator char or +
+    cmp al, CR
+    je .cpExit
+    cmp al, "+"
+    je .cpPlus
+    inc ecx ;Add another file to the count
+    call .skipVar   ;Goto end of var. Move rsi->First terminator char or +
+    cmp al, CR
+    je .cpExit
+    cmp al, "+"
+    jne .cp1 
+.cpPlus:
+;Here we hit a "+"
+    xor ecx, ecx    ;Clean this var again
+    or byte [bCpFlg], mod3Cpy   ;We are in mode 3 if we are here
+    inc rsi         ;Go past the + sign
+    mov qword [pLastFspec], rsi ;Save this var as we go
+    jmp short .cp1
+.cpExit:
+    cmp ecx, 3  ;If we have more than 2 files w/o a + between them, syntax err
+    cmc         ;Compliment CF to make CF=CY on error!
+    return
+.gotoVar:
+;Goes to the next variable, plus sign or CR.
+;Returns rsi -> First char of the pathspec, + or CR
+    lodsb
+    call isALdelimiter  
+    je .gotoVar         ;Skips delimiters
+    cmp al, byte [switchChar]
+    jne .vexit
+    call .skipVar   ;Now skip the string after the cmdline switch
+    jmp short .gotoVar  ;And switches
+.vexit:
+    dec rsi ;Return back to the break condition char
+    return
+.skipVar:
+;Goes to the delimiter for this string
+    lodsb
+    cmp al, CR
+    je .vexit
+    cmp al, "+"
+    je .vexit
+    call isALdelimiter
+    je .vexit
+    jmp short .skipVar
+
 
 erase:
     test byte [arg1Flg], -1

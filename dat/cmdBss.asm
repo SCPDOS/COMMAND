@@ -93,6 +93,8 @@ srcPtr      dq ?    ;Where to copy pattern to in src path
 destPtr     dq ?    ;Where to copy pattern to in dest path
 renName     db 11 dup (?) ;Build a name pattern here in FCB format
 ;Copy vars
+pLastFspec  dq ?    ;Ptr to first char past last + in source of Mode 3 copy
+pNextFspec  dq ?    ;Ptr to first char past next + in source of Mode 3 copy
 verifyFlg   db ?    ;Set if verify on before copy
 sourceHdl   dw ?    ;These get set to -1 on entry to copy
 destHdl     dw ?
@@ -100,15 +102,14 @@ srcHdlInfo  dw ?    ;Save the hdl device info (bit 7 Set -> Char dev)
 cpBufPtr    dq ?    ;Ptr to the xfr arena
 wCpBufSz    dw ?    ;Copy Buffer size, max 4096 bytes
 dCpCnt      dd ?    ;Number of files we have copied
-bCpFlg      db ?    ;Copy state flag
-
+bCpFlg      db ?    ;Copy state flag   
 ascSrc      equ 1   ;Set if ascii copy for this source file.
 binSrc      equ 2   ;Set if last encountered src file flag was binary
 ascDes      equ 4   ;Set if add ^Z at end of file. Clear if not!
 wcSrc       equ 8   ;Set if wc's in source pattern. Display source file names.
 oneDest     equ 10h ;Single destination, not dir 
 mod1Cpy     equ 20h ;Set if copying files to new dir with same names
-mod2Cpy     equ 40h ;Set if copying files with new names
+mod2Cpy     equ 40h ;Set if copying files with new names (unused)
 mod3Cpy     equ 80h ;Set if dflt cat ASCII files to a single destination
 
 ;Environment manipulation vars
