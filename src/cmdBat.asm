@@ -413,7 +413,6 @@ batCleanup:
     test rbx, rbx
     jz .exit    ;Skip any references using this pointer
 ;Restore the state from the current block
-    call callClean
     mov al, byte [rbx + batBlockHdr.bEchoFlg]   ;Reset the echo flag
     mov byte [echoFlg], al
     mov al, byte [rbx + batBlockHdr.bStatFlg]

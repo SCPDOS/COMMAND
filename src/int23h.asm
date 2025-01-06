@@ -73,9 +73,11 @@ ctrlCHandler:
     call printCRLF
     jmp .exitBat    ;Clears errRetHdls and in ctrlc flag and exits!
 .killBat:   ;Now we need to terminate the batch file too.
+    call callClean
     call batCleanup
     jmp short .endBat   ;Now CRLF and exit!
 .nestKill:
+    call callClean
     call batCleanup
     and byte [statFlg1], ~inCtrlC   
     jmp .retFromDosCall ;Nested kill needs to be handled like other nestings

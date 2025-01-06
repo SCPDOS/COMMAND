@@ -1153,8 +1153,6 @@ callClean:
 ;Frees everything but the last one. 
 ;There must be a pointer in bbPtr!
 ;Returns with rbx -> Last pointer
-    ;return
-    ;breakpoint
     mov rbx, qword [bbPtr]
     mov rax, qword [rbx + batBlockHdr.pLink]
     test rax, rax
