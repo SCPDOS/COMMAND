@@ -832,7 +832,7 @@ ifCmd:
 ;Now rsi points to delims before the command. 
 ; Skip the delims and copy the argument!
     call skipDelimiters    ;Now go to the next argument (No need for CR check)
-    lea rdi, qword [inBuffer + 2]
+    lea rdi, qword [cLineBuffer + 2]
     xor ecx, ecx
 .cpExitLp:
     lodsb
@@ -841,7 +841,7 @@ ifCmd:
     cmp al, CR
     jne .cpExitLp
     dec ecx ;Drop CR from count
-    mov byte [inBuffer + 1], cl
+    mov byte [cLineBuffer + 1], cl
     pop rax ;Balance the stack
     pop rax
     jmp commandMain.batProceed    ;And execute the command now!
@@ -889,7 +889,7 @@ forCmd:
 ;Clean any pre-established redirs
     call batKillRedir   ;Preserves rbp
 ;Now copy the command line to the block :)
-    lea rsi, inBuffer   ;Start reading what we typed in
+    lea rsi, cLineBuffer   ;Start reading what we typed in
     lea rdi, qword [rbp + forBlk.sCmdLine]
     push rdi
     mov ecx, cmdBufferL
@@ -1049,7 +1049,7 @@ forProceed:
 ;We substitute the string in forBlk.sNameBuf into the command line when we
 ; hit a matching %<var>
     mov rsi, qword [rbp + forBlk.pCmd]  ;Copy the command line
-    lea rdi, qword [inBuffer + 2]   ;We will be writing to this buffer
+    lea rdi, qword [cLineBuffer + 2]   ;We will be writing to this buffer
     xor ecx, ecx    ;Keep track of chars we copy over
 .ccLp:
     lodsb
@@ -1089,11 +1089,11 @@ forProceed:
     jmp short .ccLp ;And get the next char
 .ccLpEnd:
     stosb       ;Store the terminating CR
-    mov byte [inBuffer + 1], cl ;Store var count here
+    mov byte [cLineBuffer + 1], cl ;Store var count here
     jmp commandMain.goSingle    ;And do it! :)
 forEnd:
     lea rsi, qword [rbp + forBlk.sCmdLine]
-    lea rdi, inBuffer
+    lea rdi, cLineBuffer
     mov ecx, cmdBufferL
     rep movsb   ;Zoom zoom copy the cmdline back home :)
     call forFree

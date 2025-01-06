@@ -21,8 +21,7 @@ batFile     db fileSpecZL dup (?)   ;Path to bat to execute. Qual with
 ifFlg       db ?                    ;Flags for IF
 ifReset     equ 0                   ;Value to reset the flags
 ifNot       equ 1                   ;Set if NOT encountered
-ifCond      equ 2                   ;Set if condition encountered     
-batCmdline  db cmdBufferL dup (?)   ;Stores original commandline
+ifCond      equ 2                   ;Set if condition encountered 
 ;callFlg     db ?                    ;Set to -1 in a call!
 ;nestCnt     db ?                    ;Incremented each time a call is made
 ;                                    Max nesting, 10
@@ -45,10 +44,9 @@ launchBlock db execProg_size dup (?)
 ; at least 1 character long. The tail is formed of the remaining chars, so there
 ; will be at least 127 chars left. Thus we always have enough space.
 inLen   equ 128 
-batCpyBuffer:   ;Ptr to the buffer to drop the processed line into
 inBuffer    db cmdBufferL dup (?)   ;Original input from user! 128 chars max!
 batInBuffer:    ;Ptr to the buffer for batch input
-cpyBuffer   db cmdBufferL dup (?)   ;Copied input for processing
+cLineBuffer db cmdBufferL dup (?)   ;Copied input for processing
 cmdBuffer   db cmdBufferL dup (?)   ;Buffer with the command pipeline
 cmdPathSpec db fileSpecZL dup (?)   ;Space for full path to a ext cmd
 cmdName     db cmdNameL dup (?)     ;Cmd name prefixed by length 

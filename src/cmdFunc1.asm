@@ -1385,7 +1385,7 @@ date:
     mov ah, 09h
     int 21h
 
-    lea rdx, cpyBuffer  ;Make sure to use cpyBuffer to preserve F3
+    lea rdx, cLineBuffer  ;Make sure to use cLineBuffer to preserve F3
     mov byte [rdx], inLen ;Enter a string of up to 128 chars in length
     mov ah, 0Ah
     int 21h
@@ -1501,7 +1501,7 @@ time:
     mov ah, 09h
     int 21h
 
-    lea rdx, cpyBuffer  ;Make sure to use cpyBuffer to preserve F3
+    lea rdx, cLineBuffer  ;Make sure to use cLineBuffer to preserve F3
     mov byte [rdx], inLen ;Enter a string of up to 128 chars in length
     mov ah, 0Ah
     int 21h

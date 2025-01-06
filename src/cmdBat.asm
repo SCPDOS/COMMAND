@@ -16,10 +16,6 @@ batLaunch:
     mov qword [bbPtr], 0    ;Mark as free. Can leave flags alone!
 .noBat:
 ;Now start by saving the command line
-    lea rsi, inBuffer
-    lea rdi, batCmdline
-    mov ecx, cmdBufferL
-    rep movsb
 ;Now check if we are executing AUTOEXEC.BAT. If so, 
 ; we suppress F3 recalling of the command
     lea rsi, autoSpec + 3   ;Just check the name
@@ -27,7 +23,7 @@ batLaunch:
     mov ecx, 8  ;Only check filename as the extension here must be BAT
     repe cmpsb
     jne .notAutoexec
-    mov byte [batCmdline + 1], 0    ;Set the count byte to 0
+    mov byte [inBuffer + 1], 0    ;Set the count byte to 0
 .notAutoexec:
     lea rsi, cmdPathSpec    ;Path here is null terminated.
     lea rdi, batFile
@@ -245,7 +241,7 @@ batNextLine:
     je batNextLine          ;Just get the next line immediately
     call batPreprocess      ;Else we preprocess now
 
-    lea rdx, batCpyBuffer + 2
+    lea rdx, batInBuffer + 2
     cmp byte [rdx], batNoEchoChar   ;Line no echo check! (@)
     je .noEchoPull       
     test byte [echoFlg], -1         
@@ -259,20 +255,20 @@ batNextLine:
     int 21h
     jmp commandMain.batProceedCrlf
 .noEchoPull:
-    dec byte [batCpyBuffer + 1]     ;Eliminate the @ char
+    dec byte [batInBuffer + 1]     ;Eliminate the @ char
     jz batNextLine    ;If this was just a @<CR><LF>, get next line
     mov rdi, rdx
     lea rsi, qword [rdx + 1]    ;Start from the char afterwards
-    movzx ecx, byte [batCpyBuffer + 1]  ;Get the remaining count to copy
+    movzx ecx, byte [batInBuffer + 1]  ;Get the remaining count to copy
     inc ecx                         ;Want to copy over the terminating CR too
     rep movsb 
     jmp commandMain.batProceed   ;Now proceed normally w/o crlf
 
 batPreprocess:
-;Copies the line from batCpyBuffer to batInBuffer for regular processing,
+;Copies the line from batInBuffer to batInBuffer for regular processing,
 ; expanding any environment variables as the expansion takes place.
 ;Line is guaranteed only CR terminated.
-    lea rbp, batCpyBuffer   ;Save the ptr for the expandVar function
+    lea rbp, cmdBuffer      ;Save the ptr for the expandVar function
     lea rdi, qword [rbp + 2]    ;Point to the string destination
     mov byte [rbp + 1], 0       ;Reset the buffer count
     lea rsi, qword [batInBuffer + 2]
@@ -286,13 +282,19 @@ batPreprocess:
 .rawcp:
     stosb   ;Store the char
     cmp al, CR
-    rete    ;Return immediately if we copied a CR. Dont add to count.
+    je .exit    ;Return immediately if we copied a CR. Dont add to count.
     inc byte [rbp + 1] ;Else inc the buffer count
 .check:
     cmp byte [rbp + 1], inLen - 1   ;Max chars yet?
     jne .lp
     mov al, CR  ;Here if so, terminate the line nicely :)
     stosb   ;Store this char too
+.exit:
+;Now copy the expanded command line back :)
+    mov rsi, rbp
+    lea rdi, batInBuffer
+    mov ecx, cmdBufferL
+    rep movsb
     return
 
 
@@ -414,12 +416,8 @@ batCleanup:
     call cleanupRedirs  ;Clean up all redirections, close files etc
     mov qword [bbPtr], 0    
     and byte [statFlg1], ~(inBatch|batchEOF)   ;Oh bye bye batch mode!
-;... and copy the batch command line back to its resting place.
-    lea rsi, batCmdline
-    lea rdi, inBuffer
-    mov ecx, cmdBufferL
-    rep movsb
     return
+    
 batFree:
 ;Frees the batch block in rbx
     push r8

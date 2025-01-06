@@ -14,9 +14,9 @@ commandStart:
     test byte [statFlg1], inSingle
     jnz commandMain.goSingle 
     ;Only enter here if we are autoexec :)
-    mov byte [inBuffer + 1], autoSpecL - 1  ;Drop one from the count for CR
+    mov byte [cLineBuffer + 1], autoSpecL - 1  ;Drop one from the count for CR
     lea rsi, autoSpec
-    lea rdi, inBuffer + 2
+    lea rdi, cLineBuffer + 2
     call strcpy
     mov byte [rdi - 1], CR  ;Store a CR over the terminating null
     jmp short commandMain.batProceed
@@ -44,18 +44,18 @@ commandMain:
     lea rdx, inBuffer
     mov eax, 0A00h      ;Do Buffered input
     int 21h
+;Copy over the input text
+    lea rsi, inBuffer       ;Preserve what was input
+    lea rdi, cLineBuffer
+    mov ecx, cmdBufferL     ;Copy the buffer over to manipulate
+    rep movsb
 .batProceedCrlf:
     call printCRLF      ;Note we have accepted input
 .batProceed:            ;Jump here to copy the batch input line 
 ;First check we had something typed in of length greater than 0
-    cmp byte [inBuffer + 1], 0  ;Check input length valid
+    cmp byte [cLineBuffer + 1], 0  ;Check input length valid
     je .inputGetCmdlineAgain  ;If not, keep looping input
 .goSingle:
-;Copy over the input text
-    lea rsi, inBuffer   ;This buffer is used for all input so copy command line
-    lea rdi, cpyBuffer
-    mov ecx, cmdBufferL     ;Copy the buffer over to manipulate
-    rep movsb
     call makeCmdBuffer      ;Preprocess the redir, make cmd buffer
     ;Now check we aren't starting with a pipe or <CR> and treat differently
     lea rsi, cmdBuffer + 2
@@ -93,7 +93,7 @@ makeCmdBuffer:
 ;Makes the command buffer, escapes quotes and peels off any redirs from the
 ; copy buffer. Called only once in a cycle.
 ;Throughout: CL has char count, CH has quote count
-    lea rsi, [cpyBuffer + 2]    ;Goto copy buffer + 2
+    lea rsi, [cLineBuffer + 2]    ;Goto copy buffer + 2
     xor ecx, ecx
     mov rdi, rsi    ;Save the pointer
 .countQuotes:
@@ -686,7 +686,7 @@ advanceRedir:
 peelRedir:
 ;Checks and sets up redir as appropriate
 ;Input: al = First char to check, if al < > >> or |, handled appropriately
-;       rsi points to the first char after the char in al in cpyBuffer
+;       rsi points to the first char after the char in al in cLineBuffer
 ;Output: ZF=NZ => No redir
 ;        ZF=ZY => Redir
 ;           rsi is moved to the first non-terminating char after redir filespec
@@ -866,7 +866,7 @@ getSetMainState:
 ;Resets the buffers lengths, sets stringops and gets the pPSP in r8
     cld ;Ensure stringops are done the right way
     mov byte [inBuffer], inLen      ;Reset the buffer length
-    mov byte [cpyBuffer], inLen     ;Reset the buffer length
+    mov byte [cLineBuffer], inLen     ;Reset the buffer length
     mov byte [cmdBuffer], inLen     ;Reset the buffer length
     mov r8, qword [pPSP]              ;Reset the pPSP
     return
