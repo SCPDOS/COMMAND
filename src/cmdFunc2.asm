@@ -16,6 +16,7 @@
 ; goto          GOTO 
 ; ifCmd         IF  
 ; forCmd        FOR
+; callCmd       CALL
 ;----------------------------------------------------
 
 type:
@@ -537,54 +538,39 @@ echo:
     jmp printString
 .argGiven:
     lea rsi, qword [r8 + cmdLine]
-    movzx eax, byte [arg1Off]   ;Get the offset
-    add rsi, rax
-    lodsb   ;Get this char
-    dec rsi ;And go back to the start of the string
-    call ucChar
-    cmp al, "O" ;Was it an O? If not, direct copy
-    jne .directEcho
-    mov al, byte [rsi + 1]  ;Get the next char
-    call ucChar
-    cmp al, "N" ;If its N, check its the last char on the string
-    jne .checkOff
-    push rsi
-    add rsi, 2  ;Go past on string
+    call skipDelimiters
+    call makeArgAsciz
     call skipDelimiters
     cmp byte [rsi], CR
-    pop rsi
-    jne .directEcho ;If its not, just echo the string
-    mov byte [echoFlg], 1   ;Set to 1 if on
-    return
-.checkOff:
-    mov al, byte [rsi + 1]  ;Get first char past O
-    call ucChar
-    cmp al, "F" ;Is it an F?
-    jne .directEcho ;No, just direct echo
-    mov al, byte [rsi + 2]
-    call ucChar
-    cmp al, "F"
     jne .directEcho
-    push rsi
-    add rsi, 3
-    call skipDelimiters
-    cmp byte [rsi], CR
-    pop rsi
-    jne .directEcho
-    mov byte [echoFlg], 0
-    return
+;Here if one word, check if it is ON or OFF
+    lea rsi, onStr
+    call strcmp
+    je .setOn
+    lea rsi, offStr
+    call strcmp
+    je .setOff
 .directEcho: 
     lea rdx, qword [r8 + cmdLine]
-    mov rbx, rsi    
-    sub rbx, rdx
-    movzx ecx, byte [r8 + cmdLineCnt]   ;Get original char count
-    sub ecx, ebx    ;Get the remaining chars
-    jc printCRLFecho    ;If something weird, echo nothing
-    mov rdx, rsi
+    mov rsi, rdx
+    call skipDelimiters ;Go to the first word on cmdline
+    push rsi            ;Save this as the start of print
+    sub rsi, rdx        ;Get how many fewer chars we have to print
+    movzx ecx, byte [r8 + cmdLineCnt]   ;Get char count
+    sub ecx, esi
+    pop rdx             ;Pop the ptr into rdx
+    jc printCRLFecho    
     mov ebx, 1
     mov eax, 4000h
     int 21h
     jmp printCRLF   ;Needs to be a proper CRLF to insert a CRLF at the end!
+.setOn:
+    mov byte [echoFlg], 1   ;Set to 1 if on
+    return
+.setOff:
+    mov byte [echoFlg], 0
+    return
+
 
 pauza:  ;Well... pause is an instruction in english 0:)
 ;Thank you authors of MSDOS Encyclopedia for confusing an argument to this command

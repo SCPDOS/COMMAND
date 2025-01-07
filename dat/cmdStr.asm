@@ -62,7 +62,9 @@ forStr  db "FOR",0
 pipeErr db "Intermediate file error during pipe",CR,LF,"$"
 binDevErr   db "Cannot do binary reads from a device",CR,LF,"$"
 offMes  db "off",CR,LF,"$"
+offStr  db "OFF",0
 onMes   db "on",CR,LF,"$"
+onStr   db "ON",0
 breakIs db "BREAK is $"
 verifyIs    db "VERIFY is $"
 echoIs  db "ECHO is $"  
