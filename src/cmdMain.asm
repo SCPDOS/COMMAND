@@ -805,9 +805,12 @@ setupRedirandPipes:
     jc redirFailure
     mov word [redirSTDOUT], ax   ;Save the handle in variable
     lea rdx, rdrOutFilespec
+    cmp byte [redirOut], 1  ;If >, just create a new file!
+    je .skipOpen
     mov eax, 3D02h  ;Open file for read write access
     int 21h
     jnc .fileExists
+.skipOpen:
     mov eax, 3C00h
     xor ecx, ecx  ;Make the file with no attributes
     int 21h
