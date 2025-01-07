@@ -592,16 +592,16 @@ pauza:  ;Well... pause is an instruction in english 0:)
     mov eax, 0800h  ;CON input w/o echo. Triggers ^C
     int 21h
     call printCRLF
-    return
 remark:
+    return
 ;If in a batch file, do nothing. Else, go through normal loop.
-    test byte [statFlg1], inBatch
-    retz
-.go:
-    pop rbx
-    pop rbx ;Realign the stack back :)
-    call getSetMainState
-    jmp commandMain.inputGetAgain   ;Clean any redirs and get input
+;    test byte [statFlg1], inBatch
+;    retz
+;.go:
+;    pop rbx
+;    pop rbx ;Realign the stack back :)
+;    call getSetMainState
+;    jmp commandMain.inputGetAgain   ;Clean any redirs and get input
 
 shift:
 ;If not in batch, immediately return!
@@ -731,7 +731,8 @@ goto:
     jne .notLabelLp
     ;Here if the label is found. Bat FP points to the next line to read.
     call batClose   ;Close the handle
-    jmp remark.go   ;Now behave like rem to get the next line!
+    return
+    ;jmp remark.go   ;Now behave like rem to get the next line!
 .eof:
 ;Print label not found, end batch mode and return
     lea rdx, badLbl
