@@ -176,18 +176,17 @@ batFinish:
     call printPrompt    ;Add this to emulate what DOS does
     mov rax, qword [bbPtr]
     mov rax, qword [rax + batBlockHdr.pLink]
+    movzx ebx, byte [rax + batBlockHdr.bStatFlg]    ;Get called state
     push rax    ;Save the ptr on the stack
+    push rbx    ;Save state on stack
     call batCleanup     ;Cleanup the batch and batch state vars etc etc
+    pop rbx
     pop rax
     test rax, rax   ;If the link ptr is 0, we start again :)
     jz commandMain
-    ;Else, we prepare to go back a command block
-    mov qword [bbPtr], rax
-    ;And place the original states back
-    mov bl, byte [rax + batBlockHdr.bEchoFlg]
-    mov byte [echoFlg], bl
-    mov bl, byte [rax + batBlockHdr.bStatFlg]
-    mov byte [statFlg1], bl
+    ;Else, we go back a command block
+    mov qword [bbPtr], rax  ;Place caller batch block back :)
+    mov byte [statFlg1], bl ;And place the original states back
     jmp commandMain
     ;And read the next command from the previous batch file!
 batNextLine:
@@ -421,7 +420,7 @@ batCleanup:
     call batFree
 .exit:
     call cleanupRedirs  ;Clean up all redirections, close files etc
-    mov qword [bbPtr], 0    
+    mov qword [bbPtr], 0 
     and byte [statFlg1], ~(inBatch|batchEOF)   ;Oh bye bye batch mode!
     return
 
