@@ -905,17 +905,16 @@ int2Eh:
     int 21h
     mov r8, rbx ;Set to point to the command.com psp
     mov r9, rbx
-    lea rdi, inBuffer + 1
-    mov ecx, 10h    ;80h/8
     cld
-    rep movsq   ;Zoom zoom copy command line over
+    lea rdi, cLineBuffer + 1
+    mov ecx, cmdBufferL - 1
+    rep movsb   ;Zoom zoom copy command line over
     call getSetMainState    ;Ensure the buffers have their lengths set
-    cmp byte [inBuffer + 1], 0
     call resetNation        ;Now ensure internationalisation is up to date
+    cmp byte [cLineBuffer + 1], 0   ;Don't use batProceed to fail if len 0
     jne commandMain.goSingle    ;Proceed if we have anything to execute
 int2ERet:
     call clearCommandLineState  ;Be a good citizen, leave it as we found it!
-    mov byte [inBuffer + 1], 0  ;Clean this byte to disable F3 recall
     mov rsp, qword [int2Ersp]
     mov rbx, qword [int2Epsp] ;Get Old current PSP in rbx
     mov eax, 5000h  ;Set Current PSP
