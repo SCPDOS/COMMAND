@@ -1944,6 +1944,22 @@ truename:
     test byte [arg1Flg], -1
     jz badArgError
     call buildCommandPath   ;Get the first argument into the searchSpec
+    mov eax, dword [searchSpec]
+    shr eax, 8  ;Drop the first char 
+    cmp al, ":" ;If its not a drive letter, go search
+    jne .goSearch
+    shr eax, 8  ;Drop the colon too
+    test al, al
+    jz .kludge
+    cmp al, byte [pathSep]  ;Was path at least X:\ ?
+    jne .goSearch
+    shr eax, 8  ;Was the path exactly X:\<NUL>?
+    jnz .goSearch
+.kludge:
+    movzx eax, byte [pathSep]
+    mov ah, "." ;Add the dot to the second byte
+    mov dword [searchSpec + 2], eax ;Add the pathsep, CD dot and null terminator here too
+.goSearch:
     lea rsi, searchSpec     ;Store the path here
     mov rdi, rsi    ;Normalise the pathspec here
     mov eax, 6000h  ;TRUENAME
@@ -1953,6 +1969,7 @@ truename:
     je badFileError
     jmp badParamError
 .writePath:
+    call printCRLF
     mov rdx, rdi    ;Print from the destination buffer
     mov ecx, -1
     xor al, al
