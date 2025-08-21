@@ -151,7 +151,8 @@ errorMsgTbl:
 .C: db "General Failure $"      ;Driver Error C / DOS Error 01Fh
 .D: db "Sharing violation $"    ;SHARE Error / DOS Error 020h
 .E: db "Lock violation $"       ;SHARE Error / DOS Error 021h
-.F: db "Please Insert disk "    ;Driver Error F / DOS Error 022h
+;Driver Error F / DOS Error 022h
+.F: db "Invalid Disk Change",CR,LF,"Please Insert disk "    
 .FVol:  db 11 dup (" ")         ; Volume name for disk. Setup before print
         db CR,LF,"$"
 ;Next two strings dont print any more information, such as reading/writing etc
