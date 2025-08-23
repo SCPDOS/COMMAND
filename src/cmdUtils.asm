@@ -310,9 +310,9 @@ outChar:
     return
 putCWDInPrompt:
     call getCurrentDrive
-    cmp byte [failDrv], al  ;If these are equal, badDrive
-    mov byte [failDrv], -1  ;Reset on read
-    je .badDrive 
+    ;cmp byte [failDrv], al  ;If these are equal, badDrive
+    ;mov byte [failDrv], -1  ;Reset on read
+    ;je .badDrive 
     mov dl, al  ;Get drive letter in dl for path
     inc dl
     add al, "A" ;Convert to letter

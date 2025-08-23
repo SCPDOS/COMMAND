@@ -12,10 +12,10 @@ Output file:  ./bin/COMMAND.COM
 
 Vstart            Start             Stop              Length    Class     Name
              100               100               100  00000000  progbits  .text
-             100               100              4EB5  00004DB5  progbits  cmd
-            5C60              4EB5              53CE  00000519  progbits  init
-            4EB5              4EB5              560F  0000075A  nobits    bss
-            5610              5610              5C60  00000650  nobits    stack
+             100               100              4EA6  00004DA6  progbits  cmd
+            5C50              4EA6              53BF  00000519  progbits  init
+            4EA6              4EA6              5600  0000075A  nobits    bss
+            5600              5600              5C50  00000650  nobits    stack
 
 -- Sections (detailed) --------------------------------------------------------
 
@@ -33,7 +33,7 @@ vfollows:  not defined
 ---- Section cmd --------------------------------------------------------------
 
 class:     progbits
-length:                4DB5
+length:                4DA6
 start:                  100
 align:                    1
 follows:   not defined
@@ -45,10 +45,10 @@ vfollows:  not defined
 
 class:     progbits
 length:                 519
-start:                 4EB5
+start:                 4EA6
 align:                    1
 follows:   cmd
-vstart:                5C60
+vstart:                5C50
 valign:                   1
 vfollows:  stack
 
@@ -56,10 +56,10 @@ vfollows:  stack
 
 class:     nobits
 length:                 75A
-start:                 4EB5
+start:                 4EA6
 align:                    1
 follows:   not defined
-vstart:                4EB5
+vstart:                4EA6
 valign:                   1
 vfollows:  cmd
 
@@ -67,10 +67,10 @@ vfollows:  cmd
 
 class:     nobits
 length:                 650
-start:                 5610
+start:                 5600
 align:                   10
 follows:   not defined
-vstart:                5610
+vstart:                5600
 valign:                  10
 vfollows:  bss
 
@@ -1473,349 +1473,349 @@ Real              Virtual           Name
             4462              4462  outChar
             4466              4466  ..@311._ret
             4467              4467  putCWDInPrompt
-            44BD              44BD  ..@312._ret
-            44BE              44BE  putCWDInPrompt.badDrive
-            44CA              44CA  printFmtTime
-            4515              4515  ..@313._ret
-            4516              4516  getTime
-            4532              4532  ..@314._ret
-            4533              4533  printFmtDate
-            45A4              45A4  ..@315._ret
-            45A5              45A5  hexToBCD
-            45AB              45AB  hexToBCD.htb0
-            45BB              45BB  hexToBCD.htb1
-            45C2              45C2  printPackedBCD
-            45D5              45D5  printPackedBCD.upperNybble
-            45E3              45E3  printPackedBCD.lowerNybble
-            45ED              45ED  ..@316._ret
-            45EE              45EE  setDrive
-            45F9              45F9  ..@317._ret
-            45FA              45FA  getCurrentDrive
-            45FE              45FE  ..@318._ret
-            45FF              45FF  strcpy
-            460D              460D  ..@319._ret
-            460E              460E  strcpy2
-            4617              4617  ..@320._ret
-            4618              4618  strlen
-            4621              4621  ..@321._ret
-            4622              4622  ucChar
-            462D              462D  ..@322._ret
-            462E              462E  normalisePath
-            463C              463C  ..@323._ret
-            463D              463D  skipDelimiters
-            463E              463E  skipDelimiters.l1
-            4646              4646  skipDelimiters.exit
-            464A              464A  ..@324._ret
-            464B              464B  isALdelimiter
-            464D              464D  ..@326._base
-            4651              4651  ..@328._base
-            4655              4655  ..@330._base
-            4659              4659  ..@332._base
-            465D              465D  ..@333._ret
-            465E              465E  clearCommandState
-            466E              466E  ..@334._ret
-            466F              466F  clearCommandLineState
-            469F              469F  clearCommandLineState.lp
-            46A9              46A9  ..@335._ret
-            46AA              46AA  asciiFilenameToFCB
-            46C7              46C7  asciiFilenameToFCB.processName
-            46D7              46D7  asciiFilenameToFCB.extSpace
-            46E0              46E0  asciiFilenameToFCB.ext
-            46E4              46E4  asciiFilenameToFCB.processExt
-            46F0              46F0  asciiFilenameToFCB.exitBadChar
-            46F2              46F2  asciiFilenameToFCB.exit
-            46F3              46F3  ..@336._ret
-            46F4              46F4  findLastPathComponant
-            4712              4712  findLastPathComponant.exit
-            4717              4717  ..@337._ret
-            4718              4718  FCBToAsciiz
-            471F              471F  FCBToAsciiz.scanNameSpace
-            4732              4732  FCBToAsciiz.ext
-            473F              473F  FCBToAsciiz.validExt
-            4749              4749  FCBToAsciiz.scanExtSpace
-            4754              4754  FCBToAsciiz.exit
-            4757              4757  ..@338._ret
-            4758              4758  cpDelimOrCtrlStringToBufz
-            475B              475B  cpDelimOrCtrlStringToBufz.lp
-            476A              476A  cpDelimOrCtrlStringToBufz.exit
-            476D              476D  ..@339._ret
-            476E              476E  cpDelimPathToBufz
-            4775              4775  cpDelimPathToBufz.lp
-            478C              478C  cpDelimPathToBufz.gotRedirPath
-            47AD              47AD  cpDelimPathToBufz.notColon
-            47B0              47B0  ..@340._ret
-            47B1              47B1  buildCommandPath
-            47C9              47C9  copyArgumentToSearchSpec
-            47D5              47D5  ..@341._ret
-            47D6              47D6  scanForWildcards
-            47D8              47D8  scanForWildcards.lp
-            47E7              47E7  scanForWildcards.exit
-            47E9              47E9  ..@342._ret
-            47EA              47EA  printDecimalValLB
-            480F              480F  printDecimalValLB.skipLp
-            4828              4828  printDecimalValLB.printLp
-            4835              4835  printDecimalValLB.exit
-            4838              4838  ..@343._ret
-            4839              4839  printDecimalValLB.errPrint
-            4844              4844  decimalise
-            484E              484E  decimalise.lp
-            4867              4867  decimalise.skipSep
-            4885              4885  decimalise.exit
-            4886              4886  ..@344._ret
-            4887              4887  decimalise.exitErr
-            488A              488A  printDecimalWord
-            489C              489C  printDecimalWord.notZero
-            48A3              48A3  printDecimalWord.mainLp
-            48B5              48B5  printDecimalWord.goPrint
-            48C2              48C2  ..@345._ret
-            48C3              48C3  getDecimalWord
-            48CC              48CC  getDecimalWord.dpfb0
-            48E2              48E2  getDecimalWord.dpfb1
-            48E9              48E9  ..@346._ret
-            48EA              48EA  getByte
-            48F5              48F5  ..@347._ret
-            48F6              48F6  getNum
-            48FE              48FE  getNum.lp
-            491E              491E  getNum.exit
-            491F              491F  getNum.exitBad
-            4926              4926  ..@348._ret
-            4927              4927  freezePC
-            4932              4932  freezePC.altEP
-            493D              493D  freezePC.lp
-            4942              4942  setDTA
-            4954              4954  ..@349._ret
-            4955              4955  getDTA
-            495C              495C  ..@350._ret
-            495D              495D  resetNation
-            497A              497A  resetNation.skipSwitch
-            4988              4988  ..@351._ret
-            4989              4989  resetIDTentries
-            49B3              49B3  ..@352._ret
-            49B4              49B4  makeAsciizAdv
-            49C1              49C1  makeArgAsciz
-            49D2              49D2  ..@353._ret
-            49D3              49D3  getNextArg
-            49DB              49DB  ..@355._base
-            49E8              49E8  strcmp
-            49EF              49EF  ..@356._ret
-            49F0              49F0  cmpEnvVar
-            49F5              49F5  cmpEnvVar.lp
-            4A08              4A08  cmpEnvVar.exit
-            4A0A              4A0A  ..@357._ret
-            4A0B              4A0B  checkEnvGoodAndGet
-            4A21              4A21  checkEnvGoodAndGet.pathNulScan
-            4A33              4A33  checkEnvGoodAndGet.badExit
-            4A38              4A38  ..@358._ret
-            4A39              4A39  findEnvSpace
-            4A44              4A44  ..@360._base
-            4A4F              4A4F  findEnvSpace.endsearch
-            4A64              4A64  ..@361._ret
-            4A65              4A65  searchForEnvVar
-            4A6F              4A6F  searchForEnvVar.varLp
-            4A8E              4A8E  searchForEnvVar.varNotFound
-            4A8F              4A8F  searchForEnvVar.varFound
-            4A92              4A92  ..@362._ret
-            4A93              4A93  envFree
-            4A98              4A98  envFree.freeLp
-            4AA0              4AA0  envFree.exitLp
-            4AAE              4AAE  envFree.prepPullup
-            4AB1              4AB1  envFree.pullUp
-            4ABC              4ABC  envFree.cleanEnv
-            4ACB              4ACB  ..@363._ret
-            4ACC              4ACC  getFreeSpace
-            4AE3              4AE3  ..@364._ret
-            4AE4              4AE4  getEnvSize
-            4AF0              4AF0  ..@365._ret
-            4AF1              4AF1  getPtrToEndOfEnv
-            4AFD              4AFD  getPtrToEndOfEnv.lp
-            4B05              4B05  ..@366._ret
-            4B06              4B06  growEnvBlock
-            4B45              4B45  growEnvBlock.exit
-            4B4A              4B4A  ..@367._ret
-            4B4B              4B4B  growEnvBlock.tooLarge
-            4B51              4B51  ctrlCHandler
-            4B6B              4B6B  ctrlCHandler.notLoading
-            4B7D              4B7D  ctrlCHandler.retFromDosCall
-            4B97              4B97  ctrlCHandler.i23Bounce
-            4B9C              4B9C  ctrlCHandler.inInt23
-            4B9E              4B9E  ctrlCHandler.notNested
-            4BB7              4BB7  ctrlCHandler.skipReset
-            4BCE              4BCE  ctrlCHandler.ynLp
-            4C00              4C00  ctrlCHandler.endBat
-            4C0A              4C0A  ctrlCHandler.killBat
-            4C16              4C16  ctrlCHandler.nestKill
-            4C2C              4C2C  ctrlCHandler.notBat
-            4C37              4C37  ctrlCHandler.exitBat
-            4C3C              4C3C  ctrlCHandler.exit
-            4C43              4C43  ctrlCHandler.exitIn
-            4C47              4C47  critErrorHandler
-            4CCD              4CCD  critErrorHandler.redirDefault
-            4CD6              4CD6  critErrorHandler.shareErr
-            4CE4              4CE4  critErrorHandler.driverErr
-            4D0B              4D0B  critErrorHandler.redirDefProceed
-            4D18              4D18  critErrorHandler.proceedNormalWrite
-            4D65              4D65  critErrorHandler.userInput
-            4D6A              4D6A  critErrorHandler.userAbort
-            4D76              4D76  critErrorHandler.userRetry
-            4D93              4D93  critErrorHandler.userIgnore
-            4DB0              4DB0  critErrorHandler.userFail
-            4DCD              4DCD  critErrorHandler.userMsgEnd
-            4DEF              4DEF  critErrorHandler.uip1
-            4E01              4E01  critErrorHandler.validInput
-            4E14              4E14  critErrorHandler.viFail
-            4E1F              4E1F  critErrorHandler.viIgnore
-            4E2A              4E2A  critErrorHandler.viRetry
-            4E33              4E33  critErrorHandler.cehExit
-            4E3F              4E3F  critErrorHandler.charError
-            4E52              4E52  critErrorHandler.ce1
-            4E60              4E60  errSwapHdls
-            4E7C              4E7C  ..@368._ret
-            4E7D              4E7D  errRetHdls
-            4E99              4E99  ..@369._ret
-            4E9A              4E9A  getJftPtr
-            4EAF              4EAF  ..@370._ret
-            4EB0              4EB0  getJftPtr.pspJftExit
-            4EB4              4EB4  ..@371._ret
-            4EB5              4EB5  cmdLdrE
+            44AE              44AE  ..@312._ret
+            44AF              44AF  putCWDInPrompt.badDrive
+            44BB              44BB  printFmtTime
+            4506              4506  ..@313._ret
+            4507              4507  getTime
+            4523              4523  ..@314._ret
+            4524              4524  printFmtDate
+            4595              4595  ..@315._ret
+            4596              4596  hexToBCD
+            459C              459C  hexToBCD.htb0
+            45AC              45AC  hexToBCD.htb1
+            45B3              45B3  printPackedBCD
+            45C6              45C6  printPackedBCD.upperNybble
+            45D4              45D4  printPackedBCD.lowerNybble
+            45DE              45DE  ..@316._ret
+            45DF              45DF  setDrive
+            45EA              45EA  ..@317._ret
+            45EB              45EB  getCurrentDrive
+            45EF              45EF  ..@318._ret
+            45F0              45F0  strcpy
+            45FE              45FE  ..@319._ret
+            45FF              45FF  strcpy2
+            4608              4608  ..@320._ret
+            4609              4609  strlen
+            4612              4612  ..@321._ret
+            4613              4613  ucChar
+            461E              461E  ..@322._ret
+            461F              461F  normalisePath
+            462D              462D  ..@323._ret
+            462E              462E  skipDelimiters
+            462F              462F  skipDelimiters.l1
+            4637              4637  skipDelimiters.exit
+            463B              463B  ..@324._ret
+            463C              463C  isALdelimiter
+            463E              463E  ..@326._base
+            4642              4642  ..@328._base
+            4646              4646  ..@330._base
+            464A              464A  ..@332._base
+            464E              464E  ..@333._ret
+            464F              464F  clearCommandState
+            465F              465F  ..@334._ret
+            4660              4660  clearCommandLineState
+            4690              4690  clearCommandLineState.lp
+            469A              469A  ..@335._ret
+            469B              469B  asciiFilenameToFCB
+            46B8              46B8  asciiFilenameToFCB.processName
+            46C8              46C8  asciiFilenameToFCB.extSpace
+            46D1              46D1  asciiFilenameToFCB.ext
+            46D5              46D5  asciiFilenameToFCB.processExt
+            46E1              46E1  asciiFilenameToFCB.exitBadChar
+            46E3              46E3  asciiFilenameToFCB.exit
+            46E4              46E4  ..@336._ret
+            46E5              46E5  findLastPathComponant
+            4703              4703  findLastPathComponant.exit
+            4708              4708  ..@337._ret
+            4709              4709  FCBToAsciiz
+            4710              4710  FCBToAsciiz.scanNameSpace
+            4723              4723  FCBToAsciiz.ext
+            4730              4730  FCBToAsciiz.validExt
+            473A              473A  FCBToAsciiz.scanExtSpace
+            4745              4745  FCBToAsciiz.exit
+            4748              4748  ..@338._ret
+            4749              4749  cpDelimOrCtrlStringToBufz
+            474C              474C  cpDelimOrCtrlStringToBufz.lp
+            475B              475B  cpDelimOrCtrlStringToBufz.exit
+            475E              475E  ..@339._ret
+            475F              475F  cpDelimPathToBufz
+            4766              4766  cpDelimPathToBufz.lp
+            477D              477D  cpDelimPathToBufz.gotRedirPath
+            479E              479E  cpDelimPathToBufz.notColon
+            47A1              47A1  ..@340._ret
+            47A2              47A2  buildCommandPath
+            47BA              47BA  copyArgumentToSearchSpec
+            47C6              47C6  ..@341._ret
+            47C7              47C7  scanForWildcards
+            47C9              47C9  scanForWildcards.lp
+            47D8              47D8  scanForWildcards.exit
+            47DA              47DA  ..@342._ret
+            47DB              47DB  printDecimalValLB
+            4800              4800  printDecimalValLB.skipLp
+            4819              4819  printDecimalValLB.printLp
+            4826              4826  printDecimalValLB.exit
+            4829              4829  ..@343._ret
+            482A              482A  printDecimalValLB.errPrint
+            4835              4835  decimalise
+            483F              483F  decimalise.lp
+            4858              4858  decimalise.skipSep
+            4876              4876  decimalise.exit
+            4877              4877  ..@344._ret
+            4878              4878  decimalise.exitErr
+            487B              487B  printDecimalWord
+            488D              488D  printDecimalWord.notZero
+            4894              4894  printDecimalWord.mainLp
+            48A6              48A6  printDecimalWord.goPrint
+            48B3              48B3  ..@345._ret
+            48B4              48B4  getDecimalWord
+            48BD              48BD  getDecimalWord.dpfb0
+            48D3              48D3  getDecimalWord.dpfb1
+            48DA              48DA  ..@346._ret
+            48DB              48DB  getByte
+            48E6              48E6  ..@347._ret
+            48E7              48E7  getNum
+            48EF              48EF  getNum.lp
+            490F              490F  getNum.exit
+            4910              4910  getNum.exitBad
+            4917              4917  ..@348._ret
+            4918              4918  freezePC
+            4923              4923  freezePC.altEP
+            492E              492E  freezePC.lp
+            4933              4933  setDTA
+            4945              4945  ..@349._ret
+            4946              4946  getDTA
+            494D              494D  ..@350._ret
+            494E              494E  resetNation
+            496B              496B  resetNation.skipSwitch
+            4979              4979  ..@351._ret
+            497A              497A  resetIDTentries
+            49A4              49A4  ..@352._ret
+            49A5              49A5  makeAsciizAdv
+            49B2              49B2  makeArgAsciz
+            49C3              49C3  ..@353._ret
+            49C4              49C4  getNextArg
+            49CC              49CC  ..@355._base
+            49D9              49D9  strcmp
+            49E0              49E0  ..@356._ret
+            49E1              49E1  cmpEnvVar
+            49E6              49E6  cmpEnvVar.lp
+            49F9              49F9  cmpEnvVar.exit
+            49FB              49FB  ..@357._ret
+            49FC              49FC  checkEnvGoodAndGet
+            4A12              4A12  checkEnvGoodAndGet.pathNulScan
+            4A24              4A24  checkEnvGoodAndGet.badExit
+            4A29              4A29  ..@358._ret
+            4A2A              4A2A  findEnvSpace
+            4A35              4A35  ..@360._base
+            4A40              4A40  findEnvSpace.endsearch
+            4A55              4A55  ..@361._ret
+            4A56              4A56  searchForEnvVar
+            4A60              4A60  searchForEnvVar.varLp
+            4A7F              4A7F  searchForEnvVar.varNotFound
+            4A80              4A80  searchForEnvVar.varFound
+            4A83              4A83  ..@362._ret
+            4A84              4A84  envFree
+            4A89              4A89  envFree.freeLp
+            4A91              4A91  envFree.exitLp
+            4A9F              4A9F  envFree.prepPullup
+            4AA2              4AA2  envFree.pullUp
+            4AAD              4AAD  envFree.cleanEnv
+            4ABC              4ABC  ..@363._ret
+            4ABD              4ABD  getFreeSpace
+            4AD4              4AD4  ..@364._ret
+            4AD5              4AD5  getEnvSize
+            4AE1              4AE1  ..@365._ret
+            4AE2              4AE2  getPtrToEndOfEnv
+            4AEE              4AEE  getPtrToEndOfEnv.lp
+            4AF6              4AF6  ..@366._ret
+            4AF7              4AF7  growEnvBlock
+            4B36              4B36  growEnvBlock.exit
+            4B3B              4B3B  ..@367._ret
+            4B3C              4B3C  growEnvBlock.tooLarge
+            4B42              4B42  ctrlCHandler
+            4B5C              4B5C  ctrlCHandler.notLoading
+            4B6E              4B6E  ctrlCHandler.retFromDosCall
+            4B88              4B88  ctrlCHandler.i23Bounce
+            4B8D              4B8D  ctrlCHandler.inInt23
+            4B8F              4B8F  ctrlCHandler.notNested
+            4BA8              4BA8  ctrlCHandler.skipReset
+            4BBF              4BBF  ctrlCHandler.ynLp
+            4BF1              4BF1  ctrlCHandler.endBat
+            4BFB              4BFB  ctrlCHandler.killBat
+            4C07              4C07  ctrlCHandler.nestKill
+            4C1D              4C1D  ctrlCHandler.notBat
+            4C28              4C28  ctrlCHandler.exitBat
+            4C2D              4C2D  ctrlCHandler.exit
+            4C34              4C34  ctrlCHandler.exitIn
+            4C38              4C38  critErrorHandler
+            4CBE              4CBE  critErrorHandler.redirDefault
+            4CC7              4CC7  critErrorHandler.shareErr
+            4CD5              4CD5  critErrorHandler.driverErr
+            4CFC              4CFC  critErrorHandler.redirDefProceed
+            4D09              4D09  critErrorHandler.proceedNormalWrite
+            4D56              4D56  critErrorHandler.userInput
+            4D5B              4D5B  critErrorHandler.userAbort
+            4D67              4D67  critErrorHandler.userRetry
+            4D84              4D84  critErrorHandler.userIgnore
+            4DA1              4DA1  critErrorHandler.userFail
+            4DBE              4DBE  critErrorHandler.userMsgEnd
+            4DE0              4DE0  critErrorHandler.uip1
+            4DF2              4DF2  critErrorHandler.validInput
+            4E05              4E05  critErrorHandler.viFail
+            4E10              4E10  critErrorHandler.viIgnore
+            4E1B              4E1B  critErrorHandler.viRetry
+            4E24              4E24  critErrorHandler.cehExit
+            4E30              4E30  critErrorHandler.charError
+            4E43              4E43  critErrorHandler.ce1
+            4E51              4E51  errSwapHdls
+            4E6D              4E6D  ..@368._ret
+            4E6E              4E6E  errRetHdls
+            4E8A              4E8A  ..@369._ret
+            4E8B              4E8B  getJftPtr
+            4EA0              4EA0  ..@370._ret
+            4EA1              4EA1  getJftPtr.pspJftExit
+            4EA5              4EA5  ..@371._ret
+            4EA6              4EA6  cmdLdrE
 
 ---- Section init -------------------------------------------------------------
 
 Real              Virtual           Name
-            4EB5              5C60  cmdLdr
-            4ED3              5C7E  startInit
-            4EE6              5C91  startInit.exitBad
-            4EE8              5C93  startInit.okVersion
-            4FAC              5D57  startInit.noAutoexec
-            4FDA              5D85  startInit.notMaster
-            5000              5DAB  startInit.prepStart
-            500C              5DB7  startInit.singleCom
-            501F              5DCA  parseCmdLine
-            5046              5DF1  parseCmdLine.parseLp
-            505F              5E0A  parseCmdLine.switch
-            5083              5E2E  parseCmdLine.badparm
-            508C              5E37  parseCmdLine.file
-            50B4              5E5F  parseCmdLine.badSpec
-            50BB              5E66  parseCmdLine.bs0
-            50C0              5E6B  parseCmdLine.plhop
-            50C2              5E6D  parseCmdLine.charOrDir
-            50D0              5E7B  parseCmdLine.dir
-            50F5              5EA0  parseCmdLine.charDev
-            5125              5ED0  parseCmdLine.plhop1
-            5127              5ED2  parseCmdLine.badChar
-            512E              5ED9  parseCmdLine.bs1
-            5130              5EDB  parseCmdLine.switchEnv
-            5170              5F1B  parseCmdLine.plhop2
-            5172              5F1D  parseCmdLine.badEnv
-            517B              5F26  parseCmdLine.switchPerma
-            5196              5F41  parseCmdLine.spEmbCr
-            519F              5F4A  parseCmdLine.switchStr
-            51B2              5F5D  parseCmdLine.ssembCr
-            51BE              5F69  parseCmdLine.ssLp
-            51CC              5F77  parseCmdLine.ssOk
-            51D3              5F7E  parseCmdLine.endScan
-            51F0              5F9B  parseCmdLine.esSkipPathsep
-            5208              5FB3  ..@378._base
-            520A              5FB5  ..@379._ret
-            520B              5FB6  ..@378.a
-            5212              5FBD  ..@380._ret
-            5213              5FBE  parseCmdLine.replacestdio
-            521A              5FC5  ..@382._base
-            5228              5FD3  doEnv
-            523A              5FE5  ..@384._base
-            5262              600D  ..@385._ret
-            5263              600E  doEnv.freeCurrentEnv
-            5272              601D  ..@386._ret
-            5273              601E  doEnv.prepNewEnv
-            5278              6023  doEnv.noInitEnv
-            52B0              605B  ..@387._ret
-            52B1              605C  doEnv.allocEnv
-            52C8              6073  doEnv.goAlloc
-            52D8              6083  ..@389._base
-            52EB              6096  doEnv.cpEnv
-            52F2              609D  doEnv.lp
-            5301              60AC  ..@390._ret
-            5302              60AD  doEnv.notNul
-            5306              60B1  doEnv.err
-            531D              60C8  ..@391._ret
-            531E              60C9  getMasterEnv
-            5320              60CB  getMasterEnv.lp
-            532E              60D9  getMasterEnv.exit
-            5334              60DF  ..@392._ret
-            5335              60E0  initString
-            5348              60F3  initString2
-            536E              6119  badVerStr
-            5386              6131  badCmdDir
-            53AF              615A  badEnvSz
-            53CA              6175  initNewSpec
-            53CB              6176  initNewDev
-            53CC              6177  initEnvSz
-            53CE              6179  endOfInitAlloc
+            4EA6              5C50  cmdLdr
+            4EC4              5C6E  startInit
+            4ED7              5C81  startInit.exitBad
+            4ED9              5C83  startInit.okVersion
+            4F9D              5D47  startInit.noAutoexec
+            4FCB              5D75  startInit.notMaster
+            4FF1              5D9B  startInit.prepStart
+            4FFD              5DA7  startInit.singleCom
+            5010              5DBA  parseCmdLine
+            5037              5DE1  parseCmdLine.parseLp
+            5050              5DFA  parseCmdLine.switch
+            5074              5E1E  parseCmdLine.badparm
+            507D              5E27  parseCmdLine.file
+            50A5              5E4F  parseCmdLine.badSpec
+            50AC              5E56  parseCmdLine.bs0
+            50B1              5E5B  parseCmdLine.plhop
+            50B3              5E5D  parseCmdLine.charOrDir
+            50C1              5E6B  parseCmdLine.dir
+            50E6              5E90  parseCmdLine.charDev
+            5116              5EC0  parseCmdLine.plhop1
+            5118              5EC2  parseCmdLine.badChar
+            511F              5EC9  parseCmdLine.bs1
+            5121              5ECB  parseCmdLine.switchEnv
+            5161              5F0B  parseCmdLine.plhop2
+            5163              5F0D  parseCmdLine.badEnv
+            516C              5F16  parseCmdLine.switchPerma
+            5187              5F31  parseCmdLine.spEmbCr
+            5190              5F3A  parseCmdLine.switchStr
+            51A3              5F4D  parseCmdLine.ssembCr
+            51AF              5F59  parseCmdLine.ssLp
+            51BD              5F67  parseCmdLine.ssOk
+            51C4              5F6E  parseCmdLine.endScan
+            51E1              5F8B  parseCmdLine.esSkipPathsep
+            51F9              5FA3  ..@378._base
+            51FB              5FA5  ..@379._ret
+            51FC              5FA6  ..@378.a
+            5203              5FAD  ..@380._ret
+            5204              5FAE  parseCmdLine.replacestdio
+            520B              5FB5  ..@382._base
+            5219              5FC3  doEnv
+            522B              5FD5  ..@384._base
+            5253              5FFD  ..@385._ret
+            5254              5FFE  doEnv.freeCurrentEnv
+            5263              600D  ..@386._ret
+            5264              600E  doEnv.prepNewEnv
+            5269              6013  doEnv.noInitEnv
+            52A1              604B  ..@387._ret
+            52A2              604C  doEnv.allocEnv
+            52B9              6063  doEnv.goAlloc
+            52C9              6073  ..@389._base
+            52DC              6086  doEnv.cpEnv
+            52E3              608D  doEnv.lp
+            52F2              609C  ..@390._ret
+            52F3              609D  doEnv.notNul
+            52F7              60A1  doEnv.err
+            530E              60B8  ..@391._ret
+            530F              60B9  getMasterEnv
+            5311              60BB  getMasterEnv.lp
+            531F              60C9  getMasterEnv.exit
+            5325              60CF  ..@392._ret
+            5326              60D0  initString
+            5339              60E3  initString2
+            535F              6109  badVerStr
+            5377              6121  badCmdDir
+            53A0              614A  badEnvSz
+            53BB              6165  initNewSpec
+            53BC              6166  initNewDev
+            53BD              6167  initEnvSz
+            53BF              6169  endOfInitAlloc
 
 ---- Section bss --------------------------------------------------------------
 
 Real              Virtual           Name
-            4EB5              4EB5  returnCode
-            4EB7              4EB7  int2Epsp
-            4EBF              4EBF  int2Ersp
-            4EC7              4EC7  int2Edta
-            4ECF              4ECF  statFlg1
-            4ED0              4ED0  bbPtr
-            4ED8              4ED8  batFile
-            4F27              4F27  ifFlg
-            4F28              4F28  callFlg
-            4F29              4F29  forFlg
-            4F2A              4F2A  pForBlk
-            4F32              4F32  ctryData
-            4F58              4F58  currDirStr
-            4F9B              4F9B  cmdFcb
-            4FAB              4FAB  cmdFFBlock
-            4FD6              4FD6  launchBlock
-            4FF6              4FF6  inBuffer
-            5078              5078  batInBuffer
-            5078              5078  cLineBuffer
-            50FA              50FA  cmdBuffer
-            517C              517C  cmdPathSpec
-            51CB              51CB  cmdName
-            51D9              51D9  rdrInFilespec
-            5228              5228  rdrOutFilespec
-            5277              5277  pipe1Filespec
-            52C6              52C6  pipe2Filespec
-            5315              5315  newPipe
-            531D              531D  oldPipe
-            5325              5325  searchSpec
-            5429              5429  dirFlags
-            542A              542A  dirLineCtr
-            542B              542B  dirFileCtr
-            542F              542F  dirDrv
-            5430              5430  dirSrchDir
-            54B2              54B2  dirSrchFCB
-            54C2              54C2  td1
-            54C3              54C3  td2
-            54C4              54C4  td3
-            54C5              54C5  td4
-            54C6              54C6  delPath
-            54C6              54C6  comspecDir
-            54C6              54C6  srcSpec
-            5548              5548  destSpec
-            55CA              55CA  srcPtr
-            55D2              55D2  destPtr
-            55DA              55DA  renName
-            55E5              55E5  pLastFspec
-            55ED              55ED  pNextFspec
-            55F5              55F5  verifyFlg
-            55F6              55F6  sourceHdl
-            55F8              55F8  destHdl
-            55FA              55FA  srcHdlInfo
-            55FC              55FC  cpBufPtr
-            5604              5604  wCpBufSz
-            5606              5606  dCpCnt
-            560A              560A  bCpFlg
-            560B              560B  envVarSz
-            560D              560D  envVarNamSz
+            4EA6              4EA6  returnCode
+            4EA8              4EA8  int2Epsp
+            4EB0              4EB0  int2Ersp
+            4EB8              4EB8  int2Edta
+            4EC0              4EC0  statFlg1
+            4EC1              4EC1  bbPtr
+            4EC9              4EC9  batFile
+            4F18              4F18  ifFlg
+            4F19              4F19  callFlg
+            4F1A              4F1A  forFlg
+            4F1B              4F1B  pForBlk
+            4F23              4F23  ctryData
+            4F49              4F49  currDirStr
+            4F8C              4F8C  cmdFcb
+            4F9C              4F9C  cmdFFBlock
+            4FC7              4FC7  launchBlock
+            4FE7              4FE7  inBuffer
+            5069              5069  batInBuffer
+            5069              5069  cLineBuffer
+            50EB              50EB  cmdBuffer
+            516D              516D  cmdPathSpec
+            51BC              51BC  cmdName
+            51CA              51CA  rdrInFilespec
+            5219              5219  rdrOutFilespec
+            5268              5268  pipe1Filespec
+            52B7              52B7  pipe2Filespec
+            5306              5306  newPipe
+            530E              530E  oldPipe
+            5316              5316  searchSpec
+            541A              541A  dirFlags
+            541B              541B  dirLineCtr
+            541C              541C  dirFileCtr
+            5420              5420  dirDrv
+            5421              5421  dirSrchDir
+            54A3              54A3  dirSrchFCB
+            54B3              54B3  td1
+            54B4              54B4  td2
+            54B5              54B5  td3
+            54B6              54B6  td4
+            54B7              54B7  delPath
+            54B7              54B7  comspecDir
+            54B7              54B7  srcSpec
+            5539              5539  destSpec
+            55BB              55BB  srcPtr
+            55C3              55C3  destPtr
+            55CB              55CB  renName
+            55D6              55D6  pLastFspec
+            55DE              55DE  pNextFspec
+            55E6              55E6  verifyFlg
+            55E7              55E7  sourceHdl
+            55E9              55E9  destHdl
+            55EB              55EB  srcHdlInfo
+            55ED              55ED  cpBufPtr
+            55F5              55F5  wCpBufSz
+            55F7              55F7  dCpCnt
+            55FB              55FB  bCpFlg
+            55FC              55FC  envVarSz
+            55FE              55FE  envVarNamSz
 
 ---- Section stack ------------------------------------------------------------
 
 Real              Virtual           Name
-            5C50              5C50  stackTop
-            5C60              5C60  endOfAlloc
+            5C40              5C40  stackTop
+            5C50              5C50  endOfAlloc
 
