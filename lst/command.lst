@@ -9448,6 +9448,7 @@
     56 00004B7E 7655                <1>     jbe .driverErr
     57                              <1> ;Now we split the driver from sharing and networking errors. Sharing doesnt go 
     58                              <1> ; thru the redir
+<<<<<<< HEAD
     59 00004B80 81FF24000000        <1>     cmp edi, errShrFul
     60 00004B86 763F                <1>     jbe .shareErr
     61                              <1> ;Ok so this is a net error. Check to see if an installed message!
@@ -9460,6 +9461,20 @@
     68 00004B95 B405                <1>     mov ah, 05h         ;Get the string we need
     69 00004B97 CD21                <1>     int 21h
     70 00004B99 7223                <1>     jc .redirDefault    ;If no message installed for this code, generic!
+=======
+    59 00004B8F 81FF24000000        <1>     cmp edi, errShrFul
+    60 00004B95 763F                <1>     jbe .shareErr
+    61                              <1> ;Ok so this is a net error or bad disk swap. Check to see if an installed message!
+    62                              <1> ;di has the error code still
+    63 00004B97 B800050000          <1>     mov eax, 0500h      ;Install check!
+    64 00004B9C CD2F                <1>     int 2Fh
+    65 00004B9E 3CFF                <1>     cmp al, -1
+    66 00004BA0 752B                <1>     jne .redirDefault   ;No redir, print default net error
+    67 00004BA2 89F8                <1>     mov eax, edi        ;Else, move the error code into 
+    68 00004BA4 B405                <1>     mov ah, 05h         ;Get the string we need
+    69 00004BA6 CD2F                <1>     int 2Fh
+    70 00004BA8 7223                <1>     jc .redirDefault    ;If no message installed for this code, generic!
+>>>>>>> 1782237ca0c40352fd185925fd058706073dad4d
     71                              <1>     ;Returned if CF=NC:
     72                              <1>     ; al = 0 => Print rest of message
     73                              <1>     ; al = 1 => Immediately prompt ARIF

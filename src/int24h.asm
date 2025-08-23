@@ -58,15 +58,15 @@ critErrorHandler:   ;Int 24h
 ; thru the redir
     cmp edi, errShrFul
     jbe .shareErr
-;Ok so this is a net error. Check to see if an installed message!
+;Ok so this is a net error or bad disk swap. Check to see if an installed message!
 ;di has the error code still
     mov eax, 0500h      ;Install check!
-    int 21h
+    int 2Fh
     cmp al, -1
     jne .redirDefault   ;No redir, print default net error
     mov eax, edi        ;Else, move the error code into 
     mov ah, 05h         ;Get the string we need
-    int 21h
+    int 2Fh
     jc .redirDefault    ;If no message installed for this code, generic!
     ;Returned if CF=NC:
     ; al = 0 => Print rest of message
