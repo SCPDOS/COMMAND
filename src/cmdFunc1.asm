@@ -29,7 +29,7 @@ dir:
     mov word [searchSpec], 0
     lea rdi, dirSrchFCB ;Start also by initialising the search pattern
     mov byte [rdi + fcb.driveNum], 0    ;Default drive
-    mov rax, "????????"
+    mov rax, "????????" ;Do not change this as we need the ? for searching
     mov qword [rdi + fcb.filename], rax
     mov dword [rdi + fcb.fileext], "???"
     ;Start by scanning for the switches
@@ -284,10 +284,60 @@ dir:
 .root:
     dec rdi ;Point back to the pathsep
     stosb   ;Store the pathsep here and advance rdi
-    lea rsi, qword [dirSrchFCB + 1] ;Go to the name field of the FCB
+    lea rsi, qword [dirSrchFCB + fcb.filename] 
+    mov rbp, rdi    ;Save the ptr to the filename start in rbp
     call FCBToAsciiz    ;Terminates for free
+    call .wcCompress    ;Tries to compress the name
     call .searchForFile
     return
+.wcCompress:
+;Attempts to compress the name using *'s if possible.
+;The algorithm above will have translated any input *'s into ?
+; for pattern matching. Now we reverse any work done by this
+;First checks the whole thing, then each portion separately.
+;Input: rbp -> Filename in path to compress
+    xor eax, eax
+    xor ecx, ecx
+    mov rsi, rbp
+.wcclp:
+    lodsb   ;This string IS guaranteed null terminated so no counter needed
+    test eax, eax   ;Did we just read a null char?
+    retz    ;Then we do not modify anything
+    cmp al, "."
+    je .wccExt  ;Branch only when . encountered
+    cmp al, "?"
+    jne .wcclp
+    inc ecx ;Add one more ? to the count
+    jmp short .wcclp
+.wccExt:
+;rsi now points to the extension, past the .
+    cmp ecx, 8
+    jne .wccExtGo
+;Here we can now modify the string
+    mov byte [rbp], "*"
+    mov byte [rbp + 1], "."
+;Now copy the extension over
+    lea rdi, qword [rbp + 2]
+    push rdi
+    movsd   ;In this is the null too, no harm done by pulling up
+    pop rsi ;Start sourcing chars here again
+.wccExtGo:
+    xor ecx, ecx
+.wccExtLp:
+    lodsb
+    test eax, eax
+    retz
+    cmp al, "?"
+    inc ecx
+    cmp ecx, 3
+    jne .wccExtLp
+    mov eax, "*"    ;Upper byte is null
+    mov word [rbp + 2], ax  ;Store this past the .
+    cmp dword [rbp], "*.*"    ;Check if the path is this? Upper byte 0
+    retne
+    mov word [rbp], ax  ;Replace the string with this instead
+    return
+
 
 .searchForFile:
     mov ecx, dirDirectory   ;Search for normal, ro and dir
