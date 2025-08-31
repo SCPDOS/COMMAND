@@ -143,17 +143,19 @@ parseCmdLine:
     stosw   ;Store the pathsep and a terminating <NUL>
 
     call setDTA                     ;Ensure searches dont trample the tail!
+;The tail is defined as:
+;Tail[0] = Count byte, n, max 126
+;Tail[1-n] = Command line, String of length n
+;Tail[n+1] = Terminating <CR> char
+;Thus the tail is, at most, 128 chars long with a command line being, at most,
+; 126 chars. Thus, the last spot in the buffer is reserved for
+; a CR. If there isn't a CR there, we can overwrite it!
     lea rsi, qword [r8 + cmdLine]   ;Get the start of tail chars
-    movzx ecx, byte [rsi - 1]       ;Get the count byte. Shouldnt be geq 7Eh
-    mov eax, 80h - 1                ;Get the default string length
-    cmp ecx, eax                    ;Is count >= 7Fh?
-    cmova ecx, eax                  ;If so, use default count.
-    lea rdi, searchSpec             ;Copy the command line here
-    push rdi                        ;Save ptr to string to scan
-    rep movsb                       ;Copy the string of chars
-    mov al, CR
-    stosb                           ;Terminate this string
-    pop rsi                         ;Now parse this string
+    movzx ecx, byte [rsi - 1]       ;Get the count byte. Shouldnt be geq 126
+    mov eax, 128 - 2                ;Max count byte
+    cmp ecx, eax                    ;Is count too big?
+    cmova ecx, eax                  ;If so, use max count.
+    mov byte [rsi + rcx], CR        ;Force a terminator there.
 .parseLp:
     call skipDelimiters             ;Strip delims
     lodsb
