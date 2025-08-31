@@ -110,7 +110,8 @@ startInit:
 .singleCom:
 ;In single command mode, check the length of the input string was not 0.
 ; If it was, exit, else proceed
-    cmp byte [inBuffer + 1], 0
+    ;cmp byte [inBuffer + 1], 0
+    cmp byte [cLineBuffer + 1], 0
     je exit
     xor edx, edx
     dec edx             ;Pretend that we want to process Autoexec
@@ -141,8 +142,18 @@ parseCmdLine:
     movzx eax, byte [pathSep]
     stosw   ;Store the pathsep and a terminating <NUL>
 
-    call setDTA                     ;Ensure any searches dont trample on the tail!
+    call setDTA                     ;Ensure searches dont trample the tail!
     lea rsi, qword [r8 + cmdLine]   ;Get the start of tail chars
+    movzx ecx, byte [rsi - 1]       ;Get the count byte. Shouldnt be geq 7Eh
+    mov eax, 80h - 1                ;Get the default string length
+    cmp ecx, eax                    ;Is count >= 7Fh?
+    cmova ecx, eax                  ;If so, use default count.
+    lea rdi, searchSpec             ;Copy the command line here
+    push rdi                        ;Save ptr to string to scan
+    rep movsb                       ;Copy the string of chars
+    mov al, CR
+    stosb                           ;Terminate this string
+    pop rsi                         ;Now parse this string
 .parseLp:
     call skipDelimiters             ;Strip delims
     lodsb
@@ -274,13 +285,15 @@ parseCmdLine:
     jne .badparm
 .ssembCr:
     call skipDelimiters     ;Move rsi past the delimiters
-    lea rdi, inBuffer + 2   ;Store the command in the inBuffer as if typed in
+    ;lea rdi, inBuffer + 2   ;Store the command in the inBuffer as if typed in
+    lea rdi, cLineBuffer + 2
 .ssLp:
     lodsb
     stosb
     cmp al, CR
     je .ssOk
-    inc byte [inBuffer + 1] ;Increment the char count
+    ;inc byte [inBuffer + 1] ;Increment the char count
+    inc byte [cLineBuffer + 1] ;Increment the char count
     jmp short .ssLp
 .ssOk:
     or byte [statFlg1], inSingle    ;Set the single flag

@@ -13,7 +13,7 @@ Output file:  ./bin/COMMAND.COM
 Vstart            Start             Stop              Length    Class     Name
              100               100               100  00000000  progbits  .text
              100               100              4F07  00004E07  progbits  cmd
-            5CC0              4F07              5420  00000519  progbits  init
+            5CC0              4F07              543C  00000535  progbits  init
             4F07              4F07              5661  0000075A  nobits    bss
             5670              5670              5CC0  00000650  nobits    stack
 
@@ -44,7 +44,7 @@ vfollows:  not defined
 ---- Section init -------------------------------------------------------------
 
 class:     progbits
-length:                 519
+length:                 535
 start:                 4F07
 align:                    1
 follows:   cmd
@@ -633,7 +633,7 @@ FFFFFFFFFFFFFFFF  bbNoParam
 00000080  mod3Cpy
 0000075A  bssLen
 00000650  stackLen
-00000519  initLen
+00000535  initLen
 00000DAA  initOffset
 
 
@@ -1699,66 +1699,66 @@ Real              Virtual           Name
             5052              5E0B  startInit.prepStart
             505E              5E17  startInit.singleCom
             5071              5E2A  parseCmdLine
-            5098              5E51  parseCmdLine.parseLp
-            50B1              5E6A  parseCmdLine.switch
-            50D5              5E8E  parseCmdLine.badparm
-            50DE              5E97  parseCmdLine.file
-            5106              5EBF  parseCmdLine.badSpec
-            510D              5EC6  parseCmdLine.bs0
-            5112              5ECB  parseCmdLine.plhop
-            5114              5ECD  parseCmdLine.charOrDir
-            5122              5EDB  parseCmdLine.dir
-            5147              5F00  parseCmdLine.charDev
-            5177              5F30  parseCmdLine.plhop1
-            5179              5F32  parseCmdLine.badChar
-            5180              5F39  parseCmdLine.bs1
-            5182              5F3B  parseCmdLine.switchEnv
-            51C2              5F7B  parseCmdLine.plhop2
-            51C4              5F7D  parseCmdLine.badEnv
-            51CD              5F86  parseCmdLine.switchPerma
-            51E8              5FA1  parseCmdLine.spEmbCr
-            51F1              5FAA  parseCmdLine.switchStr
-            5204              5FBD  parseCmdLine.ssembCr
-            5210              5FC9  parseCmdLine.ssLp
-            521E              5FD7  parseCmdLine.ssOk
-            5225              5FDE  parseCmdLine.endScan
-            5242              5FFB  parseCmdLine.esSkipPathsep
-            525A              6013  ..@385._base
-            525C              6015  ..@386._ret
-            525D              6016  ..@385.a
-            5264              601D  ..@387._ret
-            5265              601E  parseCmdLine.replacestdio
-            526C              6025  ..@389._base
-            527A              6033  doEnv
-            528C              6045  ..@391._base
-            52B4              606D  ..@392._ret
-            52B5              606E  doEnv.freeCurrentEnv
-            52C4              607D  ..@393._ret
-            52C5              607E  doEnv.prepNewEnv
-            52CA              6083  doEnv.noInitEnv
-            5302              60BB  ..@394._ret
-            5303              60BC  doEnv.allocEnv
-            531A              60D3  doEnv.goAlloc
-            532A              60E3  ..@396._base
-            533D              60F6  doEnv.cpEnv
-            5344              60FD  doEnv.lp
-            5353              610C  ..@397._ret
-            5354              610D  doEnv.notNul
-            5358              6111  doEnv.err
-            536F              6128  ..@398._ret
-            5370              6129  getMasterEnv
-            5372              612B  getMasterEnv.lp
-            5380              6139  getMasterEnv.exit
-            5386              613F  ..@399._ret
-            5387              6140  initString
-            539A              6153  initString2
-            53C0              6179  badVerStr
-            53D8              6191  badCmdDir
-            5401              61BA  badEnvSz
-            541C              61D5  initNewSpec
-            541D              61D6  initNewDev
-            541E              61D7  initEnvSz
-            5420              61D9  endOfInitAlloc
+            50B4              5E6D  parseCmdLine.parseLp
+            50CD              5E86  parseCmdLine.switch
+            50F1              5EAA  parseCmdLine.badparm
+            50FA              5EB3  parseCmdLine.file
+            5122              5EDB  parseCmdLine.badSpec
+            5129              5EE2  parseCmdLine.bs0
+            512E              5EE7  parseCmdLine.plhop
+            5130              5EE9  parseCmdLine.charOrDir
+            513E              5EF7  parseCmdLine.dir
+            5163              5F1C  parseCmdLine.charDev
+            5193              5F4C  parseCmdLine.plhop1
+            5195              5F4E  parseCmdLine.badChar
+            519C              5F55  parseCmdLine.bs1
+            519E              5F57  parseCmdLine.switchEnv
+            51DE              5F97  parseCmdLine.plhop2
+            51E0              5F99  parseCmdLine.badEnv
+            51E9              5FA2  parseCmdLine.switchPerma
+            5204              5FBD  parseCmdLine.spEmbCr
+            520D              5FC6  parseCmdLine.switchStr
+            5220              5FD9  parseCmdLine.ssembCr
+            522C              5FE5  parseCmdLine.ssLp
+            523A              5FF3  parseCmdLine.ssOk
+            5241              5FFA  parseCmdLine.endScan
+            525E              6017  parseCmdLine.esSkipPathsep
+            5276              602F  ..@385._base
+            5278              6031  ..@386._ret
+            5279              6032  ..@385.a
+            5280              6039  ..@387._ret
+            5281              603A  parseCmdLine.replacestdio
+            5288              6041  ..@389._base
+            5296              604F  doEnv
+            52A8              6061  ..@391._base
+            52D0              6089  ..@392._ret
+            52D1              608A  doEnv.freeCurrentEnv
+            52E0              6099  ..@393._ret
+            52E1              609A  doEnv.prepNewEnv
+            52E6              609F  doEnv.noInitEnv
+            531E              60D7  ..@394._ret
+            531F              60D8  doEnv.allocEnv
+            5336              60EF  doEnv.goAlloc
+            5346              60FF  ..@396._base
+            5359              6112  doEnv.cpEnv
+            5360              6119  doEnv.lp
+            536F              6128  ..@397._ret
+            5370              6129  doEnv.notNul
+            5374              612D  doEnv.err
+            538B              6144  ..@398._ret
+            538C              6145  getMasterEnv
+            538E              6147  getMasterEnv.lp
+            539C              6155  getMasterEnv.exit
+            53A2              615B  ..@399._ret
+            53A3              615C  initString
+            53B6              616F  initString2
+            53DC              6195  badVerStr
+            53F4              61AD  badCmdDir
+            541D              61D6  badEnvSz
+            5438              61F1  initNewSpec
+            5439              61F2  initNewDev
+            543A              61F3  initEnvSz
+            543C              61F5  endOfInitAlloc
 
 ---- Section bss --------------------------------------------------------------
 

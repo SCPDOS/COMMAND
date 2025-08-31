@@ -9928,7 +9928,7 @@
      5                              <1> ; VIRTUAL START.
      6 00000000 488D35F9FFFFFF      <1>     lea rsi, cmdLdr
      7 00000007 498DB8[00000000]    <1>     lea rdi, qword [r8 + section.init.vstart]
-     8 0000000E B919050000          <1>     mov ecx, initLen
+     8 0000000E B935050000          <1>     mov ecx, initLen
      9 00000013 F3A4                <1>     rep movsb
     10 00000015 498DB8[1E000000]    <1>     lea rdi, qword [r8 + startInit]
     11 0000001C 57                  <1>     push rdi
@@ -9940,7 +9940,7 @@
     17 00000020 CD21                <1>     int 21h
     18 00000022 3C01                <1>     cmp al, 01h ;Version 1
     19 00000024 760D                <1>     jbe .okVersion
-    20 00000026 488D158C040000      <1>     lea rdx, badVerStr
+    20 00000026 488D15A8040000      <1>     lea rdx, badVerStr
     21 0000002D B409                <1>     mov ah, 09h
     22 0000002F CD21                <1>     int 21h
     23                              <1> .exitBad:
@@ -9957,7 +9957,7 @@
     34 00000056 F3AA                <1>     rep stosb
     35                              <1> ;Now eject all the unneeded space, to make space for allocating.
     36                              <1> ;Thus the allocations in the parsing should never fail (but still may)
-    37 00000058 488D1DBA040000      <1>     lea rbx, endOfInitAlloc
+    37 00000058 488D1DD6040000      <1>     lea rbx, endOfInitAlloc
     38 0000005F 4C29C3              <1>     sub rbx, r8 ;Convert to number of bytes (Could get assembler to do this)
     39 00000062 81C30F000000        <1>     add ebx, 0Fh    ;Round up paragraph
     40 00000068 C1EB04              <1>     shr ebx, 4  ;Convert to paragraphs
@@ -9967,7 +9967,7 @@
     44 00000074 E8(AF480000)        <1>     call resetNation
     45                              <1> ;Now space has been made, time to parse the command tail
     46 00000079 E8EC000000          <1>     call parseCmdLine   ;Now parse the command tail.
-    47 0000007E E8F0020000          <1>     call doEnv          ;Now enact the command tail actions
+    47 0000007E E80C030000          <1>     call doEnv          ;Now enact the command tail actions
     48 00000083 E8(DB480000)        <1>     call resetIDTentries    ;Setup IDT entries now. 
     49 00000088 F605(1A000000)01    <1>     test byte [statFlg1], permaShell ;Are we perma?
     50 0000008F 0F8490000000        <1>     jz .notMaster   ;Jump if not!
@@ -10019,11 +10019,11 @@
     96                              <1> ;Finish by printing INIT string.
     97 00000125 F605(1A000000)04    <1>     test byte [statFlg1], inSingle  ;Are we in single mode?
     98 0000012C 7529                <1>     jnz .singleCom
-    99 0000012E 488D154B030000      <1>     lea rdx, initString
+    99 0000012E 488D1567030000      <1>     lea rdx, initString
    100 00000135 B409                <1>     mov ah, 09h
    101 00000137 CD21                <1>     int 21h ;Print init string
    102 00000139 E8(75330000)        <1>     call version.printVersionNumber
-   103 0000013E 488D154E030000      <1>     lea rdx, initString2
+   103 0000013E 488D156A030000      <1>     lea rdx, initString2
    104 00000145 B409                <1>     mov ah, 09h
    105 00000147 CD21                <1>     int 21h ;Print init string
    106 00000149 31D2                <1>     xor edx, edx        ;Indicate we DONT want to do Autoexec processing
@@ -10033,200 +10033,213 @@
    110                              <1> .singleCom:
    111                              <1> ;In single command mode, check the length of the input string was not 0.
    112                              <1> ; If it was, exit, else proceed
-   113 00000157 803D(42010000)00    <1>     cmp byte [inBuffer + 1], 0
-   114 0000015E 0F84(94350000)      <1>     je exit
-   115 00000164 31D2                <1>     xor edx, edx
-   116 00000166 FFCA                <1>     dec edx             ;Pretend that we want to process Autoexec
-   117 00000168 EBE1                <1>     jmp short .prepStart
-   118                              <1> 
+   113                              <1>     ;cmp byte [inBuffer + 1], 0
+   114 00000157 803D(C4010000)00    <1>     cmp byte [cLineBuffer + 1], 0
+   115 0000015E 0F84(94350000)      <1>     je exit
+   116 00000164 31D2                <1>     xor edx, edx
+   117 00000166 FFCA                <1>     dec edx             ;Pretend that we want to process Autoexec
+   118 00000168 EBE1                <1>     jmp short .prepStart
    119                              <1> 
-   120                              <1> parseCmdLine:
-   121                              <1> ;COMMAND [drive:][path][device][/E:n][/P][/C string]
-   122                              <1> ;[drive:] gives the default drive for COMSPEC. Default is default drive.
-   123                              <1> ;[path] gives the search path to search for when searching for COMSPEC.
-   124                              <1> ;   Default is root directory. Hence default COMSPEC is _:\COMMAND.COM
-   125                              <1> ;[device] gives the default device to set STDIO to and reset to if we error
-   126                              <1> ;           MAX 8 chars long name ([device] can be colon terminated).
-   127                              <1> ;           Default is CON
-   128                              <1> ;[/C string] means execute the string as a command and terminate immediately
-   129                              <1> ;   This is single command mode, sets inSingle bit. Similar to int 2Eh.
-   130                              <1> ;[/P] means make the instance of COMMAND.COM permanent.
-   131                              <1> ;[/E:n] where n is a base 10 value between 160-32768, giving the size of the 
-   132                              <1> ; environment to allocate in bytes. Only works if COMMAND.COM is to be 
-   133                              <1> ; permanent. Needs a colon after E. 
-   134                              <1> ;
-   135                              <1> ;Start by setting up the default comspec dir, null terminated
-   136 0000016A E8(4C450000)        <1>     call getCurrentDrive    ;Get 0 based drive number in al
-   137 0000016F 0441                <1>     add al, "A"
-   138 00000171 B43A                <1>     mov ah, ":"
-   139 00000173 488D3D(11060000)    <1>     lea rdi, comspecDir
-   140 0000017A 66AB                <1>     stosw   ;Store drive specifier
-   141 0000017C 0FB605(0A000000)    <1>     movzx eax, byte [pathSep]
-   142 00000183 66AB                <1>     stosw   ;Store the pathsep and a terminating <NUL>
-   143                              <1> 
-   144 00000185 E8(94480000)        <1>     call setDTA                     ;Ensure any searches dont trample on the tail!
-   145 0000018A 498DB081000000      <1>     lea rsi, qword [r8 + cmdLine]   ;Get the start of tail chars
-   146                              <1> .parseLp:
-   147 00000191 E8(8F450000)        <1>     call skipDelimiters             ;Strip delims
-   148 00000196 AC                  <1>     lodsb
-   149 00000197 48FFCE              <1>     dec rsi ;Point to first non-delimiter char
-   150 0000019A 3C0D                <1>     cmp al, CR
-   151 0000019C 0F847C010000        <1>     je .endScan
-   152 000001A2 3A05(0B000000)      <1>     cmp al, byte [switchChar]       ;Is this a switchchar?
-   153 000001A8 752D                <1>     jne .file
-   154                              <1> .switch:
-   155 000001AA 48FFC6              <1>     inc rsi ;Go past the switch char
-   156 000001AD AC                  <1>     lodsb   ;Get first char past switch, advance rsi
-   157 000001AE E8(74450000)        <1>     call ucChar
-   158 000001B3 3C43                <1>     cmp al, "C"
-   159 000001B5 0F842F010000        <1>     je .switchStr
-   160 000001BB 3C50                <1>     cmp al, "P"
-   161 000001BD 0F8403010000        <1>     je .switchPerma
-   162 000001C3 3C45                <1>     cmp al, "E"
-   163 000001C5 0F84B0000000        <1>     je .switchEnv
-   164 000001CB 48FFCE              <1>     dec rsi ;Now point rsi back to this char
-   165                              <1> .badparm:
-   166 000001CE 488D15(52030000)    <1>     lea rdx, badParm
-   167 000001D5 EBBA                <1>     jmp short .parseLp
-   168                              <1> ;-----------------------------------------------------------------
-   169                              <1> ;Search for the filespec
-   170                              <1> .file:
-   171 000001D7 E8(1B470000)        <1>     call copyArgumentToSearchSpec   ;Moves rsi to char past the delimiter
-   172 000001DC 48FFCE              <1>     dec rsi ;Point to the delimiter itself
-   173 000001DF 488D15(70040000)    <1>     lea rdx, searchSpec
-   174 000001E6 B8004E0000          <1>     mov eax, 4E00h  ;Find First
-   175 000001EB B910000000          <1>     mov ecx, dirDirectory   ;Return Normal, RO, Dir or Char
-   176 000001F0 CD21                <1>     int 21h
-   177 000001F2 7319                <1>     jnc .charOrDir
-   178                              <1> ;Just double check if the spec was the root dir. If so, proceed ok.
-   179 000001F4 8B02                <1>     mov eax, dword [rdx]    ;Get the first four chars
-   180 000001F6 30C0                <1>     xor al, al
-   181 000001F8 3D003A5C00          <1>     cmp eax, 005C3A00h  ;Was this a <NUL>:\<NUL>?
-   182 000001FD 741C                <1>     je .dir ;If so, root dir specified, all oki!
-   183                              <1> .badSpec:
-   184                              <1> ;rsi has been moved past the argument so we can keep proceeding with processing
-   185 000001FF 488D15CB020000      <1>     lea rdx, badCmdDir
-   186                              <1> .bs0:
-   187 00000206 E8(53430000)        <1>     call printString
-   188                              <1> .plhop:
-   189 0000020B EB84                <1>     jmp short .parseLp
-   190                              <1> ;-----------------------------------------------------------------
-   191                              <1> ;Check if a char or directory here
-   192                              <1> .charOrDir:
-   193 0000020D 8A05(0B010000)      <1>     mov al, byte [cmdFFBlock + ffBlock.attribFnd]
-   194 00000213 2450                <1>     and al, dirCharDev | dirDirectory
-   195 00000215 74E8                <1>     jz .badSpec
-   196 00000217 A840                <1>     test al, dirCharDev
-   197 00000219 7525                <1>     jnz .charDev
-   198                              <1> ;Here if a directory. Save it null terminated in comspecDir.
-   199                              <1> .dir:
-   200 0000021B 56                  <1>     push rsi
-   201 0000021C 488D35(70040000)    <1>     lea rsi, searchSpec 
-   202 00000223 488D3D(11060000)    <1>     lea rdi, comspecDir
-   203 0000022A E8(60450000)        <1>     call strcpy2
-   204 0000022F B811120000          <1>     mov eax, 1211h  ;Uppercase the pathspec
-   205 00000234 CD2F                <1>     int 2Fh         ;DOS 3.3 does't do this hehe 0:-)
-   206 00000236 5E                  <1>     pop rsi
-   207 00000237 C605D7020000FF      <1>     mov byte [initNewSpec], -1  ;Set, we have a new comspec
-   208 0000023E EBCB                <1>     jmp short .plhop
-   209                              <1> ;-----------------------------------------------------------------
-   210                              <1> ;Handle char dev here
-   211                              <1> .charDev:
-   212                              <1> ;Check the name is max 8 chars in length
-   213 00000240 488D3D(70040000)    <1>     lea rdi, searchSpec
-   214 00000247 E8(6A450000)        <1>     call strlen ;Get len plus <NUL> in ecx. Cant be more than 8+1 for <NUL>
-   215 0000024C 81F909000000        <1>     cmp ecx, 9  ;This can literally never happen but never hurts to be safe :)
-   216 00000252 771E                <1>     ja .badChar
-   217 00000254 56                  <1>     push rsi    ;Save offset into cmdTail on stack
-   218 00000255 488D35(70040000)    <1>     lea rsi, searchSpec
-   219 0000025C 488D3D(F0070000)    <1>     lea rdi, devName
-   220 00000263 E8(51450000)        <1>     call strcpy ;Copy this string over
-   221 00000268 5E                  <1>     pop rsi
-   222 00000269 C605A6020000FF      <1>     mov byte [initNewDev], -1   ;Set this byte now we have a new dev!
-   223                              <1> .plhop1:
-   224 00000270 EB99                <1>     jmp short .plhop    ;parseLp
-   225                              <1> .badChar:
-   226 00000272 488D15(05050000)    <1>     lea rdx, badDev
-   227                              <1> .bs1:
-   228 00000279 EB8B                <1>     jmp short .bs0
-   229                              <1> ;-----------------------------------------------------------------
-   230                              <1> .switchEnv:
-   231 0000027B AC                  <1>     lodsb
-   232 0000027C 48FFCE              <1>     dec rsi
-   233 0000027F 3C3A                <1>     cmp al, ":"
-   234 00000281 0F8547FFFFFF        <1>     jne .badparm
-   235 00000287 48FFC6              <1>     inc rsi ;Now point past teh colon, skip any delimiters
-   236 0000028A E8(8F450000)        <1>     call skipDelimiters
-   237 0000028F AC                  <1>     lodsb       ;Get the first non-delimiter
-   238 00000290 48FFCE              <1>     dec rsi     ;Point back at it
-   239 00000293 3C0D                <1>     cmp al, CR
-   240 00000295 0F8433FFFFFF        <1>     je .badparm     ;Print bad arg, rsi positioned to terminate parsing now
-   241                              <1>     ;Else, rsi now pointing at the first number. Do maths :)
-   242 0000029B E8(48480000)        <1>     call getNum ;Move rsi to first non digit/9th digit if too many digits
-   243 000002A0 0F8228FFFFFF        <1>     jc .badparm    ;Bad parameter error!
-   244 000002A6 3D00800000          <1>     cmp eax, 8000h
-   245 000002AB 7710                <1>     ja .badEnv
-   246 000002AD 3DA0000000          <1>     cmp eax, 0A0h
-   247 000002B2 7209                <1>     jb .badEnv
-   248 000002B4 6689055C020000      <1>     mov word [initEnvSz], ax    ;Store the allocated size here
-   249                              <1> .plhop2:
-   250 000002BB EBB3                <1>     jmp short .plhop1  ;parseLp
-   251                              <1> .badEnv:
-   252 000002BD 488D1536020000      <1>     lea rdx, badEnvSz
-   253 000002C4 EBB3                <1>     jmp short .bs1
-   254                              <1> ;-----------------------------------------------------------------
-   255                              <1> .switchPerma:
-   256 000002C6 AC                  <1>     lodsb   ;Get the second char after the P
-   257 000002C7 48FFCE              <1>     dec rsi ;Point back at it
-   258 000002CA 3C0D                <1>     cmp al, CR
-   259 000002CC 7413                <1>     je .spEmbCr ;Allow CR after the P
-   260 000002CE 3A05(0B000000)      <1>     cmp al, byte [switchChar]
-   261 000002D4 740B                <1>     je .spEmbCr ;Allow switch char after P
-   262 000002D6 E8(9D450000)        <1>     call isALdelimiter
-   263 000002DB 0F85EDFEFFFF        <1>     jne .badparm
-   264                              <1> .spEmbCr:
-   265 000002E1 800D(1A000000)01    <1>     or byte [statFlg1], permaShell  ;Set the bit
-   266 000002E8 EBD1                <1>     jmp short .plhop2  ;parseLp
-   267                              <1> ;-----------------------------------------------------------------
-   268                              <1> .switchStr:
-   269 000002EA AC                  <1>     lodsb       ;Get the char after the C
-   270 000002EB 48FFCE              <1>     dec rsi     ;Point back at it
-   271 000002EE 3C0D                <1>     cmp al, CR
-   272 000002F0 740B                <1>     je .ssembCr         ;Embedded CR ok
-   273 000002F2 E8(9D450000)        <1>     call isALdelimiter  ;Char immediately after the C must be a delimiter
-   274 000002F7 0F85D1FEFFFF        <1>     jne .badparm
-   275                              <1> .ssembCr:
-   276 000002FD E8(8F450000)        <1>     call skipDelimiters     ;Move rsi past the delimiters
-   277 00000302 488D3D(43010000)    <1>     lea rdi, inBuffer + 2   ;Store the command in the inBuffer as if typed in
-   278                              <1> .ssLp:
-   279 00000309 AC                  <1>     lodsb
-   280 0000030A AA                  <1>     stosb
-   281 0000030B 3C0D                <1>     cmp al, CR
-   282 0000030D 7408                <1>     je .ssOk
-   283 0000030F FE05(42010000)      <1>     inc byte [inBuffer + 1] ;Increment the char count
-   284 00000315 EBF2                <1>     jmp short .ssLp
-   285                              <1> .ssOk:
-   286 00000317 800D(1A000000)04    <1>     or byte [statFlg1], inSingle    ;Set the single flag
-   287                              <1> ;Now we fall through as we have processed the cmd line and set the flag
-   288                              <1> ;-----------------------------------------------------------------
-   289                              <1> .endScan:
-   290                              <1> ;Now copy our name to the end of the dir specified
-   291 0000031E 488D3D(11060000)    <1>     lea rdi, comspecDir
-   292 00000325 E8(6A450000)        <1>     call strlen ;Get the length in ecx, preserve rdi
-   293 0000032A FFC9                <1>     dec ecx ;Point to null terminator
-   294 0000032C 8A05(0A000000)      <1>     mov al, byte [pathSep]
-   295 00000332 4801CF              <1>     add rdi, rcx    ;Now point to the null
-   296 00000335 3847FF              <1>     cmp byte [rdi - 1], al
-   297 00000338 7401                <1>     je .esSkipPathsep
-   298 0000033A AA                  <1>     stosb
-   299                              <1> .esSkipPathsep:
-   300 0000033B 488D35(18080000)    <1>     lea rsi, cspec
-   301 00000342 E8(51450000)        <1>     call strcpy ;Now copy over the name of our beloved shell
-   302 00000347 E812000000          <1>     call .replacestdio
-   303                              <1> ;Ensure that on exit, if both inSingle bit and permaShell are set, inSingle 
-   304                              <1> ; wins. Unless this is the first boot, in which case, we ignore it
-   305 0000034C F605(1A000000)04    <1>     test byte [statFlg1], inSingle
-   306                              <1>     retz    ;Return if not set
+   120                              <1> 
+   121                              <1> parseCmdLine:
+   122                              <1> ;COMMAND [drive:][path][device][/E:n][/P][/C string]
+   123                              <1> ;[drive:] gives the default drive for COMSPEC. Default is default drive.
+   124                              <1> ;[path] gives the search path to search for when searching for COMSPEC.
+   125                              <1> ;   Default is root directory. Hence default COMSPEC is _:\COMMAND.COM
+   126                              <1> ;[device] gives the default device to set STDIO to and reset to if we error
+   127                              <1> ;           MAX 8 chars long name ([device] can be colon terminated).
+   128                              <1> ;           Default is CON
+   129                              <1> ;[/C string] means execute the string as a command and terminate immediately
+   130                              <1> ;   This is single command mode, sets inSingle bit. Similar to int 2Eh.
+   131                              <1> ;[/P] means make the instance of COMMAND.COM permanent.
+   132                              <1> ;[/E:n] where n is a base 10 value between 160-32768, giving the size of the 
+   133                              <1> ; environment to allocate in bytes. Only works if COMMAND.COM is to be 
+   134                              <1> ; permanent. Needs a colon after E. 
+   135                              <1> ;
+   136                              <1> ;Start by setting up the default comspec dir, null terminated
+   137 0000016A E8(4C450000)        <1>     call getCurrentDrive    ;Get 0 based drive number in al
+   138 0000016F 0441                <1>     add al, "A"
+   139 00000171 B43A                <1>     mov ah, ":"
+   140 00000173 488D3D(11060000)    <1>     lea rdi, comspecDir
+   141 0000017A 66AB                <1>     stosw   ;Store drive specifier
+   142 0000017C 0FB605(0A000000)    <1>     movzx eax, byte [pathSep]
+   143 00000183 66AB                <1>     stosw   ;Store the pathsep and a terminating <NUL>
+   144                              <1> 
+   145 00000185 E8(94480000)        <1>     call setDTA                     ;Ensure searches dont trample the tail!
+   146 0000018A 498DB081000000      <1>     lea rsi, qword [r8 + cmdLine]   ;Get the start of tail chars
+   147 00000191 0FB64EFF            <1>     movzx ecx, byte [rsi - 1]       ;Get the count byte. Shouldnt be geq 7Eh
+   148 00000195 B87F000000          <1>     mov eax, 80h - 1                ;Get the default string length
+   149 0000019A 39C1                <1>     cmp ecx, eax                    ;Is count >= 7Fh?
+   150 0000019C 0F47C8              <1>     cmova ecx, eax                  ;If so, use default count.
+   151 0000019F 488D3D(70040000)    <1>     lea rdi, searchSpec             ;Copy the command line here
+   152 000001A6 57                  <1>     push rdi                        ;Save ptr to string to scan
+   153 000001A7 F3A4                <1>     rep movsb                       ;Copy the string of chars
+   154 000001A9 B00D                <1>     mov al, CR
+   155 000001AB AA                  <1>     stosb                           ;Terminate this string
+   156 000001AC 5E                  <1>     pop rsi                         ;Now parse this string
+   157                              <1> .parseLp:
+   158 000001AD E8(8F450000)        <1>     call skipDelimiters             ;Strip delims
+   159 000001B2 AC                  <1>     lodsb
+   160 000001B3 48FFCE              <1>     dec rsi ;Point to first non-delimiter char
+   161 000001B6 3C0D                <1>     cmp al, CR
+   162 000001B8 0F847C010000        <1>     je .endScan
+   163 000001BE 3A05(0B000000)      <1>     cmp al, byte [switchChar]       ;Is this a switchchar?
+   164 000001C4 752D                <1>     jne .file
+   165                              <1> .switch:
+   166 000001C6 48FFC6              <1>     inc rsi ;Go past the switch char
+   167 000001C9 AC                  <1>     lodsb   ;Get first char past switch, advance rsi
+   168 000001CA E8(74450000)        <1>     call ucChar
+   169 000001CF 3C43                <1>     cmp al, "C"
+   170 000001D1 0F842F010000        <1>     je .switchStr
+   171 000001D7 3C50                <1>     cmp al, "P"
+   172 000001D9 0F8403010000        <1>     je .switchPerma
+   173 000001DF 3C45                <1>     cmp al, "E"
+   174 000001E1 0F84B0000000        <1>     je .switchEnv
+   175 000001E7 48FFCE              <1>     dec rsi ;Now point rsi back to this char
+   176                              <1> .badparm:
+   177 000001EA 488D15(52030000)    <1>     lea rdx, badParm
+   178 000001F1 EBBA                <1>     jmp short .parseLp
+   179                              <1> ;-----------------------------------------------------------------
+   180                              <1> ;Search for the filespec
+   181                              <1> .file:
+   182 000001F3 E8(1B470000)        <1>     call copyArgumentToSearchSpec   ;Moves rsi to char past the delimiter
+   183 000001F8 48FFCE              <1>     dec rsi ;Point to the delimiter itself
+   184 000001FB 488D15(70040000)    <1>     lea rdx, searchSpec
+   185 00000202 B8004E0000          <1>     mov eax, 4E00h  ;Find First
+   186 00000207 B910000000          <1>     mov ecx, dirDirectory   ;Return Normal, RO, Dir or Char
+   187 0000020C CD21                <1>     int 21h
+   188 0000020E 7319                <1>     jnc .charOrDir
+   189                              <1> ;Just double check if the spec was the root dir. If so, proceed ok.
+   190 00000210 8B02                <1>     mov eax, dword [rdx]    ;Get the first four chars
+   191 00000212 30C0                <1>     xor al, al
+   192 00000214 3D003A5C00          <1>     cmp eax, 005C3A00h  ;Was this a <NUL>:\<NUL>?
+   193 00000219 741C                <1>     je .dir ;If so, root dir specified, all oki!
+   194                              <1> .badSpec:
+   195                              <1> ;rsi has been moved past the argument so we can keep proceeding with processing
+   196 0000021B 488D15CB020000      <1>     lea rdx, badCmdDir
+   197                              <1> .bs0:
+   198 00000222 E8(53430000)        <1>     call printString
+   199                              <1> .plhop:
+   200 00000227 EB84                <1>     jmp short .parseLp
+   201                              <1> ;-----------------------------------------------------------------
+   202                              <1> ;Check if a char or directory here
+   203                              <1> .charOrDir:
+   204 00000229 8A05(0B010000)      <1>     mov al, byte [cmdFFBlock + ffBlock.attribFnd]
+   205 0000022F 2450                <1>     and al, dirCharDev | dirDirectory
+   206 00000231 74E8                <1>     jz .badSpec
+   207 00000233 A840                <1>     test al, dirCharDev
+   208 00000235 7525                <1>     jnz .charDev
+   209                              <1> ;Here if a directory. Save it null terminated in comspecDir.
+   210                              <1> .dir:
+   211 00000237 56                  <1>     push rsi
+   212 00000238 488D35(70040000)    <1>     lea rsi, searchSpec 
+   213 0000023F 488D3D(11060000)    <1>     lea rdi, comspecDir
+   214 00000246 E8(60450000)        <1>     call strcpy2
+   215 0000024B B811120000          <1>     mov eax, 1211h  ;Uppercase the pathspec
+   216 00000250 CD2F                <1>     int 2Fh         ;DOS 3.3 does't do this hehe 0:-)
+   217 00000252 5E                  <1>     pop rsi
+   218 00000253 C605D7020000FF      <1>     mov byte [initNewSpec], -1  ;Set, we have a new comspec
+   219 0000025A EBCB                <1>     jmp short .plhop
+   220                              <1> ;-----------------------------------------------------------------
+   221                              <1> ;Handle char dev here
+   222                              <1> .charDev:
+   223                              <1> ;Check the name is max 8 chars in length
+   224 0000025C 488D3D(70040000)    <1>     lea rdi, searchSpec
+   225 00000263 E8(6A450000)        <1>     call strlen ;Get len plus <NUL> in ecx. Cant be more than 8+1 for <NUL>
+   226 00000268 81F909000000        <1>     cmp ecx, 9  ;This can literally never happen but never hurts to be safe :)
+   227 0000026E 771E                <1>     ja .badChar
+   228 00000270 56                  <1>     push rsi    ;Save offset into cmdTail on stack
+   229 00000271 488D35(70040000)    <1>     lea rsi, searchSpec
+   230 00000278 488D3D(F0070000)    <1>     lea rdi, devName
+   231 0000027F E8(51450000)        <1>     call strcpy ;Copy this string over
+   232 00000284 5E                  <1>     pop rsi
+   233 00000285 C605A6020000FF      <1>     mov byte [initNewDev], -1   ;Set this byte now we have a new dev!
+   234                              <1> .plhop1:
+   235 0000028C EB99                <1>     jmp short .plhop    ;parseLp
+   236                              <1> .badChar:
+   237 0000028E 488D15(05050000)    <1>     lea rdx, badDev
+   238                              <1> .bs1:
+   239 00000295 EB8B                <1>     jmp short .bs0
+   240                              <1> ;-----------------------------------------------------------------
+   241                              <1> .switchEnv:
+   242 00000297 AC                  <1>     lodsb
+   243 00000298 48FFCE              <1>     dec rsi
+   244 0000029B 3C3A                <1>     cmp al, ":"
+   245 0000029D 0F8547FFFFFF        <1>     jne .badparm
+   246 000002A3 48FFC6              <1>     inc rsi ;Now point past teh colon, skip any delimiters
+   247 000002A6 E8(8F450000)        <1>     call skipDelimiters
+   248 000002AB AC                  <1>     lodsb       ;Get the first non-delimiter
+   249 000002AC 48FFCE              <1>     dec rsi     ;Point back at it
+   250 000002AF 3C0D                <1>     cmp al, CR
+   251 000002B1 0F8433FFFFFF        <1>     je .badparm     ;Print bad arg, rsi positioned to terminate parsing now
+   252                              <1>     ;Else, rsi now pointing at the first number. Do maths :)
+   253 000002B7 E8(48480000)        <1>     call getNum ;Move rsi to first non digit/9th digit if too many digits
+   254 000002BC 0F8228FFFFFF        <1>     jc .badparm    ;Bad parameter error!
+   255 000002C2 3D00800000          <1>     cmp eax, 8000h
+   256 000002C7 7710                <1>     ja .badEnv
+   257 000002C9 3DA0000000          <1>     cmp eax, 0A0h
+   258 000002CE 7209                <1>     jb .badEnv
+   259 000002D0 6689055C020000      <1>     mov word [initEnvSz], ax    ;Store the allocated size here
+   260                              <1> .plhop2:
+   261 000002D7 EBB3                <1>     jmp short .plhop1  ;parseLp
+   262                              <1> .badEnv:
+   263 000002D9 488D1536020000      <1>     lea rdx, badEnvSz
+   264 000002E0 EBB3                <1>     jmp short .bs1
+   265                              <1> ;-----------------------------------------------------------------
+   266                              <1> .switchPerma:
+   267 000002E2 AC                  <1>     lodsb   ;Get the second char after the P
+   268 000002E3 48FFCE              <1>     dec rsi ;Point back at it
+   269 000002E6 3C0D                <1>     cmp al, CR
+   270 000002E8 7413                <1>     je .spEmbCr ;Allow CR after the P
+   271 000002EA 3A05(0B000000)      <1>     cmp al, byte [switchChar]
+   272 000002F0 740B                <1>     je .spEmbCr ;Allow switch char after P
+   273 000002F2 E8(9D450000)        <1>     call isALdelimiter
+   274 000002F7 0F85EDFEFFFF        <1>     jne .badparm
+   275                              <1> .spEmbCr:
+   276 000002FD 800D(1A000000)01    <1>     or byte [statFlg1], permaShell  ;Set the bit
+   277 00000304 EBD1                <1>     jmp short .plhop2  ;parseLp
+   278                              <1> ;-----------------------------------------------------------------
+   279                              <1> .switchStr:
+   280 00000306 AC                  <1>     lodsb       ;Get the char after the C
+   281 00000307 48FFCE              <1>     dec rsi     ;Point back at it
+   282 0000030A 3C0D                <1>     cmp al, CR
+   283 0000030C 740B                <1>     je .ssembCr         ;Embedded CR ok
+   284 0000030E E8(9D450000)        <1>     call isALdelimiter  ;Char immediately after the C must be a delimiter
+   285 00000313 0F85D1FEFFFF        <1>     jne .badparm
+   286                              <1> .ssembCr:
+   287 00000319 E8(8F450000)        <1>     call skipDelimiters     ;Move rsi past the delimiters
+   288                              <1>     ;lea rdi, inBuffer + 2   ;Store the command in the inBuffer as if typed in
+   289 0000031E 488D3D(C5010000)    <1>     lea rdi, cLineBuffer + 2
+   290                              <1> .ssLp:
+   291 00000325 AC                  <1>     lodsb
+   292 00000326 AA                  <1>     stosb
+   293 00000327 3C0D                <1>     cmp al, CR
+   294 00000329 7408                <1>     je .ssOk
+   295                              <1>     ;inc byte [inBuffer + 1] ;Increment the char count
+   296 0000032B FE05(C4010000)      <1>     inc byte [cLineBuffer + 1] ;Increment the char count
+   297 00000331 EBF2                <1>     jmp short .ssLp
+   298                              <1> .ssOk:
+   299 00000333 800D(1A000000)04    <1>     or byte [statFlg1], inSingle    ;Set the single flag
+   300                              <1> ;Now we fall through as we have processed the cmd line and set the flag
+   301                              <1> ;-----------------------------------------------------------------
+   302                              <1> .endScan:
+   303                              <1> ;Now copy our name to the end of the dir specified
+   304 0000033A 488D3D(11060000)    <1>     lea rdi, comspecDir
+   305 00000341 E8(6A450000)        <1>     call strlen ;Get the length in ecx, preserve rdi
+   306 00000346 FFC9                <1>     dec ecx ;Point to null terminator
+   307 00000348 8A05(0A000000)      <1>     mov al, byte [pathSep]
+   308 0000034E 4801CF              <1>     add rdi, rcx    ;Now point to the null
+   309 00000351 3847FF              <1>     cmp byte [rdi - 1], al
+   310 00000354 7401                <1>     je .esSkipPathsep
+   311 00000356 AA                  <1>     stosb
+   312                              <1> .esSkipPathsep:
+   313 00000357 488D35(18080000)    <1>     lea rsi, cspec
+   314 0000035E E8(51450000)        <1>     call strcpy ;Now copy over the name of our beloved shell
+   315 00000363 E812000000          <1>     call .replacestdio
+   316                              <1> ;Ensure that on exit, if both inSingle bit and permaShell are set, inSingle 
+   317                              <1> ; wins. Unless this is the first boot, in which case, we ignore it
+   318 00000368 F605(1A000000)04    <1>     test byte [statFlg1], inSingle
+   319                              <1>     retz    ;Return if not set
     41                              <2> cret z
     19                              <3> %%_base:
     20                              <3> %assign baseVar %%_base-$$
@@ -10238,10 +10251,10 @@
     26                              <3>  j%+1 short retOff
     27                              <3>  %endif
     28                              <3>  %else
-    29 00000353 7501                <3>  j%-1 short %%a
+    29 0000036F 7501                <3>  j%-1 short %%a
     30                              <3>  return
     13                              <4> %%_ret:
-    14 00000355 C3                  <4>  ret
+    14 00000371 C3                  <4>  ret
     15                              <4> %assign retOff %%_ret-$$
     31                              <3> %%a:
     32                              <3>  %endif
@@ -10250,21 +10263,21 @@
     35                              <3>  return
     36                              <3> %%a:
     37                              <3>  %endif
-   307 00000356 8025(1A000000)FE    <1>     and byte [statFlg1], ~permaShell ;Else, ensure perma is deactivated
-   308                              <1>     return
+   320 00000372 8025(1A000000)FE    <1>     and byte [statFlg1], ~permaShell ;Else, ensure perma is deactivated
+   321                              <1>     return
     13                              <2> %%_ret:
-    14 0000035D C3                  <2>  ret
+    14 00000379 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-   309                              <1> .replacestdio:
-   310 0000035E F605B1010000FF      <1>     test byte [initNewDev], -1
-   311                              <1>     retz    ;Return if not set
+   322                              <1> .replacestdio:
+   323 0000037A F605B1010000FF      <1>     test byte [initNewDev], -1
+   324                              <1>     retz    ;Return if not set
     41                              <2> cret z
     19                              <3> %%_base:
     20                              <3> %assign baseVar %%_base-$$
     21                              <3>  %ifdef retOff
     22                              <3>  %if (baseVar - retOff <= 126) && (baseVar > retOff)
     23                              <3>  %ifdef currSegVBase
-    24 00000365 74F6                <3>  j%+1 short (retOff+currSegVBase)
+    24 00000381 74F6                <3>  j%+1 short (retOff+currSegVBase)
     25                              <3>  %else
     26                              <3>  j%+1 short retOff
     27                              <3>  %endif
@@ -10278,23 +10291,23 @@
     35                              <3>  return
     36                              <3> %%a:
     37                              <3>  %endif
-   312 00000367 488D15(F0070000)    <1>     lea rdx, devName
-   313 0000036E E9(052E0000)        <1>     jmp ctty.loadSwap  ;Return through the return instruction in ctty
-   314                              <1> 
-   315                              <1> doEnv:
-   316                              <1> ;Will do the environment adjustments as needed
-   317 00000373 498B703E            <1>     mov rsi, qword [r8 + psp.envPtr]
-   318 00000377 4885F6              <1>     test rsi, rsi
-   319 0000037A 7447                <1>     jz .noInitEnv
-   320 0000037C 66813D920100000000  <1>     cmp word [initEnvSz], 0 ;If an env exists and /E not specified, return!
-   321                              <1>     retz
+   325 00000383 488D15(F0070000)    <1>     lea rdx, devName
+   326 0000038A E9(052E0000)        <1>     jmp ctty.loadSwap  ;Return through the return instruction in ctty
+   327                              <1> 
+   328                              <1> doEnv:
+   329                              <1> ;Will do the environment adjustments as needed
+   330 0000038F 498B703E            <1>     mov rsi, qword [r8 + psp.envPtr]
+   331 00000393 4885F6              <1>     test rsi, rsi
+   332 00000396 7447                <1>     jz .noInitEnv
+   333 00000398 66813D920100000000  <1>     cmp word [initEnvSz], 0 ;If an env exists and /E not specified, return!
+   334                              <1>     retz
     41                              <2> cret z
     19                              <3> %%_base:
     20                              <3> %assign baseVar %%_base-$$
     21                              <3>  %ifdef retOff
     22                              <3>  %if (baseVar - retOff <= 126) && (baseVar > retOff)
     23                              <3>  %ifdef currSegVBase
-    24 00000385 74D6                <3>  j%+1 short (retOff+currSegVBase)
+    24 000003A1 74D6                <3>  j%+1 short (retOff+currSegVBase)
     25                              <3>  %else
     26                              <3>  j%+1 short retOff
     27                              <3>  %endif
@@ -10308,81 +10321,81 @@
     35                              <3>  return
     36                              <3> %%a:
     37                              <3>  %endif
-   322                              <1> ;Now if no new comspec has been given, we allocate a new block, 
-   323                              <1> ;copy the environment from the master and free the original block.
-   324                              <1> ;If the block we allocate is smaller than the original block, 
-   325                              <1> ; print out of env space and stop there
-   326                              <1> ;Else, we simply allocate and create a fresh new environment with the new 
-   327                              <1> ; comspec. 
-   328 00000387 F60587010000FF      <1>     test byte [initNewSpec], -1  ;If we have a new comspec, create afresh
-   329 0000038E 752E                <1>     jnz .prepNewEnv
-   330                              <1>     ;Else, we create new alloc and copy master into it
-   331 00000390 E867000000          <1>     call .allocEnv
-   332 00000395 4889C7              <1>     mov rdi, rax        ;Move pointer into rdi
-   333 00000398 E8CC000000          <1>     call getMasterEnv   ;Get the current active master environment in rsi
-   334 0000039D 57                  <1>     push rdi            ;Save the start of the environment block
-   335 0000039E E893000000          <1>     call .cpEnv         ;Copy the environment
-   336 000003A3 5F                  <1>     pop rdi
-   337 000003A4 E805000000          <1>     call .freeCurrentEnv
-   338 000003A9 4989783E            <1>     mov qword [r8 + psp.envPtr], rdi    ;Now set us as the env ptr
-   339                              <1>     return  
+   335                              <1> ;Now if no new comspec has been given, we allocate a new block, 
+   336                              <1> ;copy the environment from the master and free the original block.
+   337                              <1> ;If the block we allocate is smaller than the original block, 
+   338                              <1> ; print out of env space and stop there
+   339                              <1> ;Else, we simply allocate and create a fresh new environment with the new 
+   340                              <1> ; comspec. 
+   341 000003A3 F60587010000FF      <1>     test byte [initNewSpec], -1  ;If we have a new comspec, create afresh
+   342 000003AA 752E                <1>     jnz .prepNewEnv
+   343                              <1>     ;Else, we create new alloc and copy master into it
+   344 000003AC E867000000          <1>     call .allocEnv
+   345 000003B1 4889C7              <1>     mov rdi, rax        ;Move pointer into rdi
+   346 000003B4 E8CC000000          <1>     call getMasterEnv   ;Get the current active master environment in rsi
+   347 000003B9 57                  <1>     push rdi            ;Save the start of the environment block
+   348 000003BA E893000000          <1>     call .cpEnv         ;Copy the environment
+   349 000003BF 5F                  <1>     pop rdi
+   350 000003C0 E805000000          <1>     call .freeCurrentEnv
+   351 000003C5 4989783E            <1>     mov qword [r8 + psp.envPtr], rdi    ;Now set us as the env ptr
+   352                              <1>     return  
     13                              <2> %%_ret:
-    14 000003AD C3                  <2>  ret
+    14 000003C9 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-   340                              <1> .freeCurrentEnv:
-   341 000003AE 4150                <1>     push r8
-   342 000003B0 4D8B403E            <1>     mov r8, qword [r8 + psp.envPtr] ;Get the original envPtr to free
-   343 000003B4 B800490000          <1>     mov eax, 4900h
-   344 000003B9 CD21                <1>     int 21h
-   345 000003BB 4158                <1>     pop r8
-   346                              <1>     return
+   353                              <1> .freeCurrentEnv:
+   354 000003CA 4150                <1>     push r8
+   355 000003CC 4D8B403E            <1>     mov r8, qword [r8 + psp.envPtr] ;Get the original envPtr to free
+   356 000003D0 B800490000          <1>     mov eax, 4900h
+   357 000003D5 CD21                <1>     int 21h
+   358 000003D7 4158                <1>     pop r8
+   359                              <1>     return
     13                              <2> %%_ret:
-    14 000003BD C3                  <2>  ret
+    14 000003D9 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-   347                              <1> .prepNewEnv:
-   348 000003BE E8EBFFFFFF          <1>     call .freeCurrentEnv
-   349                              <1> .noInitEnv:
-   350                              <1> ;Build the initial block.
-   351 000003C3 E834000000          <1>     call .allocEnv
-   352 000003C8 4889C7              <1>     mov rdi, rax        ;Move rdi to the environment
-   353 000003CB 4989783E            <1>     mov qword [r8 + psp.envPtr], rdi    ;Now store this as the env pointer
-   354 000003CF 57                  <1>     push rdi            ;Save the environment ptr!
-   355 000003D0 488D35(09080000)    <1>     lea rsi, pathEVar
-   356 000003D7 E8(51450000)        <1>     call strcpy
-   357 000003DC 488D35(0F080000)    <1>     lea rsi, comspecEVar
-   358 000003E3 E8(51450000)        <1>     call strcpy
-   359 000003E8 48FFCF              <1>     dec rdi ;Write over the terminating null
-   360 000003EB 488D35(11060000)    <1>     lea rsi, comspecDir    ;Now copy the actual comspec! 
-   361 000003F2 E8(51450000)        <1>     call strcpy 
-   362 000003F7 30C0                <1>     xor al, al
-   363 000003F9 AA                  <1>     stosb   ;Store the second terminating null
-   364 000003FA 5F                  <1>     pop rdi ;Get back the pointer to the start of the env
-   365                              <1>     return
+   360                              <1> .prepNewEnv:
+   361 000003DA E8EBFFFFFF          <1>     call .freeCurrentEnv
+   362                              <1> .noInitEnv:
+   363                              <1> ;Build the initial block.
+   364 000003DF E834000000          <1>     call .allocEnv
+   365 000003E4 4889C7              <1>     mov rdi, rax        ;Move rdi to the environment
+   366 000003E7 4989783E            <1>     mov qword [r8 + psp.envPtr], rdi    ;Now store this as the env pointer
+   367 000003EB 57                  <1>     push rdi            ;Save the environment ptr!
+   368 000003EC 488D35(09080000)    <1>     lea rsi, pathEVar
+   369 000003F3 E8(51450000)        <1>     call strcpy
+   370 000003F8 488D35(0F080000)    <1>     lea rsi, comspecEVar
+   371 000003FF E8(51450000)        <1>     call strcpy
+   372 00000404 48FFCF              <1>     dec rdi ;Write over the terminating null
+   373 00000407 488D35(11060000)    <1>     lea rsi, comspecDir    ;Now copy the actual comspec! 
+   374 0000040E E8(51450000)        <1>     call strcpy 
+   375 00000413 30C0                <1>     xor al, al
+   376 00000415 AA                  <1>     stosb   ;Store the second terminating null
+   377 00000416 5F                  <1>     pop rdi ;Get back the pointer to the start of the env
+   378                              <1>     return
     13                              <2> %%_ret:
-    14 000003FB C3                  <2>  ret
+    14 00000417 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-   366                              <1> 
-   367                              <1> .allocEnv:
-   368                              <1> ;Output: rax -> Ptr to the environment block. 
-   369                              <1> ;   If anything goes wrong, error message and exit the shell!
-   370 000003FC 0FB71D14010000      <1>     movzx ebx, word [initEnvSz]
-   371 00000403 85DB                <1>     test ebx, ebx   ;If this is 0, allocate 160 bytes
-   372 00000405 750C                <1>     jnz .goAlloc
-   373 00000407 BBA0000000          <1>     mov ebx, 0A0h    ;160 bytes
-   374 0000040C 66891D04010000      <1>     mov word [initEnvSz], bx    ;Overwrite
-   375                              <1> .goAlloc:
-   376 00000413 81C30F000000        <1>     add ebx, 0Fh
-   377 00000419 C1EB04              <1>     shr ebx, 4  ;Round up and turn into paragraphs
-   378 0000041C B800480000          <1>     mov eax, 4800h
-   379 00000421 CD21                <1>     int 21h
-   380                              <1>     retnc
+   379                              <1> 
+   380                              <1> .allocEnv:
+   381                              <1> ;Output: rax -> Ptr to the environment block. 
+   382                              <1> ;   If anything goes wrong, error message and exit the shell!
+   383 00000418 0FB71D14010000      <1>     movzx ebx, word [initEnvSz]
+   384 0000041F 85DB                <1>     test ebx, ebx   ;If this is 0, allocate 160 bytes
+   385 00000421 750C                <1>     jnz .goAlloc
+   386 00000423 BBA0000000          <1>     mov ebx, 0A0h    ;160 bytes
+   387 00000428 66891D04010000      <1>     mov word [initEnvSz], bx    ;Overwrite
+   388                              <1> .goAlloc:
+   389 0000042F 81C30F000000        <1>     add ebx, 0Fh
+   390 00000435 C1EB04              <1>     shr ebx, 4  ;Round up and turn into paragraphs
+   391 00000438 B800480000          <1>     mov eax, 4800h
+   392 0000043D CD21                <1>     int 21h
+   393                              <1>     retnc
     61                              <2> cret nc
     19                              <3> %%_base:
     20                              <3> %assign baseVar %%_base-$$
     21                              <3>  %ifdef retOff
     22                              <3>  %if (baseVar - retOff <= 126) && (baseVar > retOff)
     23                              <3>  %ifdef currSegVBase
-    24 00000423 73D6                <3>  j%+1 short (retOff+currSegVBase)
+    24 0000043F 73D6                <3>  j%+1 short (retOff+currSegVBase)
     25                              <3>  %else
     26                              <3>  j%+1 short retOff
     27                              <3>  %endif
@@ -10396,88 +10409,88 @@
     35                              <3>  return
     36                              <3> %%a:
     37                              <3>  %endif
-   381 00000425 488D15(53070000)    <1>     lea rdx, memBad1
-   382 0000042C E8(53430000)        <1>     call printString
-   383 00000431 E9(AB350000)        <1>     jmp exit.ouch 
-   384                              <1> 
-   385                              <1> .cpEnv:
-   386                              <1> ;Copies the environment
-   387                              <1> ;Input: rsi -> Source to copy from
-   388                              <1> ;       rdi -> Destination to copy to
-   389 00000436 0FB70DDA000000      <1>     movzx ecx, word [initEnvSz]
-   390                              <1> .lp:
-   391 0000043D AC                  <1>     lodsb
-   392 0000043E AA                  <1>     stosb
-   393 0000043F 84C0                <1>     test al, al
-   394 00000441 750A                <1>     jnz .notNul
-   395 00000443 3806                <1>     cmp byte [rsi], al
-   396 00000445 7506                <1>     jnz .notNul
-   397                              <1>     ;Here, we have encountered our double null!
-   398 00000447 FFC9                <1>     dec ecx ;Now we check if we have space to store the second char
-   399 00000449 7406                <1>     jz .err ;If we dont have space for the last null kill last non-null char
-   400 0000044B AA                  <1>     stosb
-   401                              <1>     return
-    13                              <2> %%_ret:
-    14 0000044C C3                  <2>  ret
-    15                              <2> %assign retOff %%_ret-$$
-   402                              <1> .notNul:
-   403 0000044D FFC9                <1>     dec ecx ;One less char to copy over
-   404 0000044F 75EC                <1>     jnz .lp
-   405                              <1> .err:
-   406 00000451 4881EF02000000      <1>     sub rdi, 2
-   407 00000458 488D15(46020000)    <1>     lea rdx, noEnvSpace
-   408 0000045F E8(53430000)        <1>     call printString
-   409 00000464 31C0                <1>     xor eax, eax
-   410 00000466 66AB                <1>     stosw   ;Store 0 word
-   411                              <1>     return
+   394 00000441 488D15(53070000)    <1>     lea rdx, memBad1
+   395 00000448 E8(53430000)        <1>     call printString
+   396 0000044D E9(AB350000)        <1>     jmp exit.ouch 
+   397                              <1> 
+   398                              <1> .cpEnv:
+   399                              <1> ;Copies the environment
+   400                              <1> ;Input: rsi -> Source to copy from
+   401                              <1> ;       rdi -> Destination to copy to
+   402 00000452 0FB70DDA000000      <1>     movzx ecx, word [initEnvSz]
+   403                              <1> .lp:
+   404 00000459 AC                  <1>     lodsb
+   405 0000045A AA                  <1>     stosb
+   406 0000045B 84C0                <1>     test al, al
+   407 0000045D 750A                <1>     jnz .notNul
+   408 0000045F 3806                <1>     cmp byte [rsi], al
+   409 00000461 7506                <1>     jnz .notNul
+   410                              <1>     ;Here, we have encountered our double null!
+   411 00000463 FFC9                <1>     dec ecx ;Now we check if we have space to store the second char
+   412 00000465 7406                <1>     jz .err ;If we dont have space for the last null kill last non-null char
+   413 00000467 AA                  <1>     stosb
+   414                              <1>     return
     13                              <2> %%_ret:
     14 00000468 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-   412                              <1> 
-   413                              <1> getMasterEnv:
-   414                              <1> ;Walks the psp chain to the first self parent.
-   415                              <1> ;Output: rsi -> Environment of the first self-parent program
-   416 00000469 4150                <1>     push r8
-   417                              <1> .lp:
-   418 0000046B 498B7022            <1>     mov rsi, qword [r8 + psp.parentPtr] ;Get the parent pointer
-   419 0000046F 4C39C6              <1>     cmp rsi, r8 ;Are we a self parent?
-   420 00000472 7405                <1>     je .exit
-   421 00000474 4989F0              <1>     mov r8, rsi ;Make the current psp the parent
-   422 00000477 EBF2                <1>     jmp short .lp
-   423                              <1> .exit:
-   424 00000479 4158                <1>     pop r8
-   425 0000047B 488B763E            <1>     mov rsi, qword [rsi + psp.envPtr]   ;Get the environment pointer
-   426                              <1>     return
+   415                              <1> .notNul:
+   416 00000469 FFC9                <1>     dec ecx ;One less char to copy over
+   417 0000046B 75EC                <1>     jnz .lp
+   418                              <1> .err:
+   419 0000046D 4881EF02000000      <1>     sub rdi, 2
+   420 00000474 488D15(46020000)    <1>     lea rdx, noEnvSpace
+   421 0000047B E8(53430000)        <1>     call printString
+   422 00000480 31C0                <1>     xor eax, eax
+   423 00000482 66AB                <1>     stosw   ;Store 0 word
+   424                              <1>     return
     13                              <2> %%_ret:
-    14 0000047F C3                  <2>  ret
+    14 00000484 C3                  <2>  ret
     15                              <2> %assign retOff %%_ret-$$
-   427                              <1> 
-   428                              <1> 
-   429                              <1> ;Loader Data here
-   430                              <1> initString: 
-   431 00000480 0D0A5343502F444F53- <1>     db CR,LF, "SCP/DOS Version $"
-   431 00000489 2056657273696F6E20- <1>
-   431 00000492 24                  <1>
-   432                              <1> initString2:
-   433 00000493 0D0A436F7079726967- <1>     db CR,LF, "Copyright 2022, 2024, Yll Buzoku.",
-   433 0000049C 687420323032322C20- <1>
-   433 000004A5 323032342C20596C6C- <1>
-   433 000004AE 2042757A6F6B752E    <1>
-   434 000004B6 0D0A24              <1>     db CR,LF,"$"
-   435 000004B9 496E636F7272656374- <1> badVerStr:  db "Incorrect DOS version",CR,LF,"$"
-   435 000004C2 20444F532076657273- <1>
-   435 000004CB 696F6E0D0A24        <1>
-   436 000004D1 537065636966696564- <1> badCmdDir:  db "Specified COMMAND search directory bad",CR,LF,"$"
-   436 000004DA 20434F4D4D414E4420- <1>
-   436 000004E3 736561726368206469- <1>
-   436 000004EC 726563746F72792062- <1>
-   436 000004F5 61640D0A24          <1>
-   437 000004FA 496E76616C69642045- <1> badEnvSz:   db "Invalid Environment Size",CR,LF,"$"
-   437 00000503 6E7669726F6E6D656E- <1>
-   437 0000050C 742053697A650D0A24  <1>
-   438 00000515 00                  <1> initNewSpec db 0    ;Set if a new comspec found and copied
-   439 00000516 00                  <1> initNewDev  db 0    ;Set if a new device found and copied
-   440 00000517 0000                <1> initEnvSz   dw 0    ;Max 7FFFh (32768) bytes. Default to 160. 0 means no /E:
+   425                              <1> 
+   426                              <1> getMasterEnv:
+   427                              <1> ;Walks the psp chain to the first self parent.
+   428                              <1> ;Output: rsi -> Environment of the first self-parent program
+   429 00000485 4150                <1>     push r8
+   430                              <1> .lp:
+   431 00000487 498B7022            <1>     mov rsi, qword [r8 + psp.parentPtr] ;Get the parent pointer
+   432 0000048B 4C39C6              <1>     cmp rsi, r8 ;Are we a self parent?
+   433 0000048E 7405                <1>     je .exit
+   434 00000490 4989F0              <1>     mov r8, rsi ;Make the current psp the parent
+   435 00000493 EBF2                <1>     jmp short .lp
+   436                              <1> .exit:
+   437 00000495 4158                <1>     pop r8
+   438 00000497 488B763E            <1>     mov rsi, qword [rsi + psp.envPtr]   ;Get the environment pointer
+   439                              <1>     return
+    13                              <2> %%_ret:
+    14 0000049B C3                  <2>  ret
+    15                              <2> %assign retOff %%_ret-$$
+   440                              <1> 
+   441                              <1> 
+   442                              <1> ;Loader Data here
+   443                              <1> initString: 
+   444 0000049C 0D0A5343502F444F53- <1>     db CR,LF, "SCP/DOS Version $"
+   444 000004A5 2056657273696F6E20- <1>
+   444 000004AE 24                  <1>
+   445                              <1> initString2:
+   446 000004AF 0D0A436F7079726967- <1>     db CR,LF, "Copyright 2022, 2024, Yll Buzoku.",
+   446 000004B8 687420323032322C20- <1>
+   446 000004C1 323032342C20596C6C- <1>
+   446 000004CA 2042757A6F6B752E    <1>
+   447 000004D2 0D0A24              <1>     db CR,LF,"$"
+   448 000004D5 496E636F7272656374- <1> badVerStr:  db "Incorrect DOS version",CR,LF,"$"
+   448 000004DE 20444F532076657273- <1>
+   448 000004E7 696F6E0D0A24        <1>
+   449 000004ED 537065636966696564- <1> badCmdDir:  db "Specified COMMAND search directory bad",CR,LF,"$"
+   449 000004F6 20434F4D4D414E4420- <1>
+   449 000004FF 736561726368206469- <1>
+   449 00000508 726563746F72792062- <1>
+   449 00000511 61640D0A24          <1>
+   450 00000516 496E76616C69642045- <1> badEnvSz:   db "Invalid Environment Size",CR,LF,"$"
+   450 0000051F 6E7669726F6E6D656E- <1>
+   450 00000528 742053697A650D0A24  <1>
+   451 00000531 00                  <1> initNewSpec db 0    ;Set if a new comspec found and copied
+   452 00000532 00                  <1> initNewDev  db 0    ;Set if a new device found and copied
+   453 00000533 0000                <1> initEnvSz   dw 0    ;Max 7FFFh (32768) bytes. Default to 160. 0 means no /E:
     45                                  endOfInitAlloc: ;Symbol to free during init
     46                                  initLen equ ($ - $$)
     47                                  
