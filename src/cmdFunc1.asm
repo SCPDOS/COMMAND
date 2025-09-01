@@ -288,7 +288,6 @@ dir:
     mov rbp, rdi    ;Save the ptr to the filename start in rbp
     call FCBToAsciiz    ;Terminates for free
     call .wcCompress    ;Tries to compress the name
-    breakpoint
     call .searchForFile
     return
 .wcCompress:
