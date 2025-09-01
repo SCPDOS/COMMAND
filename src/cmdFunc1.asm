@@ -288,6 +288,7 @@ dir:
     mov rbp, rdi    ;Save the ptr to the filename start in rbp
     call FCBToAsciiz    ;Terminates for free
     call .wcCompress    ;Tries to compress the name
+    breakpoint
     call .searchForFile
     return
 .wcCompress:
@@ -302,13 +303,19 @@ dir:
 .wcclp:
     lodsb   ;This string IS guaranteed null terminated so no counter needed
     test eax, eax   ;Did we just read a null char?
-    retz    ;Then we do not modify anything
+    jz .edgeTest
     cmp al, "."
     je .wccExt  ;Branch only when . encountered
     cmp al, "?"
     jne .wcclp
     inc ecx ;Add one more ? to the count
     jmp short .wcclp
+.edgeTest:
+    cmp ecx, 8  ;Did we read 8 chars before this?
+    retne
+    mov word [rbp], "*."   ;Move *.
+    mov byte [rbp + 2], al  ;and <NUL>
+    return
 .wccExt:
 ;rsi now points to the extension, past the .
     cmp ecx, 8
@@ -320,19 +327,22 @@ dir:
     lea rdi, qword [rbp + 2]
     push rdi
     movsd   ;In this is the null too, no harm done by pulling up
-    pop rsi ;Start sourcing chars here again
+    pop rsi ;Start sourcing chars here again, past dot
 .wccExtGo:
+    mov rdi, rsi    ;Save the start of the extension
     xor ecx, ecx
 .wccExtLp:
     lodsb
     test eax, eax
     retz
     cmp al, "?"
+    ;jne .wccExtLp
+    retne
     inc ecx
     cmp ecx, 3
     jne .wccExtLp
     mov eax, "*"    ;Upper byte is null
-    mov word [rbp + 2], ax  ;Store this past the .
+    mov word [rdi], ax  ;Store this past the .
     cmp dword [rbp], "*.*"    ;Check if the path is this? Upper byte 0
     retne
     mov word [rbp], ax  ;Replace the string with this instead
