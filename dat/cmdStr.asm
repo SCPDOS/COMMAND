@@ -98,9 +98,8 @@ redirErrMsg db "Redirection error",CR,LF
 redirErrMsgL   equ $ - redirErrMsg
 
 ansiCls  db ESC,"[2J" ;ANSI CLS sequence, 4 chars long
-fourSpc  db "    $"
-threeSpc db "   $"
-twoSpc   db "  $"
+fourSpc  db SPC
+threeSpc db SPC, SPC, SPC,"$"
 
 badOnOff db "Must specify ON or OFF",CR,LF,"$"
 
