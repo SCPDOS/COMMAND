@@ -1316,83 +1316,76 @@ copyParse:
 erase:
     test byte [arg1Flg], -1
     jz badArgError
-    call buildCommandPath   ;Get the relative path to the file
-.dirLp:
+;Now copy the argument from the command line to searchspec and null terminate
+    call buildCommandPath
     lea rdi, searchSpec
-    call findLastPathComponant
-    mov rsi, rdi    ;Save this as the source
-    lea rdi, qword [r8 + fcb1]  ;Use FCB1 for searchpath res
-    mov al, "?"
-    ;Store question marks in the name field
-    push rdi
-    inc rdi ;Goto the first char
-    mov ecx, 11
-    rep stosb
-    pop rdi
-    mov rdx, rsi    ;Save the ptr
-    mov eax, 290Dh  ;Parse the search mask into the FCB block
+    call findLastPathComponant  ;Ret ptr to last \ or head of string if none
+    mov rsi, rdi    ;Save the final componant as source fcb parsing below
+    lea rdi, qword [r8 + fcb1]  ;Use FCB1 as destination for parse
+    mov eax, 290Dh  ;Parse search mask to find if wc and if we have 11 ?s
     int 21h
     cmp al, 1
     jne .noWildcard ;If no wildcards, just delete directly, unless a directory
-    ;Else, we now copy back the search pattern over the last componant!
-    ;No dirs to handle in here
-    lea rsi, qword [rdi + fcb.filename]    ;Now move the ptr to the filename in rsi
-    mov rdi, rdx    ;Move the ptr to the start of the last componant to rdi
-    call FCBToAsciiz    ;Null terminates for free
-    ;Count the number of ?'s, if 11, we print the message
+;No dirs to handle in here
+;Count the number of ?'s, if 11, we print the message
     lea rsi, qword [r8 + fcb1 + fcb.filename]
     xor ecx, ecx
 .wcScan:
     lodsb
     cmp al, "?"
-    jne .endCount
+    jne .findFile
     inc ecx
     cmp ecx, 11
     jne .wcScan
 .ynmsg:
     lea rdx, ynMes
     call printString
-    mov ah, 01h ;STDIN without Console Echo
-    int 21h ;Get char in al
-    call ucChar ;Uppercase the char
-    cmp al, "Y" ;If they want it... they'll get it!
-    je .endCount1
-    cmp al, "N"
-    rete    ;Simply return to command line if they don't want it!
-    call printCRLF      ;Else, tell me what you want!!!
-    jmp short .ynmsg    
-.endCount1:
-    call printCRLF
-.endCount:
-    ;Now we copy our search template pathstring to delPath
-    lea rdi, delPath
-    lea rsi, searchSpec ;Source the chars from here
-    call strcpy2         ;Copy the string over to delPath
+    mov eax, 0100h
+    int 21h         ;Get char w/o echo to al
+    mov dl, al
+    mov eax, 6523h  ;Get Y/N char
+    int 21h
+    cmp eax, 1      ;Check against middle value (indicates Yes)
+    retb            ;Return to cmd if they don't want it! (Returned 0)
+    pushfq          ;Else save flags 
+    call printCRLF  ;Print a CRLF
+    popfq
+    jne short .ynmsg    ;If we were not 1, we were 2 so loop again
 .findFile:
-    ;Now we find first/find next our way through the files
-    mov rdx, rsi    ;rdx must point at searchSpec for findfirst
+;Now we find first/find next our way through the files
+    lea rdx, searchSpec    ;rdx points at searchSpec for findfirst/next
     xor ecx, ecx    ;Search for normal and ro files only
     mov eax, 4E00h  ;Find first
     int 21h
     jc badFnf   ;Here we just print file not found error and return!
-    ;Now the file was found, we copy the name over, delete and keep going
-    call findLastPathComponant  ;Now find the last componant in delPath
+;Now the file was found, we copy the name over, delete and keep going
+    mov rdi, rdx    ;Get in rdi the path to find last componant of...
+    call findLastPathComponant  ;... and point to it in rdi
+    cmp rdi, rdx    ;If these are equal, no pathseps found
+    jne .goDel
+    cmp byte [rdi + 1], ":" ;Is this a drive specifier?
+    jne .goDel
+    inc rdi ;Move rdi past the drive specifier if a purely cd relative del
+    inc rdi
+.goDel:
     lea rsi, qword [cmdFFBlock + ffBlock.asciizName]
 .delNextFile:
-;rsi and rdi dont move here
-    call strcpy2     ;Now copy over ASCIIZname to last path componant of delpath
-    lea rdx, delPath
+;Enter with:
+;   rsi -> asciiz name of file to delete
+;   rdi -> position in pathname to copy the filename to
+;   rdx -> pathname to delete
+;rsi, rdi and rdx dont move here.
+    call strcpy2    ;Now copy over ASCIIZname to last path componant
     mov eax, 4100h  ;Delete File 
-    int 21h         ;If this fails to delete it, fail silently
-    lea rdx, searchSpec    ;Now point rdx to the search spec
+    int 21h         ;If this fails to delete it, ignore the failure
     mov eax, 4F00h  ;Else, find next file
     int 21h
     jnc .delNextFile    
     clc ;Clear carry to indicate success
     return
 .noWildcard:
-    ;Here we just check that the file was not a directory. If it was, we add
-    ; a \*.*<NUL> over the null terminator
+;Here we just check that the file was not a directory. If it was, we add
+; a \*.*<NUL> over the null terminator
     lea rdx, searchSpec
     mov ecx, dirDirectory    ;Search for normal, RO and dir
     mov eax, 4E00h  ;Find first
@@ -1410,7 +1403,7 @@ erase:
     stosb
     mov eax, "*.*"  ;Null terminated for us!
     stosd
-    jmp .dirLp    ;Now restart the process with extended path!
+    jmp .ynmsg    ;Now prompt the y/n message and proceed as normal
 .delMain:   ;Call with rdx -> buffer!
     mov eax, 4100h  ;Delete File 
     int 21h
@@ -1418,7 +1411,6 @@ erase:
     cmp al, errAccDen
     je badAccError ;If the file is RO, fail!
     jmp badFileError
-    return
 
 date:
     lea rsi, qword [r8 + cmdLine]
