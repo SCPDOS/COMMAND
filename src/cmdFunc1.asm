@@ -1692,7 +1692,7 @@ cls:
     int 21h         ;in dx
     test edx, devCharDev
     jz .doAnsi  ;Make files register an ansi cls sequence
-    test edx, charDevFastOut
+    test edx, devCharFastOut
     jz .doAnsi
     ;Test if Int 29h uses Int 30h
     ;Tests if within the first 1024 bytes we have the sequence Int 30h (30CD)

@@ -4,6 +4,23 @@
 ; SCP/DOS structures.                                   ;
 ;-------------------------------------------------------;
 
+;File/path length equates.
+MAX_FNAME_FCB   equ 8
+MAX_EXT_FCB     equ 3
+MAX_NAME_FCB    equ MAX_FNAME_FCB + MAX_EXT_FCB
+MAX_NAME_FCBZ   equ MAX_NAME_FCB + 1    ;Space for a null terminator
+;Values below include the null terminator.
+MAX_FILE    equ 13  ;Maximum length of a filename (includes dot)
+MAX_DRIVE   equ 3   ;Maximum length of a drive string (X:<NUL>)
+MAX_FSPEC   equ 64  ;Maximum length of a path to a file (filespec)
+MAX_PATH    equ 67  ;Maximum length of a fully qualified pathspec
+;MAX_PATH is X:\<string, maxlen 63 chars>,<null> so 67 chars total.
+;Use this symbol to check the length of a filename after qualification.
+MAX_PSPEC   equ MAX_PATH - MAX_FILE - 1 ;54 bytes
+;MAX_PSPEC is the max length of a path with space for a filename!
+;Remember, filenames for us are just a string of, at most, 13 characters,
+; which we always resolve into FCB format. Buffers need to make space for
+; both the dot and terminating null
 ;------------------------------------------------------------------------;
 ; Each mass storage device up to LASTDRIVE gets a DPB, describing 
 ; its file system structure. This is used to locate files and structures
@@ -14,25 +31,25 @@
 ;------------------------------------------------------------------------;
 struc dpb        ;Drive Parameter Block
 
-    .bDriveNumber            db ?  ;Drive number (0=A, 1=B ...)
-    .bUnitNumber             db ?  ;Unit number in device
-    .wBytesPerSector         dw ?  ;min 512, max 4096
-    .bMaxSectorInCluster     db ?  ;(Maximum sector in cluster) - 1
-    .bSectorsPerClusterShift db ?  ;Sectors per cluster exponent
-    .wFAToffset              dw ?  ;Number of reserved sectors in partition
-    .bNumberOfFATs           db ?  ;Number of FATs
-    .wNumberRootDirEntries   dw ?  ;In 32 byte units, this is 0 for FAT32
-    .dClusterHeapOffset      dd ?  ;Start sector of data area
-    .dClusterCount           dd ?  ;Total number of clusters in data area
-    .dFATlength              dd ?  ;FAT length, in sectors
-    .dFirstUnitOfRootDir     dd ?  
+    .bDriveNumber           db ?  ;Drive number (0=A, 1=B ...)
+    .bUnitNumber            db ?  ;Unit number in device
+    .wBytesPerSector        dw ?  ;min 512, max 4096
+    .bMaxSectorInCluster    db ?  ;(Maximum sector in cluster) - 1
+    .bSecPerClustShift      db ?  ;Sectors per cluster exponent
+    .wFAToffset             dw ?  ;Number of reserved sectors in partition
+    .bNumberOfFATs          db ?  ;Number of FATs
+    .wNumberRootDirEntries  dw ?  ;In 32 byte units, this is 0 for FAT32
+    .dClusterHeapOffset     dd ?  ;Start sector of data area
+    .dMaxClusterAddr        dd ?  ;Max Cluster Addr = # of data clusters + 1
+    .dFATlength             dd ?  ;FAT length, in sectors
+    .dFirstUnitOfRootDir    dd ?  
     ;Unit=Sector/Cluster of Root Directory (FAT12/16 = Sector, FAT32 = Cluster)
-    .qDriverHeaderPtr        dq ?  ;Pointer to device driver header
-    .bMediaDescriptor        db ?  ;Media descriptor
-    .bAccessFlag             db ?  ;Access Flag (0 if accessed, else -1)
-    .qNextDPBPtr             dq ?  ;Pointer to next DPB, -1 if at end
-    .dFirstFreeCluster       dd ?  ;Starting cluster of free space search
-    .dNumberOfFreeClusters   dd ?  ;Number of free clusters, -1 unknown
+    .qDriverHeaderPtr       dq ?  ;Pointer to device driver header
+    .bMediaDescriptor       db ?  ;Media descriptor
+    .bAccessFlag            db ?  ;Access Flag (0 if accessed, else -1)
+    .qNextDPBPtr            dq ?  ;Pointer to next DPB, -1 if at end
+    .dNextFreeClst          dd ?  ;Starting cluster of free space search
+    .dFreeClustCnt          dd ?  ;Number of free clusters, -1 unknown
 
 endstruc
 
@@ -49,7 +66,7 @@ fat16MaxClustCnt    equ 65525   ;Cluster count less than this is FAT16
 ; DEFAULT LASTDRIVE=E, MINIMUM LASTDRIVE=B
 ;------------------------------------------------------------------------;
 struc cds       ;Current Directory structure
-    .sCurrentPath        db 67 dup (?)    ;Current Directory Path String
+    .sCurrentPath        db MAX_PATH dup (?)    ;Current Directory Path String
     .wFlags              dw ?   ;CDS Flags - 
     .qDPBPtr             dq ?   ;Ptr to the DPB of the dev using this CDS
     .dStartCluster       dd ?   ;Starting cluster of the directory on disk
@@ -146,53 +163,96 @@ struc sft
 endstruc
 ;Open Mode equates
 ;Access modes   Bits[2:0]
-ReadAccess      equ 0h
-WriteAccess     equ 1h
-RWAccess        equ 2h
+openRdAcc   equ 0h
+openWrAcc   equ 1h
+openRWAcc   equ 2h
 ;Bit 3 reserved 0
 ;Sharing modes  Bits[6:4]
-CompatShare     equ 0h
-denyRWShare     equ 10h
-denyWriteShare  equ 20h
-denyReadShare   equ 30h
-denyNoneShare   equ 40h
+openCompat      equ 0h  ;Deny all, compatibility mode
+openDenRWShr    equ 10h ;Deny all, explicity read/write
+openDenWrShr    equ 20h ;Deny writes
+openDenRdShr    equ 30h ;Deny reads
+openDenNoShr    equ 40h ;Don't deny anything!
 ;NetFCB is for files open by a local server, handling IO from a remote
 ; client by proxy opened by an FCB! Sets the Net bit to indicate this. 
 ;Thus, this is a handle with no JFT entry! Server handles its own JFT!
-netFCBShare     equ 70h     
-noInherit       equ 80h
+openNetFCBShr   equ 70h
+openNoInherit   equ 80h
+
 ;Bits 8-12 reserved 0
-;Fancy open mode bits
-diskFullFail    equ 2000h   ;Reserved: If set, trigger Int 24h on disk full.
-noBufferWrites  equ 4000h   ;Reserved: If set, flush after each buffer write.
+;The next two are extended open mode bits! 
+;Can be set
+openFailOnI24   equ 2000h   ;If set, automatically FAIL all Int 24h
+openFlushWrites equ 4000h   ;If set, commit after each write call.
 ;Once share is loaded, if a local FCB open occurs, mark the sft as so.
-FCBopenedFile   equ 8000h   ;If set, file is opened by FCB, else handle based.
+openSFTFCB      equ 8000h   ;If set, file is SFT-FCB.
 
 ;Attribute Byte
-readOnlyFile    equ 1h
-hiddenFile      equ 2h
-systemFile      equ 4h
-volLabelFile    equ 8h
-directoryFile   equ 10h ;Directory entry
-archiveFile     equ 20h
-charFile        equ 40h ;Reserved, never found in dir
-;Device Info equates
+attrFileRO          equ 1h
+attrFileHidden      equ 2h
+attrFileSys         equ 4h
+attrFileVolLbl      equ 8h
+attrFileDir         equ 10h ;Directory entry
+attrFileArchive     equ 20h
+attrFileChar        equ 40h ;Reserved, never found in dir
+
+;Device Info word equates
 ;For a block device, bits [5:0] contain the drive number
-charDevConIn    equ 1h  ;If set, device is CON input
-charDevConOut   equ 2h  ;If set, device is CON output
-charDevNulDev   equ 4h  ;If set, device is NULL device
-charDevClockDev equ 8h  ;If set, device is CLOCK device
-charDevFastOut  equ 10h ;If set, device supports INT 29h
-charDevBinary   equ 20h ;If set, r/w char device in Binary mode!!!
-charDevNoEOF    equ 40h ;If set, no EOF when reading from device!!
-blokFileNoFlush equ 40h ;Set if file is synchronised with hard store!
+devCharConIn    equ 1h  ;If set, device is CON input
+devCharConOut   equ 2h  ;If set, device is CON output
+devCharNulDev   equ 4h  ;If set, device is NULL device
+devCharClkDev   equ 8h  ;If set, device is CLOCK device
+
+devCharFastOut  equ 10h ;If set, device supports INT 29h
+devCharBinary   equ 20h ;If set, r/w char device in Binary mode
+devCharNotEOF   equ 40h ;If set, device not yet at end of file
+devDiskNoFlush  equ 40h ;Set if file is synchronised with hard store!
 devCharDev      equ 80h ;If set, it is a char device!
-charDevNetSpool equ 800h    ;If set, device is a network spooler
+
+devDiskI24onFull    equ 100h    ;If set, Int 24h on disk full or disk EOF
+devCharNetSpool equ 800h    ;If set, device is a network spooler
+
 devNoInherit    equ 1000h   ;If set, handle not inherited by child processes
-charDevNamePipe equ 2000h   ;If set, device is a named pipe
-blokNoDTonClose equ 4000h   ;If set, dont update date and time when closing
-devRedirDev     equ 8000h   ;If set, dev/file is redirected!
- 
+devCharNamePipe equ 2000h   ;If set, device is a named pipe
+devDiskNoDTonClose equ 4000h   ;If set, dont update date and time when closing
+devRedir        equ 8000h   ;If set, dev/file is redirected!
+
+;Extended open flags. For the var [wEOFlags]
+;These are not related to the SFT but are used during an extended open
+; call to keep track of whats going on and thus help build an SFT.
+eoInExtOpen     equ 0001h   ;Doing Extended Open
+eoFailI24       equ 0002h   ;If EO file hard fails, skip and fail Int 24h
+eoFileNoExist   equ 0004h   ;File doesnt exist
+
+;Can combine the third option with one of the first two options.
+;The first two options cannot be combined.
+; - If only create is selected, then we try to do a create new. If the 
+;       file exists, this fails with a "File exists" error.
+;       Acts like a normal create new call. (21/5Bh)
+;
+; - If only open is selected then we try to do an open. If the file doesn't
+;       doesn't exist, this fails with a "File not found" error.
+;       Acts like a normal open call. (21/3Dh)
+;
+; - If only truncate is selected then we try to do a create. If the file
+;       doesn't exist, this fails a "File not found" error.
+;       New behaviour.
+;
+; - If open and create are selected then we try and open the file. If 
+;       the open fails due to the file not existing, we create a new file. 
+;       New behaviour.
+;
+; - If truncate and create are selected then we try to truncate the file. 
+;       If the file doesnt exist then we create a new file instead.
+;       Acts like a normal create call. (21/3Ch)
+
+eoActOpen       equ 01h ;Open the file. 
+eoActTruncate   equ 02h ;Truncate an existing file.
+eoActCreate     equ 10h ;Create a file if one doesnt exist.
+;Extended Open Action Return 
+eoRetActOpen    equ 1   ;Open existing
+eoRetActCreate  equ 2   ;Create new and open
+eoRetActTruncate    equ 3    ;Recreate and open
 ;------------------------------------------------------------------------;
 ; Buffers allow for buffered drive IO, by first transferring a sector 
 ; to an internal buffer, and then copying it to the specified location
@@ -306,19 +366,19 @@ struc dpl
 endstruc
 
 struc cfgFrame  ;Frame used for config.sys parsing
-    .oldRBP         dq ?  ;Ptr to DOSSEG
-    .newBuffers     dq ?  ;New buffers value
+    .oldRBP         dq ?    ;Ptr to DOSSEG
+    .newBuffers     dq ?    ;New buffers value
     .newSFTVal      dq ?
     .newFCBSVal     dq ?
-    .newProtFCBSVal dq ?  ;Number of protected FCBS
+    .newProtFCBSVal dq ?    ;Number of protected FCBS
     .newLastdrive   dq ?
-    .newStacks      dq ?  ;Ignored for now
-    .newStackSize   dq ?  ;Ignored for now
-    .cfgHandle      dq ?  ;CONFIG.SYS handle
-    .lastLine       dq ?  ;Set if the last line is current
-    .linePtr        dq ?  ;Ptr to line buffer of line being processed
-    .driverBreak    dq ?  ;Ptr to the pathname terminator 
-    .breakChar      dq ?  ;Char that was replaced by null for terminator
+    .newStacks      dq ?    ;Ignored for now
+    .newStackSize   dq ?    ;Ignored for now
+    .cfgHandle      dq ?    ;CONFIG.SYS handle
+    .lastLine       dq ?    ;Set if the last line is current
+    .linePtr        dq ?    ;Ptr to line buffer of line being processed
+    .driverBreak    dq ?    ;Ptr to the pathname terminator 
+    .breakChar      dq ?    ;Char that was replaced by null for terminator
 endstruc
 
 struc filename
@@ -340,6 +400,7 @@ struc ffBlock   ;The structure of the Find First structure at the DTA
     .asciizName db 13 dup (?) ;ASCIIZ name with dot and terminating nul
 endstruc
 
+dfltJFTsize equ 20  ;Default size of PSP JFT
 struc psp
     .return     db 2 dup (?)  ;Should always be CDh 20h, same place as DOS
     .allocSize  dd ?  ;Number of paras in init alloc or when exiting as TSR.
@@ -354,7 +415,7 @@ struc psp
 ;If the user tries to reduce handle count to 20 or less, then the PSP JFT is 
 ; always used and jftSize.
     .externalJFTPtr:    ;Ptr to external JFT array (first byte AFTER MCB)
-    .jobFileTbl resb dfltJFTsize ;Main File handle array, JFT
+    .jobFileTbl db dfltJFTsize dup (?) ;Main File handle array, JFT
     .envPtr     dq ?  ;Pointer to the environment
     .rspPtr     dq ?  ;Pointer to rsp on entry to Int 21h
     .jftSize    dw ?  ;JFT array size, 20 => PSP JFT in use
@@ -369,8 +430,6 @@ struc psp
     .parmList   db ?   ;Number of characters in command tail
     .progTail   db 127 dup (?) ;Default DTA/Program tail
 endstruc
-
-dfltJFTsize equ 20  ;Default size of PSP JFT
 
 struc clkStruc
     .dateWord   dw ?
