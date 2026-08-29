@@ -372,7 +372,15 @@ dir:
     ;Else print File not found and exit!
     lea rdx, fnfMsg
     call printString
-    return
+    ;return
+    ;print 18 spaces and then jump
+    mov ecx, 18
+    mov dl, SPC
+.dirSpcLp:
+    call outChar
+    dec ecx
+    jnz .dirSpcLp
+    jmp short .doDiskSize
 .filesFound:
     mov eax, dword [dirFileCtr]   ;Get number of files
     mov ecx, 9
@@ -380,6 +388,7 @@ dir:
     lea rdx, dirOk
     mov ah, 09h
     int 21h
+.doDiskSize:
     mov eax, 3600h ;Get disk info
     mov dl, byte [dirDrv]
     inc dl  ;Function 36h wants the 1 based number
