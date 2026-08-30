@@ -527,8 +527,21 @@ prompt:
     jmp set.altEp
 
 echo:
-    test byte [arg1Flg], -1 ;If no argument, display if on or off
-    jnz .argGiven
+;Echo behaves funny. If the first char in the tail is one of ,=;.+
+; it doesn't print it, treating it as a whitespace. 
+; It skips actual whitespaces, not delimiters as normal.
+    lea rsi, qword [r8 + cmdLine]
+    mov rbp, rsi    ;Save the pointer in rbp
+.skipws:
+    lodsb
+    cmp al, SPC
+    je .skipws
+    cmp al, TAB
+    je .skipws
+;Now we have the first non-whitespace char. Check if it is CR. 
+; If so, it means print echo status.
+    cmp al, CR
+    jne .notStatus
     lea rdx, echoIs
     call printString
     lea rdx, onMes
@@ -536,41 +549,50 @@ echo:
     test byte [echoFlg], -1
     cmovz rdx, rcx
     jmp printString
-.argGiven:
-    lea rsi, qword [r8 + cmdLine]
+.notStatus:
+;Now check if we are doing an ECHO ON or ECHO OFF 
+    mov rsi, rbp        ;Point back to the head of the tail.
     call skipDelimiters
-    call makeArgAsciz
+    call makeArgAsciz       ;Do a normal argument
     call skipDelimiters
     cmp byte [rsi], CR
-    jne .directEcho
-;Here if one word, check if it is ON or OFF
+    jne .doEcho
+;Here if one word, check if it is ON or OFF.
     lea rsi, onStr
     call strcmp
-    je .setOn
+    jne .checkOff
+    mov byte [echoFlg], 1   ;Set to 1 if on.
+    return
+.checkOff:
     lea rsi, offStr
     call strcmp
-    je .setOff
-.directEcho: 
-    lea rdx, qword [r8 + cmdLine]
-    mov rsi, rdx
-    call skipDelimiters ;Go to the first word on cmdline
-    push rsi            ;Save this as the start of print
-    sub rsi, rdx        ;Get how many fewer chars we have to print
-    movzx ecx, byte [r8 + cmdLineCnt]   ;Get char count
-    sub ecx, esi
-    pop rdx             ;Pop the ptr into rdx
-    jc printCRLFecho    
-    mov ebx, 1
-    mov eax, 4000h
-    int 21h
-    jmp printCRLF   ;Needs to be a proper CRLF to insert a CRLF at the end!
-.setOn:
-    mov byte [echoFlg], 1   ;Set to 1 if on
+    jne .doEcho       ;If neither ON nor OFF, 
+    mov byte [echoFlg], 0   ;Set to 0 if off.
     return
-.setOff:
-    mov byte [echoFlg], 0
-    return
+.doEcho:
+;Else we have to echo something now. 
+    mov rsi, rbp    ;Point back to the head of the tail
+    lodsb   ;Get the first char, if it is special, ignore it.
+    call .isAlSpecial
+    jne .printLoop
+    jmp short .specialSkip
+.printLoop:
+    mov dl, al
+    call outChar
+.specialSkip:
+    lodsb
+    cmp al, CR
+    jne .printLoop
+    jmp printCRLF
 
+.isAlSpecial:
+;Called on the first char after whitespace skip
+    cmp al, "."
+    rete
+    cmp al, "+"
+    rete
+    call isALdelimiter
+    return
 
 pauza:  ;Well... pause is an instruction in english 0:)
 ;Thank you authors of MSDOS Encyclopedia for confusing an argument to this command
