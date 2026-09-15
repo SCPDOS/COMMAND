@@ -26,6 +26,8 @@ critErrorHandler:   ;Int 24h
     push rdx
     push rdi
     push rsi
+    mov rdx, qword [pPSP]
+    push qword [rdx + psp.rspPtr]
     call errSwapHdls
     cld         ;Make String ops go forward
     mov bx, ax  ;Save ah in bh and al in bl (if needed)
@@ -209,6 +211,8 @@ critErrorHandler:   ;Int 24h
     jz .userInput
 .cehExit:
     call errRetHdls
+    mov rdx, qword [pPSP]
+    pop qword [rdx + psp.rspPtr]    ;Pop the original psp rsp pointer back!
     pop rsi
     pop rdi
     pop rdx

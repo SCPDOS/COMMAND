@@ -571,18 +571,19 @@ echo:
     return
 .doEcho:
 ;Else we have to echo something now. 
-    mov rsi, rbp    ;Point back to the head of the tail
-    lodsb   ;Get the first char, if it is special, ignore it.
+    mov rdx, rbp    ;Point rdx to the print buffer
+    movzx ecx, byte [rdx - 1]   ;Get the count byte
+    mov al, byte [rdx]  ;Get the first char, if it is special, ignore it.
     call .isAlSpecial
-    jne .printLoop
-    jmp short .specialSkip
-.printLoop:
-    mov dl, al
-    call outChar
-.specialSkip:
-    lodsb
-    cmp al, CR
-    jne .printLoop
+    jne .doPrint
+    dec ecx ;Drop the special first char from the count
+    inc rdx
+.doPrint:
+;ecx = count of chars to print
+;rdx -> Buffer to print
+    mov ebx, 1  ;STDOUT
+    mov eax, 4000h
+    int 21h
     jmp printCRLF
 
 .isAlSpecial:
