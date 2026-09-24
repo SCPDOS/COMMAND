@@ -1696,6 +1696,19 @@ ctty:
     return
 
 cls:  
+;Start by checking multiplexer if ANSI.SYS is installed. If it is,
+; default to using it.
+;If not, check the device. If it supports Fast output (int 29h) AND 
+; within the first 1024 bytes of the int 29h vector is 
+; the instruction sequence:
+;  int 30h
+;  iretq
+; then we use int 30h directly.
+;Else, we default to an ANSI code that might not work.
+    mov eax, 1A00h  ;Check if ANSI.SYS is hooked in.
+    int 2Fh
+    cmp al, -1
+    je .doAnsi
     mov eax, 4400h  ;Get device info
     mov ebx, 1      ;for handle 1
     int 21h         ;in dx
