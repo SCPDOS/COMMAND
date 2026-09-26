@@ -252,6 +252,9 @@ analyseCmdline:
     stosb   ;Store a terminating null
     xchg rbx, rsi
 ;Now we build FCBs for the arguments!
+;Start by sanitising FCB drive numbers (renders them useless by default)
+    mov byte [r8 + fcb1], -1
+    mov byte [r8 + fcb2], -1
     lea rbx, qword [r8 + cmdLine]   ;Now we measure from the start of the buf!
     call .skipAndCheckCR
     je .setupCmdVars
@@ -263,12 +266,12 @@ analyseCmdline:
     mov eax, 2901h
     int 21h
     mov byte [arg1FCBret], al
-.skipArg:
+.gotoArg2:
     lodsb   ;Now we advance the pointer to the second argument or CR
     cmp al, CR
     je .setupCmdVars
     call isALdelimiter
-    jne .skipArg    ;If not a delimiter, get next char now
+    jne .gotoArg2    ;If not a delimiter, get next char now
     call .skipAndCheckCR    ;Now skip all the delimiters
     je .setupCmdVars            ;If ZF set, this we encountered a CR
     mov byte [arg2Flg], -1  ;If it is not CR, it is a second argument!

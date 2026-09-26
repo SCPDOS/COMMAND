@@ -63,18 +63,16 @@ dir:
     or byte [dirFlags], dirFileType ;Now set path given bit
     jmp short .scanNew
 .scanDone:
+    lea rsi, searchSpec ;We source our search path from here
     test byte [dirFlags], dirFileType    ;If no path, use CWD for curdrv
     jz .currentDrv
-    ;Here we check if we have a drvSpec and path or just drvSpec
-    lea rsi, searchSpec
-    cmp byte [rsi + 1], ":"  ;Is this a colon (drvspec check)
-    jne .currentDrv
-    ;Here the drive is specified, so lets parse filename to verify if drv ok
-    mov byte [r8 + fcb1 + fcb.driveNum], 0  ;Clear this byte by default
+    ;Lets parse filename to verify if drv ok
     lea rdi, qword [r8 + fcb1]
-    mov eax, 2901h   ;Parse filename
+    push rsi         ;Parse moves rsi... preserve it
+    mov eax, 2901h   ;Parse filename, sets drive to 0 by default
     int 21h
     cmp al, -1
+    pop rsi
     je badDriveError    ;If the drive is bad, bad parameter
     ;Else the drive in the fcb is valid
     movzx eax, byte [r8 + fcb1 + fcb.driveNum]
@@ -87,7 +85,6 @@ dir:
     call getCurrentDrive    ;Get current drive number (0 based) in al
     mov byte [dirDrv], al   ;Store the 0 based drive number in al
 .dirPrintVol:
-    lea rsi, searchSpec
 ;Now construct the path on dirSrchDir.
     lea rdi, dirSrchDir
     movzx eax, byte [dirDrv] ;Get the 0 based drive number
@@ -504,27 +501,6 @@ chdir:
     ;Print CWD
 .printCWD:
     call putCWDInPrompt ;Exactly the same procedure
-    call printCRLF
-    return
-.printDiskCWD:
-;Print CWD for a specified drive
-    mov dl, byte [r8 + fcb1 + fcb.driveNum] ;Get 1 based drive number in dl
-    mov al, dl
-    add al, "@" ;Get the UC letter
-    mov ah, ":"
-    lea rdi, searchSpec
-    stosw   ;Store X:, rdi+=2
-    mov al, byte [pathSep]
-    stosb   ;Store pathSep, inc rdi
-    mov ah, 47h ;Get Current Working Directory
-    mov rsi, rdi    ;rsi points to buffer to write to
-    int 21h
-    call strlen
-    add ecx, 2 ;Add two for the X:
-    mov ah, 40h ;Write to handle
-    mov ebx, 1  ;STDOUT
-    lea rdx, searchSpec
-    int 21h
     call printCRLF
     return
 .changeDir:
