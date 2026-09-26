@@ -248,40 +248,54 @@ analyseCmdline:
     xchg rbx, rsi   ;Swap the start and end of the commands!!!
     lea rdi, cmdPathSpec
     rep movsb
-    xor al, al
+    xor eax, eax
     stosb   ;Store a terminating null
-    xchg rbx, rsi
-;Now we build FCBs for the arguments!
-;Start by sanitising FCB drive numbers (renders them useless by default)
-    mov byte [r8 + fcb1], -1
-    mov byte [r8 + fcb2], -1
-    lea rbx, qword [r8 + cmdLine]   ;Now we measure from the start of the buf!
-    call .skipAndCheckCR
-    je .setupCmdVars
-    mov byte [arg1Flg], -1  ;Set that we are 
-    mov rax, rsi
-    sub rax, rbx            ;rbx points to the start of the buffer
-    mov byte [arg1Off], al  ;Store the offset 
+    mov rsi, rbx
+;Now we compute the offsets for the first two arguments!
+    lea rbx, qword [r8 + cmdLine]   ;Measure from the start of the buf!
+    call skipDelimiters    ;Skip it forwards 
+    mov rcx, rsi
+    sub rcx, rbx            ;rbx points to the start of the buffer
+.goArg1End:
+;Now we move rsi past the first argument.
+    lodsb       ;Now we advance the pointer to the second argument or CR
+    dec rsi     ;Go back to the char we just checked
+    cmp al, CR  ;If CR, we are done!
+    je .doArg2
+    inc rsi     ;Else accept the char and inc the ptr
+    call isALdelimiter
+    jne .goArg1End          ;If not a delimiter, it is part of arg1
+;Now we skip the delimiters between arg1 and arg2
+    call skipDelimiters     ;Now skip all the delimiters
+.doArg2:
+    mov rdx, rsi            
+    sub rdx, rbx            ;rbx points to the start of the buffer
+;Now we process FCBs. We process both FCBs and set them as valid IFF
+; it is not CR. We do this like this to ensure the FCB's we pass to a child
+; are always default initialised (i.e. current drive with all spaces)
+    lea rsi, qword [rbx + rcx]  ;Arg1 offset saved in ecx
+    push rsi
     lea rdi, qword [r8 + fcb1]
     mov eax, 2901h
     int 21h
+    pop rsi
+    cmp byte [rsi], CR
+    je .arg1NotOk
     mov byte [arg1FCBret], al
-.gotoArg2:
-    lodsb   ;Now we advance the pointer to the second argument or CR
-    cmp al, CR
-    je .setupCmdVars
-    call isALdelimiter
-    jne .gotoArg2    ;If not a delimiter, get next char now
-    call .skipAndCheckCR    ;Now skip all the delimiters
-    je .setupCmdVars            ;If ZF set, this we encountered a CR
-    mov byte [arg2Flg], -1  ;If it is not CR, it is a second argument!
-    mov rax, rsi            
-    sub rax, rbx            ;rbx points to the start of the buffer
-    mov byte [arg2Off], al  ;Store the offset 
+    mov byte [arg1Off], cl  ;Store the offset 
+    mov byte [arg1Flg], -1  ;Set that we have an argument
+.arg1NotOk:
+    lea rsi, qword [rbx + rdx]  ;Arg2 offset saved in edx
+    push rsi
     lea rdi, qword [r8 + fcb2]
     mov eax, 2901h
     int 21h
+    pop rsi
+    cmp byte [rsi], CR
+    je .setupCmdVars
     mov byte [arg2FCBret], al
+    mov byte [arg2Off], dl  ;Store the offset 
+    mov byte [arg2Flg], -1  ;If it is not CR, it is a second argument!
 .setupCmdVars:
 ;Before returning, we copy the command name to cmdName 
     lea rdi, cmdPathSpec
@@ -312,11 +326,6 @@ analyseCmdline:
     stosb
     dec ecx
     jnz .cpCmdName
-    return
-.skipAndCheckCR:
-;Skips all chars, rsi points to the separator. If it is a CR, set ZF=ZE
-    call skipDelimiters ;Go to the next char in the input line
-    cmp byte [rsi], CR  ;If it is not a CR, it is an argument
     return
 .exitBad:
     mov byte [cmdName], -1  ;Store -1 to indicate error
