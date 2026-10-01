@@ -281,12 +281,12 @@ launchChild:
     return
 
 set:
-    test byte [arg1Flg], -1
-    jnz .editEnv
-    ;Here we just print the environment.
     call checkEnvGoodAndGet 
     jz badEnvSpaceError
-    ;We know this is a good env so keep going! env ptr in rsi
+    test byte [arg1Flg], -1
+    jnz .editEnv
+;Here we just print the environment.
+;We know this is a good env so keep going! env ptr in rsi
     mov rdi, rsi
     mov rdx, rsi
 .findLp:
@@ -308,8 +308,6 @@ set:
     mov rdx, rdi   
     jmp short .findLp
 .editEnv:
-    call checkEnvGoodAndGet
-    jz badEnvSpaceError
     movzx eax, byte [arg1Off]
     lea rsi, qword [r8 + cmdLine]
     add rsi, rax            ;rsi -> EnvvarName=[string]<CR>
